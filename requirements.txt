@@ -1,0 +1,18 @@
+# Django core
+Django>=5.1,<5.2
+djangorestframework>=3.15,<4.0
+
+# Password hashing
+bcrypt>=4.1,<5.0
+
+# Environment variables
+python-decouple>=3.8,<4.0
+
+# CORS headers (for frontend integration)
+django-cors-headers>=4.3,<5.0
+
+# Razorpay payment gateway
+razorpay>=1.4,<2.0
+
+# Admin UI
+django-unfold>=0.90,<1.0

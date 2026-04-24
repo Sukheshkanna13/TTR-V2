@@ -1,0 +1,55 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+    .stat-card {
+        background: var(--unfold-bg-color, #fff);
+        border: 1px solid var(--unfold-border-color, #e5e7eb);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        transition: box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    .stat-icon {
+        font-size: 32px;
+        color: #6366f1;
+        margin-bottom: 8px;
+    }
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--unfold-text-color, #111827);
+        margin: 4px 0;
+    }
+    .stat-label {
+        font-size: 13px;
+        color: var(--unfold-text-muted-color, #6b7280);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+
+{% if dashboard_stats %}
+<div class="dashboard-grid">
+    {% for stat in dashboard_stats %}
+    <div class="stat-card">
+        <div class="stat-icon material-symbols-outlined">{{ stat.icon }}</div>
+        <div class="stat-value">{{ stat.value }}</div>
+        <div class="stat-label">{{ stat.label }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{{ block.super }}
+{% endblock %}
