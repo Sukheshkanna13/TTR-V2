@@ -16,3 +16,6 @@ razorpay>=1.4,<2.0
 
 # Admin UI
 django-unfold>=0.90,<1.0
+
+# Image processing (required for ImageField)
+Pillow>=12.0,<13.0

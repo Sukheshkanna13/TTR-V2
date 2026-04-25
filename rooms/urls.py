@@ -10,4 +10,5 @@ app_name = "rooms"
 
 urlpatterns = [
     path("search/", views.SearchRoomsView.as_view(), name="search"),
+    path("<uuid:room_id>/", views.RoomDetailView.as_view(), name="detail"),
 ]

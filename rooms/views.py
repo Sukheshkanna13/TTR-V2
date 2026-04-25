@@ -132,7 +132,7 @@ class SearchRoomsView(APIView):
             rooms = rooms.order_by("price_per_night")
 
         # Serialize and respond
-        room_list = RoomSerializer(rooms, many=True).data
+        room_list = RoomSerializer(rooms, many=True, context={"request": request}).data
         num_nights = (check_out - check_in).days
 
         if not room_list:
@@ -163,6 +163,30 @@ class SearchRoomsView(APIView):
                     "num_nights": num_nights,
                 },
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class RoomDetailView(APIView):
+    """
+    GET /rooms/<room_id>/
+
+    Returns full details for a single room.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, room_id):
+        try:
+            room = Room.objects.prefetch_related("images").get(id=room_id, is_active=True)
+        except Room.DoesNotExist:
+            return Response(
+                {"error": "Room not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(
+            {"room": RoomSerializer(room, context={"request": request}).data},
             status=status.HTTP_200_OK,
         )
 

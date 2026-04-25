@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Details - GrandStay</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/auth.js"></script>
+    <style>
+        /* ===== Room Details Layout ===== */
+        .details-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+            margin-top: 2rem;
+            align-items: start;
+        }
+
+        /* ===== Hero Image ===== */
+        .room-hero {
+            width: 100%;
+            height: 420px;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: var(--shadow-lg);
+        }
+        .room-hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .room-hero-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 2rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+            color: white;
+        }
+        .room-hero-overlay h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.3rem;
+            letter-spacing: -0.5px;
+        }
+        .room-hero-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-single { background: #3b82f6; }
+        .badge-double { background: #8b5cf6; }
+        .badge-deluxe { background: #f59e0b; color: #1f2937; }
+
+        /* ===== Section Headers ===== */
+        .section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text);
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        /* ===== Description ===== */
+        .room-description {
+            line-height: 1.8;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        /* ===== Amenities Grid ===== */
+        .amenities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.75rem;
+        }
+        .amenity-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #334155;
+            transition: all 0.2s;
+        }
+        .amenity-item:hover {
+            background: #eff6ff;
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+        .amenity-icon {
+            font-size: 1.2rem;
+            width: 28px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        /* ===== Quick Info Bar ===== */
+        .quick-info {
+            display: flex;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+        .quick-info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background: #f1f5f9;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #475569;
+        }
+        .quick-info-item span:first-child { font-size: 1.1rem; }
+
+        /* ===== Booking Sidebar ===== */
+        .booking-sidebar {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 6rem;
+        }
+        .sidebar-price {
+            text-align: center;
+            padding-bottom: 1.25rem;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .sidebar-price .amount {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .sidebar-price .per-night {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        .sidebar-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.65rem 0;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .sidebar-detail .label {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        .sidebar-detail .value {
+            font-weight: 600;
+            color: var(--text);
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 0 0.5rem 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+        .total-row .value { color: var(--primary); }
+
+        .book-btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            margin-top: 1rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            letter-spacing: 0.3px;
+        }
+        .book-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.35);
+        }
+        .book-btn:active { transform: translateY(0); }
+        .book-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ===== Back Link ===== */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            transition: gap 0.2s;
+        }
+        .back-link:hover { gap: 0.7rem; }
+
+        /* ===== Policies ===== */
+        .policies-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .policy-item {
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 10px;
+            border-left: 3px solid var(--primary);
+        }
+        .policy-item h4 {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.3rem;
+        }
+        .policy-item p {
+            font-size: 0.82rem;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        /* ===== Loading ===== */
+        .loading-container {
+            text-align: center;
+            padding: 6rem 2rem;
+            color: var(--text-light);
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== Photo Gallery ===== */
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .gallery-thumb {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .gallery-thumb:hover {
+            transform: scale(1.03);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border-color: var(--primary);
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 900px) {
+            .details-layout {
+                grid-template-columns: 1fr;
+            }
+            .booking-sidebar { position: static; }
+            .room-hero { height: 280px; }
+            .policies-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html" class="logo-text">GrandStay</a>
+        <div class="nav-links" id="nav-links-container">
+            <!-- Dynamically populated by auth.js -->
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading room details...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden" style="text-align: center; padding: 4rem 2rem;">
+            <h2 style="margin-bottom: 1rem; color: var(--danger);">Room Not Found</h2>
+            <p style="color: var(--text-light); margin-bottom: 2rem;">The room you're looking for doesn't exist or is no longer available.</p>
+            <a href="index.html" class="btn" style="display: inline-block; width: auto;">Back to Home</a>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="hidden">
+            <a id="backLink" href="#" class="back-link">← Back to Search Results</a>
+
+            <!-- Hero Image -->
+            <div class="room-hero">
+                <img src="images/room-hero.png" alt="Room Photo" id="heroImg">
+                <div class="room-hero-overlay">
+                    <h1 id="roomName"></h1>
+                    <span id="roomBadge" class="room-hero-badge"></span>
+                </div>
+            </div>
+
+            <!-- Two Column Layout -->
+            <div class="details-layout">
+                <!-- Left: Details -->
+                <div>
+                    <!-- Quick Info -->
+                    <div class="quick-info" id="quickInfo"></div>
+
+                    <!-- Description -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h3 class="section-title">About This Room</h3>
+                        <p class="room-description" id="roomDescription"></p>
+                    </div>
+
+                    <!-- Amenities -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h3 class="section-title">Amenities & Facilities</h3>
+                        <div class="amenities-grid" id="amenitiesGrid"></div>
+                    </div>
+
+                    <!-- Photo Gallery (only shown if room has multiple images) -->
+                    <div class="card hidden" style="margin-bottom: 1.5rem;" id="gallerySection">
+                        <h3 class="section-title">Photo Gallery</h3>
+                        <div class="photo-gallery" id="photoGallery"></div>
+                    </div>
+
+                    <!-- Policies -->
+                    <div class="card">
+                        <h3 class="section-title">Hotel Policies</h3>
+                        <div class="policies-grid">
+                            <div class="policy-item">
+                                <h4>🕐 Check-in</h4>
+                                <p>From 2:00 PM. Early check-in subject to availability.</p>
+                            </div>
+                            <div class="policy-item">
+                                <h4>🕐 Check-out</h4>
+                                <p>Until 11:00 AM. Late check-out available on request.</p>
+                            </div>
+                            <div class="policy-item">
+                                <h4>🚫 Cancellation</h4>
+                                <p>Free cancellation up to 24 hours before check-in.</p>
+                            </div>
+                            <div class="policy-item">
+                                <h4>🆔 ID Required</h4>
+                                <p>Valid government-issued photo ID required at check-in.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Booking Sidebar -->
+                <div class="booking-sidebar">
+                    <div class="sidebar-price">
+                        <div class="amount" id="sidebarPrice"></div>
+                        <div class="per-night">per night</div>
+                    </div>
+
+                    <div class="sidebar-detail">
+                        <span class="label">Check-in</span>
+                        <span class="value" id="sidebarCheckin"></span>
+                    </div>
+                    <div class="sidebar-detail">
+                        <span class="label">Check-out</span>
+                        <span class="value" id="sidebarCheckout"></span>
+                    </div>
+                    <div class="sidebar-detail">
+                        <span class="label">Guests</span>
+                        <span class="value" id="sidebarGuests"></span>
+                    </div>
+                    <div class="sidebar-detail">
+                        <span class="label">Duration</span>
+                        <span class="value" id="sidebarNights"></span>
+                    </div>
+
+                    <div class="total-row">
+                        <span>Total</span>
+                        <span class="value" id="sidebarTotal"></span>
+                    </div>
+
+                    <div id="bookErrorBox" class="alert hidden" style="margin-top: 1rem; margin-bottom: 0;"></div>
+
+                    <button id="bookBtn" class="book-btn" onclick="bookRoom()">
+                        Book Now — Reserve This Room
+                    </button>
+                    <p style="text-align: center; font-size: 0.78rem; color: var(--text-light); margin-top: 0.75rem;">
+                        You won't be charged yet. A 10-minute hold will be placed.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const roomId = params.get('id');
+        const checkIn = params.get('check_in');
+        const checkOut = params.get('check_out');
+        const guests = params.get('guests') || '1';
+
+        let roomData = null;
+
+        // Amenity icon mapping
+        const amenityIcons = {
+            'wifi': '📶', 'ac': '❄️', 'tv': '📺', 'mini bar': '🍸', 'minibar': '🍸',
+            'room service': '🛎️', 'pool': '🏊', 'gym': '🏋️', 'spa': '💆',
+            'parking': '🅿️', 'breakfast': '🍳', 'laundry': '👔', 'safe': '🔐',
+            'balcony': '🌅', 'sea view': '🌊', 'city view': '🏙️', 'kitchen': '🍽️',
+            'coffee maker': '☕', 'iron': '👕', 'hairdryer': '💨', 'bathtub': '🛁',
+            'shower': '🚿', 'desk': '🖥️', 'wardrobe': '🗄️', 'telephone': '📞',
+            'concierge': '🤵', 'restaurant': '🍽️', 'bar': '🍷', 'lounge': '🛋️',
+        };
+
+        function getAmenityIcon(amenity) {
+            const lower = amenity.toLowerCase().trim();
+            for (const [key, icon] of Object.entries(amenityIcons)) {
+                if (lower.includes(key)) return icon;
+            }
+            return '✓';
+        }
+
+        function getBadgeClass(type) {
+            const map = { single: 'badge-single', double: 'badge-double', deluxe: 'badge-deluxe' };
+            return map[type] || 'badge-single';
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        async function loadRoom() {
+            if (!roomId) {
+                showError();
+                return;
+            }
+
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/rooms/${roomId}/`);
+                if (!res.ok) {
+                    showError();
+                    return;
+                }
+
+                const data = await res.json();
+                roomData = data.room;
+                renderRoom();
+
+            } catch (err) {
+                showError();
+            }
+        }
+
+        function showError() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        function renderRoom() {
+            const room = roomData;
+
+            // Hide loading, show content
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+
+            // Update page title
+            document.title = `${room.name} - GrandStay`;
+
+            // Back link
+            const backParams = new URLSearchParams({ city: room.city, check_in: checkIn, check_out: checkOut, guests: guests });
+            document.getElementById('backLink').href = `search.html?${backParams.toString()}`;
+
+            // Hero
+            document.getElementById('roomName').textContent = room.name;
+            const badge = document.getElementById('roomBadge');
+            badge.textContent = room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1) + ' Room';
+            badge.classList.add(getBadgeClass(room.room_type));
+
+            // Hero Image — use primary_image from API if available, else fallback
+            if (room.primary_image) {
+                document.getElementById('heroImg').src = room.primary_image;
+            }
+
+            // Photo Gallery — show if room has images
+            if (room.images && room.images.length > 0) {
+                const gallerySection = document.getElementById('gallerySection');
+                const photoGallery = document.getElementById('photoGallery');
+                gallerySection.classList.remove('hidden');
+                photoGallery.innerHTML = room.images.map(img => `
+                    <img src="${img.image_url}" alt="${img.caption || room.name}" class="gallery-thumb"
+                         onclick="document.getElementById('heroImg').src='${img.image_url}'; window.scrollTo({top: 0, behavior: 'smooth'});">
+                `).join('');
+            }
+
+            // Quick Info
+            const quickInfo = document.getElementById('quickInfo');
+            quickInfo.innerHTML = `
+                <div class="quick-info-item"><span>📍</span> ${room.city}</div>
+                <div class="quick-info-item"><span>👥</span> Up to ${room.capacity} Guests</div>
+                <div class="quick-info-item"><span>🏷️</span> ${room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1)}</div>
+            `;
+
+            // Description
+            document.getElementById('roomDescription').textContent =
+                room.description || 'Experience the perfect blend of comfort and elegance in this beautifully appointed room. Featuring modern amenities and thoughtful design touches, this room offers a peaceful retreat after a day of exploration. Enjoy premium bedding, a spacious bathroom, and stunning views that make your stay truly memorable.';
+
+            // Amenities
+            const amenitiesGrid = document.getElementById('amenitiesGrid');
+            const amenities = room.amenities_list.length > 0
+                ? room.amenities_list
+                : ['WiFi', 'AC', 'TV', 'Room Service'];
+
+            amenitiesGrid.innerHTML = amenities.map(a => `
+                <div class="amenity-item">
+                    <span class="amenity-icon">${getAmenityIcon(a)}</span>
+                    ${a}
+                </div>
+            `).join('');
+
+            // Sidebar
+            const numNights = Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)));
+            const totalPrice = (parseFloat(room.price_per_night) * numNights).toFixed(2);
+
+            document.getElementById('sidebarPrice').textContent = `Rs. ${room.price_per_night}`;
+            document.getElementById('sidebarCheckin').textContent = formatDate(checkIn);
+            document.getElementById('sidebarCheckout').textContent = formatDate(checkOut);
+            document.getElementById('sidebarGuests').textContent = `${guests} Guest${guests > 1 ? 's' : ''}`;
+            document.getElementById('sidebarNights').textContent = `${numNights} Night${numNights > 1 ? 's' : ''}`;
+            document.getElementById('sidebarTotal').textContent = `Rs. ${totalPrice}`;
+        }
+
+        async function bookRoom() {
+            const bookBtn = document.getElementById('bookBtn');
+            const errorBox = document.getElementById('bookErrorBox');
+            bookBtn.disabled = true;
+            bookBtn.textContent = 'Reserving...';
+            errorBox.classList.add('hidden');
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/bookings/hold/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        room_id: roomId,
+                        check_in: checkIn,
+                        check_out: checkOut,
+                        guests: parseInt(guests)
+                    })
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    alert('Please login to book a room.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const data = await res.json();
+                if (res.ok) {
+                    window.location.href = `checkout.html?booking_id=${data.booking.id}`;
+                } else {
+                    errorBox.textContent = data.error || 'Failed to hold this room. Please try again.';
+                    errorBox.classList.remove('hidden');
+                    bookBtn.disabled = false;
+                    bookBtn.textContent = 'Book Now — Reserve This Room';
+                }
+            } catch (err) {
+                errorBox.textContent = 'Network error. Please check your connection.';
+                errorBox.classList.remove('hidden');
+                bookBtn.disabled = false;
+                bookBtn.textContent = 'Book Now — Reserve This Room';
+            }
+        }
+
+        loadRoom();
+    </script>
+</body>
+</html>

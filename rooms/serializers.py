@@ -7,15 +7,35 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Booking, Room
+from .models import Booking, Room, RoomImage
 
 User = get_user_model()
+
+
+class RoomImageSerializer(serializers.ModelSerializer):
+    """Serializes room image data."""
+
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RoomImage
+        fields = ["id", "image_url", "caption", "is_primary", "order"]
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        elif obj.image:
+            return obj.image.url
+        return None
 
 
 class RoomSerializer(serializers.ModelSerializer):
     """Serializes room data for search results."""
 
     amenities_list = serializers.ReadOnlyField()
+    images = RoomImageSerializer(many=True, read_only=True)
+    primary_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Room
@@ -29,7 +49,21 @@ class RoomSerializer(serializers.ModelSerializer):
             "amenities",
             "amenities_list",
             "description",
+            "images",
+            "primary_image",
         ]
+
+    def get_primary_image(self, obj):
+        """Return the URL of the primary image, or the first image, or None."""
+        request = self.context.get("request")
+        primary = obj.images.filter(is_primary=True).first()
+        if not primary:
+            primary = obj.images.first()
+        if primary and primary.image:
+            if request:
+                return request.build_absolute_uri(primary.image.url)
+            return primary.image.url
+        return None
 
 
 class SearchSerializer(serializers.Serializer):

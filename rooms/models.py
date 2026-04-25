@@ -82,6 +82,52 @@ class Room(models.Model):
         return [a.strip() for a in self.amenities.split(",") if a.strip()]
 
 
+class RoomImage(models.Model):
+    """
+    Image for a hotel room. Supports multiple images per room
+    with one marked as the primary/hero image.
+    """
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+    room = models.ForeignKey(
+        Room,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image = models.ImageField(
+        upload_to="room_images/",
+        help_text="Upload a room photo (JPEG/PNG, max 5MB recommended).",
+    )
+    caption = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        help_text="Optional caption for the image.",
+    )
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Primary image is shown as the hero/thumbnail.",
+    )
+    order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Display order. Lower numbers appear first.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "room image"
+        verbose_name_plural = "room images"
+        ordering = ["order", "-is_primary", "created_at"]
+
+    def __str__(self):
+        tag = " [PRIMARY]" if self.is_primary else ""
+        return f"Image for {self.room.name}{tag}"
+
+
 class Booking(models.Model):
     """
     A booking ties a user to a room for specific dates.
