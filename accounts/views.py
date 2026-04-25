@@ -305,3 +305,17 @@ class LogoutView(APIView):
             {"message": "Logged out successfully."},
             status=status.HTTP_200_OK,
         )
+
+class CurrentUserView(APIView):
+    """
+    GET /accounts/me/
+    
+    Returns the currently logged-in user's profile.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(
+            {"user": UserSerializer(request.user).data},
+            status=status.HTTP_200_OK
+        )

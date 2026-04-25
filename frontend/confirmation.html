@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Booking Confirmed - Hotel Booking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/auth.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="index.html" class="logo-text">GrandStay</a>
+        <div class="nav-links" id="nav-links-container">
+            <!-- Dynamically populated by auth.js -->
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 600px; text-align: center;">
+        <div class="card" id="successCard" style="display: none; padding: 3rem 2rem;">
+            <div style="font-size: 4rem; color: #10b981; margin-bottom: 1rem;">&#10004;</div>
+            <h1 style="color: #10b981; margin-bottom: 1rem;">Payment Successful!</h1>
+            <p style="font-size: 1.1rem; margin-bottom: 2rem;">Your booking has been confirmed. An email with the details has been sent to <strong id="emailTo"></strong>.</p>
+            
+            <div style="background: var(--bg); padding: 1.5rem; border-radius: 8px; text-align: left; margin-bottom: 2rem;">
+                <p style="color: #666; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 0.5rem;">Booking Reference</p>
+                <h2 id="refText" style="margin-bottom: 1.5rem; color: var(--primary);"></h2>
+                
+                <p><strong>Room:</strong> <span id="roomText"></span></p>
+                <p><strong>Check-in:</strong> <span id="inText"></span></p>
+                <p><strong>Check-out:</strong> <span id="outText"></span></p>
+                <p><strong>Guests:</strong> <span id="guestText"></span></p>
+                <p><strong>Amount Paid:</strong> Rs. <span id="amountText"></span></p>
+            </div>
+
+            <a href="my-bookings.html" class="btn">View My Bookings</a>
+        </div>
+        <div id="loadingMsg">Loading confirmation details...</div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const ref = params.get('ref');
+
+        async function loadConfirmation() {
+            if (!ref) {
+                document.getElementById('loadingMsg').textContent = 'Invalid booking reference.';
+                return;
+            }
+
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/bookings/ref/${ref}/confirmation/`, { credentials: 'include' });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    document.getElementById('loadingMsg').textContent = data.error || 'Failed to load confirmation.';
+                    return;
+                }
+
+                document.getElementById('loadingMsg').style.display = 'none';
+                document.getElementById('successCard').style.display = 'block';
+
+                const c = data.confirmation;
+                document.getElementById('emailTo').textContent = c.email_sent_to;
+                document.getElementById('refText').textContent = c.booking_reference;
+                document.getElementById('roomText').textContent = `${c.room_name} (${c.city})`;
+                document.getElementById('inText').textContent = c.check_in;
+                document.getElementById('outText').textContent = c.check_out;
+                document.getElementById('guestText').textContent = c.guests;
+                document.getElementById('amountText').textContent = c.total_paid;
+
+            } catch (err) {
+                document.getElementById('loadingMsg').textContent = 'Network error.';
+            }
+        }
+
+        async function logout() {
+            await fetch('http://127.0.0.1:8000/accounts/logout/', { method: 'POST', credentials: 'include' });
+            window.location.href = 'index.html';
+        }
+
+        loadConfirmation();
+    </script>
+</body>
+</html>

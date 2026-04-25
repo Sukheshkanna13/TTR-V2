@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Checkout - Hotel Booking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/auth.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="index.html" class="logo-text">GrandStay</a>
+        <div class="nav-links" id="nav-links-container">
+            <!-- Dynamically populated by auth.js -->
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 600px;">
+        <div class="card" id="bookingCard" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="color: var(--primary);">Complete Your Booking</h2>
+                <div style="background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">
+                    Hold expires in: <span id="timer">10:00</span>
+                </div>
+            </div>
+            
+            <div style="background: var(--bg); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                <h3 id="roomName" style="margin-bottom: 0.5rem;"></h3>
+                <p><strong>Dates:</strong> <span id="dates"></span></p>
+                <p><strong>Guests:</strong> <span id="guests"></span></p>
+                <div style="border-top: 1px solid var(--border); margin: 1rem 0; padding-top: 1rem; display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold;">
+                    <span>Total Amount:</span>
+                    <span id="totalPrice" style="color: var(--primary);"></span>
+                </div>
+            </div>
+
+            <div id="errorBox" class="alert hidden"></div>
+            
+            <button id="payBtn" onclick="processPayment()" class="btn" style="font-size: 1.1rem; width: 100%;">Pay Now with Razorpay</button>
+        </div>
+        <div id="loadingMsg">Loading booking details...</div>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const bookingId = params.get('booking_id');
+        let holdExpiresAt = null;
+        let bookingData = null;
+
+        async function loadBooking() {
+            if (!bookingId) {
+                document.getElementById('loadingMsg').textContent = 'Invalid booking ID.';
+                return;
+            }
+
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/bookings/${bookingId}/`, { credentials: 'include' });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    document.getElementById('loadingMsg').textContent = data.error || 'Failed to load booking.';
+                    return;
+                }
+
+                const b = data.booking;
+                bookingData = b;
+                if (b.status !== 'pending') {
+                    document.getElementById('loadingMsg').textContent = `Booking is no longer pending (Status: ${b.status}). Please search again.`;
+                    return;
+                }
+
+                document.getElementById('loadingMsg').style.display = 'none';
+                document.getElementById('bookingCard').style.display = 'block';
+
+                document.getElementById('roomName').textContent = b.room.name;
+                document.getElementById('dates').textContent = `${b.check_in} to ${b.check_out} (${b.num_nights} nights)`;
+                document.getElementById('guests').textContent = b.guests;
+                document.getElementById('totalPrice').textContent = `Rs. ${b.total_price}`;
+                
+                holdExpiresAt = new Date(b.hold_expires_at).getTime();
+                startTimer();
+
+            } catch (err) {
+                document.getElementById('loadingMsg').textContent = 'Network error.';
+            }
+        }
+
+        function startTimer() {
+            const timerEl = document.getElementById('timer');
+            const interval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = holdExpiresAt - now;
+
+                if (distance < 0) {
+                    clearInterval(interval);
+                    timerEl.textContent = "EXPIRED";
+                    document.getElementById('payBtn').disabled = true;
+                    document.getElementById('payBtn').style.opacity = '0.5';
+                    document.getElementById('errorBox').textContent = "Hold expired. Please search again.";
+                    document.getElementById('errorBox').classList.remove('hidden');
+                    return;
+                }
+
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                timerEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            }, 1000);
+        }
+
+        async function processPayment() {
+            const payBtn = document.getElementById('payBtn');
+            const errorBox = document.getElementById('errorBox');
+            payBtn.disabled = true;
+            payBtn.textContent = 'Initializing Payment...';
+            errorBox.classList.add('hidden');
+
+            try {
+                // 1. Create Order on Backend
+                const orderRes = await fetch('http://127.0.0.1:8000/payments/create-order/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ booking_id: bookingId })
+                });
+                
+                const orderData = await orderRes.json();
+                
+                if (!orderRes.ok) {
+                    throw new Error(orderData.error || 'Failed to create order');
+                }
+
+                // 2. Configure Razorpay Options
+                const options = {
+                    key: orderData.order.key_id,
+                    amount: orderData.order.amount,
+                    currency: orderData.order.currency,
+                    name: "GrandStay Hotels",
+                    description: `Booking: ${orderData.booking.room_name}`,
+                    order_id: orderData.order.order_id,
+                    handler: async function (response) {
+                        // 3. Verify Payment on Backend
+                        payBtn.textContent = 'Verifying Payment...';
+                        
+                        try {
+                            const verifyRes = await fetch('http://127.0.0.1:8000/payments/verify/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature
+                                })
+                            });
+
+                            const verifyData = await verifyRes.json();
+                            
+                            if (verifyRes.ok) {
+                                window.location.href = `confirmation.html?ref=${verifyData.booking.booking_reference}`;
+                            } else {
+                                throw new Error(verifyData.error || 'Payment verification failed');
+                            }
+                        } catch (err) {
+                            errorBox.textContent = err.message;
+                            errorBox.classList.remove('hidden');
+                            payBtn.disabled = false;
+                            payBtn.textContent = 'Try Again';
+                        }
+                    },
+                    prefill: {
+                        name: "Guest", // Ideally from user profile
+                        email: "",
+                        contact: ""
+                    },
+                    theme: {
+                        color: "#2563eb"
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            payBtn.disabled = false;
+                            payBtn.textContent = 'Pay Now';
+                        }
+                    }
+                };
+
+                // 4. Open Razorpay Checkout Modal
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (response){
+                    errorBox.textContent = "Payment failed or was cancelled.";
+                    errorBox.classList.remove('hidden');
+                    payBtn.disabled = false;
+                    payBtn.textContent = 'Pay Now';
+                });
+                rzp.open();
+
+            } catch (err) {
+                errorBox.textContent = err.message || 'Network error initializing payment.';
+                errorBox.classList.remove('hidden');
+                payBtn.disabled = false;
+                payBtn.textContent = 'Pay Now';
+            }
+        }
+
+        loadBooking();
+    </script>
+</body>
+</html>

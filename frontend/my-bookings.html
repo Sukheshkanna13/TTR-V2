@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Bookings - Hotel Booking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/auth.js"></script>
+    <style>
+        .tabs { display: flex; gap: 1rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+        .tab { padding: 1rem 2rem; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.2s; }
+        .tab.active { border-bottom-color: var(--primary); font-weight: bold; color: var(--primary); }
+        .booking-card { display: flex; justify-content: space-between; align-items: center; }
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge.confirmed { background: #dcfce3; color: #166534; }
+        .badge.pending { background: #fef3c7; color: #92400e; }
+        .badge.cancelled { background: #fee2e2; color: #991b1b; }
+        .badge.expired { background: #f3f4f6; color: #4b5563; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html" class="logo-text">GrandStay</a>
+        <div class="nav-links" id="nav-links-container">
+            <!-- Dynamically populated by auth.js -->
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>My Bookings</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('upcoming')" id="tab-upcoming">Upcoming</div>
+            <div class="tab" onclick="switchTab('past')" id="tab-past">Past</div>
+        </div>
+
+        <div id="errorBox" class="alert hidden"></div>
+        <div id="loadingMsg">Loading...</div>
+
+        <div id="upcoming-view"></div>
+        <div id="past-view" class="hidden"></div>
+    </div>
+
+    <script>
+        let upcomingData = [];
+        let pastData = [];
+
+        async function loadBookings() {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/bookings/my/', { credentials: 'include' });
+                
+                if (res.status === 401 || res.status === 403) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                const data = await res.json();
+                document.getElementById('loadingMsg').style.display = 'none';
+
+                upcomingData = data.upcoming.bookings;
+                pastData = data.past.bookings;
+
+                renderList('upcoming-view', upcomingData, true);
+                renderList('past-view', pastData, false);
+
+            } catch (err) {
+                document.getElementById('loadingMsg').textContent = 'Network error loading bookings.';
+            }
+        }
+
+        function renderList(containerId, list, isUpcoming) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                container.innerHTML = `<p style="color: #666;">No bookings found here.</p>`;
+                return;
+            }
+
+            list.forEach(b => {
+                const card = document.createElement('div');
+                card.className = 'card booking-card';
+                card.innerHTML = `
+                    <div>
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.5rem;">
+                            <h3 style="margin: 0;">${b.room.name}</h3>
+                            <span class="badge ${b.status}">${b.status}</span>
+                        </div>
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Ref: ${b.booking_reference || 'N/A'}</p>
+                        <p><strong>${b.check_in}</strong> to <strong>${b.check_out}</strong></p>
+                    </div>
+                    <div style="text-align: right;">
+                        <h3 style="margin-bottom: 1rem;">Rs. ${b.total_price}</h3>
+                        ${isUpcoming && b.can_cancel ? `<button onclick="cancelBooking('${b.id}')" class="btn btn-danger" style="width: auto;">Cancel</button>` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function cancelBooking(id) {
+            if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/bookings/${id}/cancel/`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                if (res.ok) {
+                    loadBookings(); // Reload to reflect changes
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Failed to cancel');
+                }
+            } catch(err) {
+                alert('Network error');
+            }
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tab-upcoming').classList.remove('active');
+            document.getElementById('tab-past').classList.remove('active');
+            document.getElementById('upcoming-view').classList.add('hidden');
+            document.getElementById('past-view').classList.add('hidden');
+
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById(`${tab}-view`).classList.remove('hidden');
+        }
+
+        async function logout() {
+            await fetch('http://127.0.0.1:8000/accounts/logout/', { method: 'POST', credentials: 'include' });
+            window.location.href = 'index.html';
+        }
+
+        loadBookings();
+    </script>
+</body>
+</html>

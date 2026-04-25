@@ -18,20 +18,14 @@ logger = logging.getLogger(__name__)
 # Razorpay Client
 # =========================================================================
 
-_razorpay_client = None
-
-
 def get_razorpay_client():
     """
-    Lazy-initialize and return the Razorpay client.
-    Uses RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET from settings.
+    Return a Razorpay client using current settings.
+    Creates a fresh client each time to avoid stale credentials after .env changes.
     """
-    global _razorpay_client
-    if _razorpay_client is None:
-        _razorpay_client = razorpay.Client(
-            auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-        )
-    return _razorpay_client
+    return razorpay.Client(
+        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+    )
 
 
 def create_razorpay_order(amount_inr, booking_id):
