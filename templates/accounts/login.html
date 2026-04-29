@@ -44,7 +44,12 @@
                 });
 
                 if (res.ok) {
-                    window.location.href = "{% url 'home' %}";
+                    const data = await res.json();
+                    if (data.user && data.user.is_staff) {
+                        window.location.href = "/admin/";
+                    } else {
+                        window.location.href = "{% url 'home' %}";
+                    }
                 } else {
                     const data = await res.json();
                     errorBox.textContent = data.detail || data.error || 'Login failed';
