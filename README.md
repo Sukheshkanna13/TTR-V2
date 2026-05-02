@@ -671,6 +671,4 @@ This project is developed for educational purposes.
 
 ---
 
-<p align="center">
-  Built with ❤️ by <strong>Rohinth KR</strong>
-</p>
+
