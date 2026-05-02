@@ -1,28 +1,26 @@
 """
 URL configuration for the rooms app (search only).
+
+Routes:
+    Page Views:
+        /rooms/search/page/         — Room search page
+        /rooms/room/page/           — Room detail page
+    
+    API Endpoints:
+        GET /rooms/search/          — Search available rooms
+        GET /rooms/<room_id>/       — Get room details
 """
 
-from django.shortcuts import render
 from django.urls import path
 
 from . import views
 
 app_name = "rooms"
 
-
-# Page views
-def search_page(request):
-    return render(request, "rooms/search.html")
-
-
-def room_detail_page(request):
-    return render(request, "rooms/room_details.html")
-
-
 urlpatterns = [
-    # Pages
-    path("search/page/", search_page, name="search-page"),
-    path("room/page/", room_detail_page, name="room-detail-page"),
+    # Page views
+    path("search/page/", views.search_page, name="search-page"),
+    path("room/page/", views.room_detail_page, name="room-detail-page"),
 
     # API endpoints
     path("search/", views.SearchRoomsView.as_view(), name="search"),

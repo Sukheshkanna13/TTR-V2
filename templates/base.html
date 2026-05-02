@@ -10,7 +10,7 @@
 </head>
 <body>
     <nav>
-        <a href="{% url 'home' %}" class="logo-text">GrandStay</a>
+        <a href="{% url 'core:home' %}" class="logo-text">GrandStay</a>
         <div class="nav-links" id="nav-links-container">
             {% if user.is_authenticated %}
                 <div class="user-badge">
@@ -36,7 +36,7 @@
                     credentials: 'include',
                     headers: { 'X-CSRFToken': '{{ csrf_token }}' }
                 });
-                window.location.href = "{% url 'home' %}";
+                window.location.href = "{% url 'core:home' %}";
             } catch (err) {
                 console.error("Logout failed:", err);
             }

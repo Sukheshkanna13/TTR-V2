@@ -17,6 +17,7 @@ from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Q
+from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -586,3 +587,27 @@ class MyBookingsView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+# ============================================================================
+# PAGE VIEWS (Template Rendering)
+# ============================================================================
+
+def search_page(request):
+    """Render the room search page template."""
+    return render(request, "rooms/search.html")
+
+
+def room_detail_page(request):
+    """Render the room detail page template."""
+    return render(request, "rooms/room_details.html")
+
+
+def my_bookings_page(request):
+    """Render the my bookings page template."""
+    return render(request, "bookings/my_bookings.html")
+
+
+def confirmation_page(request):
+    """Render the booking confirmation page template."""
+    return render(request, "bookings/confirmation.html")

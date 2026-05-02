@@ -1,28 +1,30 @@
 """
-URL configuration for booking endpoints (Phase 3).
+URL configuration for booking endpoints.
+
+Routes:
+    Page Views:
+        /bookings/my-bookings/page/         — My bookings page
+        /bookings/confirmation/page/        — Booking confirmation page
+    
+    API Endpoints:
+        POST /bookings/hold/                — Hold a room
+        POST /bookings/<id>/pay/            — Process payment
+        POST /bookings/<id>/cancel/         — Cancel booking
+        GET  /bookings/<id>/                — Get booking details
+        GET  /bookings/ref/<ref>/confirmation/ — Get confirmation data
+        GET  /bookings/my/                  — List user's bookings
 """
 
-from django.shortcuts import render
 from django.urls import path
 
 from rooms import views
 
 app_name = "bookings"
 
-
-# Page views
-def my_bookings_page(request):
-    return render(request, "bookings/my_bookings.html")
-
-
-def confirmation_page(request):
-    return render(request, "bookings/confirmation.html")
-
-
 urlpatterns = [
-    # Pages
-    path("my-bookings/page/", my_bookings_page, name="my-bookings-page"),
-    path("confirmation/page/", confirmation_page, name="confirmation-page"),
+    # Page views
+    path("my-bookings/page/", views.my_bookings_page, name="my-bookings-page"),
+    path("confirmation/page/", views.confirmation_page, name="confirmation-page"),
 
     # API endpoints
     path("hold/", views.HoldRoomView.as_view(), name="hold"),

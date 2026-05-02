@@ -11,6 +11,7 @@ import json
 import logging
 
 from django.conf import settings
+from django.shortcuts import render
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -365,3 +366,12 @@ class WebhookView(APIView):
             send_booking_confirmation_email(booking)
 
         return Response({"status": "processed"}, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# PAGE VIEWS (Template Rendering)
+# ============================================================================
+
+def checkout_page(request):
+    """Render the checkout page template."""
+    return render(request, "payments/checkout.html")

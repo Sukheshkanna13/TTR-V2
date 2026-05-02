@@ -15,6 +15,7 @@ Endpoints:
 import logging
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.shortcuts import render
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -319,3 +320,17 @@ class CurrentUserView(APIView):
             {"user": UserSerializer(request.user).data},
             status=status.HTTP_200_OK
         )
+
+
+# ============================================================================
+# PAGE VIEWS (Template Rendering)
+# ============================================================================
+
+def login_page(request):
+    """Render the user login page template."""
+    return render(request, "accounts/login.html")
+
+
+def register_page(request):
+    """Render the user registration page template."""
+    return render(request, "accounts/register.html")

@@ -64,7 +64,7 @@
     <div class="container">
         <div class="page-header">
             <h1>My Bookings</h1>
-            <a href="{% url 'home' %}" class="btn" style="width: auto; padding: 0.6rem 1.5rem; font-size: 0.9rem;">+ New Booking</a>
+            <a href="{% url 'core:home' %}" class="btn" style="width: auto; padding: 0.6rem 1.5rem; font-size: 0.9rem;">+ New Booking</a>
         </div>
         <div class="stats-bar" id="statsBar">
             <div class="stat-card stat-total"><div class="stat-number" id="statTotal">-</div><div class="stat-label">Total</div></div>
@@ -99,7 +99,7 @@
     <script>
         const MY_BOOKINGS_API = "{% url 'bookings:my-bookings' %}";
         const CANCEL_API_BASE = "/bookings/";
-        const HOME_URL = "{% url 'home' %}";
+        const HOME_URL = "{% url 'core:home' %}";
         const LOGIN_URL = "{% url 'accounts:login-page' %}";
         const CHECKOUT_URL = "{% url 'payments:checkout-page' %}";
         const CSRF_TOKEN = "{{ csrf_token }}";

@@ -1,28 +1,30 @@
 """
 URL configuration for the accounts app.
+
+Routes:
+    Page Views:
+        /accounts/login/page/       — User login page
+        /accounts/register/page/    — User registration page
+    
+    API Endpoints:
+        POST /accounts/register/    — Register new user
+        POST /accounts/verify-otp/  — Verify OTP
+        POST /accounts/resend-otp/  — Resend OTP
+        POST /accounts/login/       — User login
+        POST /accounts/logout/      — User logout
+        GET  /accounts/me/          — Get current user
 """
 
-from django.shortcuts import render
 from django.urls import path
 
 from . import views
 
 app_name = "accounts"
 
-
-# Page views
-def login_page(request):
-    return render(request, "accounts/login.html")
-
-
-def register_page(request):
-    return render(request, "accounts/register.html")
-
-
 urlpatterns = [
-    # Pages
-    path("login/page/", login_page, name="login-page"),
-    path("register/page/", register_page, name="register-page"),
+    # Page views
+    path("login/page/", views.login_page, name="login-page"),
+    path("register/page/", views.register_page, name="register-page"),
 
     # API endpoints
     path("register/", views.RegisterView.as_view(), name="register"),

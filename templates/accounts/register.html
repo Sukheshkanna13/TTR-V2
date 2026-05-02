@@ -154,7 +154,7 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    window.location.href = "{% url 'home' %}";
+                    window.location.href = "{% url 'core:home' %}";
                 } else {
                     errorBox.textContent = data.error || 'Verification failed.';
                     errorBox.classList.remove('hidden');
