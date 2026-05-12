@@ -1,36 +1,34 @@
 """
-Admin configuration for rooms and bookings with django-unfold.
+Admin configuration for rooms and bookings.
 
 Provides:
-- Rich booking management with status, city, and date filters
+- Booking management with status, city, and date filters
 - Searchable by booking reference and user email
-- Custom dashboard with live stats (today's count, revenue, check-ins)
 - Inline image upload for rooms
+- OTABlock and RoomRate management
 """
 
-from datetime import date
-
 from django.contrib import admin
-from django.db.models import Count, Q, Sum
-from django.utils import timezone
+from django.db.models import Count
 from django.utils.html import format_html
-from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Booking, Property, Room, RoomImage
+from .models import Booking, OTABlock, Property, Room, RoomImage, RoomRate
+
 
 @admin.register(Property)
-class PropertyAdmin(ModelAdmin):
+class PropertyAdmin(admin.ModelAdmin):
     list_display = ("name", "city", "whatsapp_number", "is_active", "created_at")
     list_filter = ("city", "is_active")
     search_fields = ("name", "city", "whatsapp_number")
     list_editable = ("is_active",)
     list_per_page = 25
 
-class RoomImageInline(TabularInline):
+
+class RoomImageInline(admin.TabularInline):
     """Inline for uploading images directly from the Room admin page."""
 
     model = RoomImage
-    extra = 1  # Show 1 empty upload slot by default
+    extra = 1
     fields = ("image", "caption", "is_primary", "order", "image_preview")
     readonly_fields = ("image_preview",)
     ordering = ("order",)
@@ -38,7 +36,7 @@ class RoomImageInline(TabularInline):
     def image_preview(self, obj):
         if obj.image:
             return format_html(
-                '<img src="{}" style="max-height: 80px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);" />',
+                '<img src="{}" style="max-height: 80px; border-radius: 6px;" />',
                 obj.image.url,
             )
         return "No image"
@@ -47,7 +45,7 @@ class RoomImageInline(TabularInline):
 
 
 @admin.register(Room)
-class RoomAdmin(ModelAdmin):
+class RoomAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "property",
@@ -55,12 +53,13 @@ class RoomAdmin(ModelAdmin):
         "room_type",
         "price_per_night",
         "capacity",
+        "operational_status",
         "image_count",
         "is_active",
     )
-    list_filter = ("property", "city", "room_type", "is_active")
+    list_filter = ("property", "city", "room_type", "is_active", "operational_status")
     search_fields = ("name", "city", "description", "property__name")
-    list_editable = ("is_active", "price_per_night")
+    list_editable = ("is_active", "price_per_night", "operational_status")
     list_per_page = 25
     inlines = [RoomImageInline]
 
@@ -75,7 +74,7 @@ class RoomAdmin(ModelAdmin):
             "fields": ("amenities",),
         }),
         ("Status", {
-            "fields": ("is_active",),
+            "fields": ("is_active", "operational_status"),
         }),
     )
 
@@ -91,7 +90,7 @@ class RoomAdmin(ModelAdmin):
 
 
 @admin.register(Booking)
-class BookingAdmin(ModelAdmin):
+class BookingAdmin(admin.ModelAdmin):
     list_display = (
         "booking_reference",
         "room",
@@ -127,31 +126,6 @@ class BookingAdmin(ModelAdmin):
     list_per_page = 25
     date_hierarchy = "check_in"
 
-    fieldsets = (
-        ("Booking Info", {
-            "fields": (
-                "id",
-                "booking_reference",
-                "status",
-            ),
-        }),
-        ("Guest", {
-            "fields": ("user", "guests"),
-        }),
-        ("Room & Dates", {
-            "fields": ("room", "check_in", "check_out"),
-        }),
-        ("Payment", {
-            "fields": ("total_price", "razorpay_order_id"),
-        }),
-        ("Hold", {
-            "fields": ("hold_expires_at",),
-        }),
-        ("Timestamps", {
-            "fields": ("created_at",),
-        }),
-    )
-
     @admin.display(description="User Email")
     def get_user_email(self, obj):
         return obj.user.email
@@ -162,3 +136,19 @@ class BookingAdmin(ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("room", "user")
+
+
+@admin.register(OTABlock)
+class OTABlockAdmin(admin.ModelAdmin):
+    list_display = ("room", "start_date", "end_date", "reason", "created_at")
+    list_filter = ("room__property", "room__city")
+    search_fields = ("room__name", "reason")
+    list_per_page = 25
+
+
+@admin.register(RoomRate)
+class RoomRateAdmin(admin.ModelAdmin):
+    list_display = ("room", "start_date", "end_date", "price", "created_at")
+    list_filter = ("room__property", "room__city")
+    search_fields = ("room__name",)
+    list_per_page = 25
