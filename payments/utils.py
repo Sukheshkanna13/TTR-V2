@@ -56,6 +56,29 @@ def create_razorpay_order(amount_inr, booking_id):
     return order
 
 
+def refund_razorpay_payment(payment_id, amount_inr=None):
+    """
+    Refund a captured Razorpay payment.
+    
+    Args:
+        payment_id: The Razorpay payment ID (e.g. pay_...)
+        amount_inr: (Optional) Partial refund amount in INR. If None, full refund.
+    """
+    client = get_razorpay_client()
+    
+    data = {}
+    if amount_inr:
+        data["amount"] = int(float(amount_inr) * 100)
+        
+    try:
+        refund = client.payment.refund(payment_id, data)
+        logger.info("Razorpay refund successful for payment %s: %s", payment_id, refund.get("id"))
+        return refund
+    except Exception as e:
+        logger.error("Razorpay refund failed for payment %s: %s", payment_id, str(e))
+        return None
+
+
 def verify_razorpay_signature(order_id, payment_id, signature):
     """
     Verify Razorpay payment signature using HMAC-SHA256.

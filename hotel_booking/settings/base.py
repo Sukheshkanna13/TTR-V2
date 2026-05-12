@@ -1,17 +1,17 @@
 """
 Django settings for hotel_booking project.
-Phase 1: Authentication System (Simplified Architecture)
-
-Pipeline: Browser -> Django -> SQLite -> Gmail SMTP -> Razorpay
+Base settings common to all environments.
 """
 
 import os
 from pathlib import Path
-
 from decouple import Csv, config
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Now that settings is a package (hotel_booking/settings/base.py),
+# BASE_DIR should point to the repository root.
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # =============================================================================
@@ -35,15 +35,23 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     # Third-party
     "rest_framework",
     "corsheaders",
+    "django_q",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     # Local apps
     "core",
     "accounts",
     "rooms",
     "payments",
 ]
+
+SITE_ID = 1
 
 
 # =============================================================================
@@ -85,6 +93,11 @@ UNFOLD = {
             {
                 "title": "Hotel",
                 "items": [
+                    {
+                        "title": "Properties",
+                        "icon": "business",
+                        "link": "/admin/rooms/property/",
+                    },
                     {
                         "title": "Rooms",
                         "icon": "hotel",
@@ -128,8 +141,11 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "accounts.middleware.AutoLogoutMiddleware",
+    "accounts.middleware.ForcePasswordChangeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "hotel_booking.urls"
@@ -154,14 +170,16 @@ WSGI_APPLICATION = "hotel_booking.wsgi.application"
 
 
 # =============================================================================
-# DATABASE — SQLite (Django's built-in, no setup needed)
+# DATABASE
 # =============================================================================
 
+# Default to SQLite but allow override via DATABASE_URL
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -177,12 +195,34 @@ AUTH_USER_MODEL = "accounts.User"
 # =============================================================================
 
 AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
     "accounts.backends.EmailBackend",
 ]
 
+# Allauth Settings
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'none' # We handle OTP separately
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}
+
+SOCIALACCOUNT_ADAPTER = 'accounts.adapter.CustomSocialAccountAdapter'
 
 # =============================================================================
-# PASSWORD HASHERS — bcrypt first
+# PASSWORD HASHERS
 # =============================================================================
 
 PASSWORD_HASHERS = [
@@ -207,7 +247,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # =============================================================================
-# SESSION — Database backed (default Django behavior)
+# SESSION
 # =============================================================================
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
@@ -217,7 +257,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 
 
 # =============================================================================
-# EMAIL — Gmail SMTP
+# EMAIL (Base - Overridden in dev/prod)
 # =============================================================================
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -238,7 +278,7 @@ REST_FRAMEWORK = {
         "accounts.backends.CsrfExemptSessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticated",
     ),
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework.renderers.JSONRenderer",
@@ -247,10 +287,10 @@ REST_FRAMEWORK = {
 
 
 # =============================================================================
-# CORS (for frontend)
+# CORS
 # =============================================================================
 
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in development
+CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=DEBUG, cast=bool)
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000,http://127.0.0.1:8080,http://localhost:8080",
@@ -260,7 +300,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 
 # =============================================================================
-# OTP CONFIGURATION
+# OTP AND BOOKING CONFIGURATION
 # =============================================================================
 
 OTP_LENGTH = 6
@@ -270,6 +310,9 @@ OTP_MAX_ATTEMPTS = 3
 # Login rate limiting
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_LOCK_DURATION_MINUTES = 15
+
+# Booking hold duration
+HOLD_DURATION_MINUTES = config("HOLD_DURATION_MINUTES", default=10, cast=int)
 
 
 # =============================================================================
@@ -286,7 +329,7 @@ RAZORPAY_WEBHOOK_SECRET = config("RAZORPAY_WEBHOOK_SECRET", default="")
 # =============================================================================
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True
 
@@ -301,7 +344,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 # =============================================================================
-# MEDIA FILES (User-uploaded content like room images)
+# MEDIA FILES
 # =============================================================================
 
 MEDIA_URL = "/media/"
@@ -313,3 +356,19 @@ MEDIA_ROOT = BASE_DIR / "media"
 # =============================================================================
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# =============================================================================
+# DJANGO Q (Task Queue)
+# =============================================================================
+
+Q_CLUSTER = {
+    "name": "ttr",
+    "orm": "default",  # Use Django ORM as broker
+    "timeout": 60,
+    "retry": 120,
+    "save_limit": 250,
+    "queue_limit": 500,
+    "cpu_affinity": 1,
+    "label": "Django Q",
+}

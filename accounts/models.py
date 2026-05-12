@@ -177,3 +177,28 @@ class LoginAttempt(models.Model):
             self.locked_until = None
             self.save(update_fields=["attempts", "locked_until"])
         return False
+
+
+class UserProfile(models.Model):
+    """
+    Profile for user roles, financial access levels, and employee settings.
+    """
+    ROLE_CHOICES = [
+        ('guest', 'Guest'),
+        ('employee', 'Employee'),
+        ('super_admin', 'Super Admin'),
+    ]
+    FIN_LEVEL_CHOICES = [
+        ('A', 'Level A (Full Financial Access)'),
+        ('B', 'Level B (Limited Financial Access)'),
+        ('C', 'Level C (No Financial Access)'),
+    ]
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='userprofile')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='guest')
+    fin_level = models.CharField(max_length=1, choices=FIN_LEVEL_CHOICES, null=True, blank=True)
+    assigned_properties = models.ManyToManyField('rooms.Property', blank=True, related_name='assigned_employees')
+    must_change_password = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.email} Profile ({self.role})"

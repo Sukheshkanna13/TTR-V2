@@ -186,3 +186,23 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "email", "full_name", "phone", "is_active", "is_staff", "date_joined"]
         read_only_fields = fields
+
+
+class EmployeeCreationSerializer(serializers.Serializer):
+    """
+    Validates employee creation input.
+    """
+    full_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+    phone = serializers.CharField(max_length=15)
+    role = serializers.ChoiceField(choices=[('employee', 'Employee'), ('super_admin', 'Super Admin')])
+    fin_level = serializers.ChoiceField(choices=[('A', 'A'), ('B', 'B'), ('C', 'C')], required=False, allow_null=True)
+    assigned_properties = serializers.ListField(
+        child=serializers.UUIDField(), required=False, allow_empty=True
+    )
+
+    def validate_email(self, value):
+        email = value.lower().strip()
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return email

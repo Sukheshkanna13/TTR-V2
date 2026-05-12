@@ -16,6 +16,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django_q.tasks import async_task
 
 from rooms.models import Booking
 from rooms.serializers import BookingSerializer
@@ -251,6 +252,20 @@ class VerifyPaymentView(APIView):
         # Send confirmation email (async-safe, won't block on failure)
         send_booking_confirmation_email(booking)
 
+        # Queue WhatsApp confirmation
+        if booking.user.phone:
+            async_task(
+                'core.tasks.send_whatsapp_message',
+                phone=booking.user.phone,
+                template_name='booking_confirmed',
+                template_data={
+                    "name": booking.user.full_name,
+                    "reference": booking.booking_reference,
+                    "check_in": str(booking.check_in),
+                    "hotel": booking.room.property.name if hasattr(booking.room, 'property') else "Temple Towns"
+                }
+            )
+
         return Response(
             {
                 "message": "Payment successful! Your booking is confirmed.",
@@ -364,6 +379,20 @@ class WebhookView(APIView):
 
             # Send confirmation email
             send_booking_confirmation_email(booking)
+
+            # Queue WhatsApp confirmation
+            if booking.user.phone:
+                async_task(
+                    'core.tasks.send_whatsapp_message',
+                    phone=booking.user.phone,
+                    template_name='booking_confirmed',
+                    template_data={
+                        "name": booking.user.full_name,
+                        "reference": booking.booking_reference,
+                        "check_in": str(booking.check_in),
+                        "hotel": booking.room.property.name if hasattr(booking.room, 'property') else "Temple Towns"
+                    }
+                )
 
         return Response({"status": "processed"}, status=status.HTTP_200_OK)
 

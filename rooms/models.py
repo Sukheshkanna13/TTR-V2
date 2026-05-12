@@ -11,6 +11,37 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+import builtins
+
+
+class Property(models.Model):
+    """
+    A hotel property (e.g., Pondicherry, Auroville, Bengaluru).
+    """
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+    name = models.CharField(max_length=100)
+    city = models.CharField(max_length=100)
+    address = models.TextField(blank=True, default="")
+    whatsapp_number = models.CharField(
+        max_length=20, 
+        blank=True, 
+        default="",
+        help_text="WhatsApp number for notifications"
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "property"
+        verbose_name_plural = "properties"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.city})"
 
 
 class Room(models.Model):
@@ -28,6 +59,13 @@ class Room(models.Model):
         primary_key=True,
         default=uuid.uuid4,
         editable=False,
+    )
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="rooms",
+        null=True,
+        blank=True,
     )
     name = models.CharField(
         max_length=100,
@@ -60,9 +98,26 @@ class Room(models.Model):
         blank=True,
         default="",
     )
+    STATUS_AVAILABLE = "available"
+    STATUS_NEEDS_CLEANING = "needs_cleaning"
+    STATUS_MAINTENANCE = "maintenance"
+
+    OPERATIONAL_STATUS_CHOICES = [
+        (STATUS_AVAILABLE, "Available"),
+        (STATUS_NEEDS_CLEANING, "Needs Cleaning"),
+        (STATUS_MAINTENANCE, "Maintenance"),
+    ]
+
     is_active = models.BooleanField(
         default=True,
         help_text="Only active rooms show up in search results.",
+    )
+    operational_status = models.CharField(
+        max_length=20,
+        choices=OPERATIONAL_STATUS_CHOICES,
+        default=STATUS_AVAILABLE,
+        db_index=True,
+        help_text="Current operational state of the room.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -74,12 +129,42 @@ class Room(models.Model):
     def __str__(self):
         return f"{self.name} ({self.city}) — ₹{self.price_per_night}/night"
 
-    @property
+    @builtins.property
     def amenities_list(self):
         """Return amenities as a list."""
         if not self.amenities:
             return []
         return [a.strip() for a in self.amenities.split(",") if a.strip()]
+
+    def calculate_price(self, check_in, check_out):
+        """
+        Calculate total price for the given dates, applying any RoomRate overrides.
+        """
+        from datetime import timedelta
+        
+        # Get all dynamic rates that overlap this booking
+        rates = self.rates.filter(
+            start_date__lt=check_out,
+            end_date__gt=check_in
+        )
+        
+        # Build a lookup for fast access
+        rate_lookup = {}
+        for r in rates:
+            current = r.start_date
+            while current <= r.end_date:
+                rate_lookup[current] = r.price
+                current += timedelta(days=1)
+                
+        total_price = 0
+        current_date = check_in
+        while current_date < check_out:
+            # Use override if exists, else base price
+            daily_price = rate_lookup.get(current_date, self.price_per_night)
+            total_price += daily_price
+            current_date += timedelta(days=1)
+            
+        return total_price
 
 
 class RoomImage(models.Model):
@@ -143,6 +228,7 @@ class Booking(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("confirmed", "Confirmed"),
+        ("completed", "Completed"),
         ("expired", "Expired"),
         ("failed", "Failed"),
         ("cancelled", "Cancelled"),
@@ -210,11 +296,11 @@ class Booking(models.Model):
     def __str__(self):
         return f"Booking: {self.user.email} -> {self.room.name} ({self.check_in} to {self.check_out}) [{self.status}]"
 
-    @property
+    @builtins.property
     def num_nights(self):
         return (self.check_out - self.check_in).days
 
-    @property
+    @builtins.property
     def is_hold_expired(self):
         """Check if the hold has passed its expiry time."""
         if self.status != "pending":
@@ -246,4 +332,60 @@ class Booking(models.Model):
         self.booking_reference = f"BK-{date_part}-{random_part}"
         self.save(update_fields=["booking_reference"])
         return self.booking_reference
+
+
+class OTABlock(models.Model):
+    """
+    Represents a room block from an OTA (Online Travel Agency) or a manual block by an admin.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="ota_blocks")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.CharField(max_length=255, blank=True, default="OTA Block")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "OTA block"
+        verbose_name_plural = "OTA blocks"
+        ordering = ["start_date"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(end_date__gte=models.F("start_date")),
+                name="ota_end_date_after_start_date",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Block for {self.room.name} ({self.start_date} to {self.end_date})"
+
+
+class RoomRate(models.Model):
+    """
+    Dynamic pricing override for a specific room and date range.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="rates")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Overridden price per night in INR.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "room rate"
+        verbose_name_plural = "room rates"
+        ordering = ["start_date"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(end_date__gte=models.F("start_date")),
+                name="rate_end_date_after_start_date",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Rate for {self.room.name}: Rs.{self.price} ({self.start_date} to {self.end_date})"
 

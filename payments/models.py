@@ -18,6 +18,7 @@ class Payment(models.Model):
         ("created", "Created"),
         ("captured", "Captured"),
         ("failed", "Failed"),
+        ("refunded", "Refunded"),
     ]
 
     id = models.UUIDField(
@@ -44,6 +45,8 @@ class Payment(models.Model):
         default="created",
         db_index=True,
     )
+    refund_id = models.CharField(max_length=100, blank=True, default="")
+    refund_status = models.CharField(max_length=50, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

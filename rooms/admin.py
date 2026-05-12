@@ -16,8 +16,15 @@ from django.utils import timezone
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Booking, Room, RoomImage
+from .models import Booking, Property, Room, RoomImage
 
+@admin.register(Property)
+class PropertyAdmin(ModelAdmin):
+    list_display = ("name", "city", "whatsapp_number", "is_active", "created_at")
+    list_filter = ("city", "is_active")
+    search_fields = ("name", "city", "whatsapp_number")
+    list_editable = ("is_active",)
+    list_per_page = 25
 
 class RoomImageInline(TabularInline):
     """Inline for uploading images directly from the Room admin page."""
@@ -43,6 +50,7 @@ class RoomImageInline(TabularInline):
 class RoomAdmin(ModelAdmin):
     list_display = (
         "name",
+        "property",
         "city",
         "room_type",
         "price_per_night",
@@ -50,15 +58,15 @@ class RoomAdmin(ModelAdmin):
         "image_count",
         "is_active",
     )
-    list_filter = ("city", "room_type", "is_active")
-    search_fields = ("name", "city", "description")
+    list_filter = ("property", "city", "room_type", "is_active")
+    search_fields = ("name", "city", "description", "property__name")
     list_editable = ("is_active", "price_per_night")
     list_per_page = 25
     inlines = [RoomImageInline]
 
     fieldsets = (
         ("Room Info", {
-            "fields": ("name", "city", "room_type", "description"),
+            "fields": ("property", "name", "city", "room_type", "description"),
         }),
         ("Pricing & Capacity", {
             "fields": ("price_per_night", "capacity"),
@@ -79,7 +87,7 @@ class RoomAdmin(ModelAdmin):
         return count
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("images")
+        return super().get_queryset(request).select_related("property").prefetch_related("images")
 
 
 @admin.register(Booking)

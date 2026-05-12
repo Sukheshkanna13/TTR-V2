@@ -20,6 +20,9 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django_q.tasks import async_task
+
+from .permissions import IsSuperAdmin
 
 from .serializers import (
     LoginSerializer,
@@ -27,6 +30,7 @@ from .serializers import (
     ResendOTPSerializer,
     UserSerializer,
     VerifyOTPSerializer,
+    EmployeeCreationSerializer,
 )
 from .utils import (
     check_login_lock,
@@ -150,6 +154,16 @@ class VerifyOTPView(APIView):
         login(request, user, backend="accounts.backends.EmailBackend")
 
         logger.info("User verified and activated: %s", email)
+
+        if user.phone:
+            async_task(
+                'core.tasks.send_whatsapp_message',
+                phone=user.phone,
+                template_name='welcome_message',
+                template_data={
+                    "name": user.full_name
+                }
+            )
 
         return Response(
             {
@@ -334,3 +348,55 @@ def login_page(request):
 def register_page(request):
     """Render the user registration page template."""
     return render(request, "accounts/register.html")
+
+
+class CreateEmployeeView(APIView):
+    """
+    POST /admin-api/employees/create/
+    
+    Super Admin only endpoint to create employee accounts.
+    """
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request):
+        serializer = EmployeeCreationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        import secrets
+        from .models import UserProfile
+        from rooms.models import Property
+
+        data = serializer.validated_data
+        
+        # Create user with a random temporary password
+        temp_password = secrets.token_urlsafe(12)
+        user = User.objects.create_user(
+            email=data['email'],
+            full_name=data['full_name'],
+            phone=data['phone'],
+            password=temp_password,
+        )
+        user.is_active = True
+        user.is_staff = True if data['role'] == 'super_admin' else False
+        user.save()
+
+        # Create user profile
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        profile.role = data['role']
+        profile.fin_level = data.get('fin_level')
+        profile.must_change_password = True
+        profile.save()
+
+        # Assign properties if provided
+        assigned_properties = data.get('assigned_properties', [])
+        if assigned_properties:
+            properties = Property.objects.filter(id__in=assigned_properties)
+            profile.assigned_properties.set(properties)
+
+        return Response({
+            "message": "Employee created successfully.",
+            "email": user.email,
+            "temporary_password": temp_password,
+            "must_change_password": True
+        }, status=status.HTTP_201_CREATED)

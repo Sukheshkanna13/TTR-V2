@@ -15,27 +15,31 @@ Phase 3 endpoints:
 import logging
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from accounts.permissions import IsEmployee
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Booking, Room
+from .models import Booking, Room, OTABlock, Property
+from payments.models import Payment
+from payments.utils import refund_razorpay_payment
 from .serializers import (
     BookingSerializer,
     HoldRoomSerializer,
     RoomSerializer,
     SearchSerializer,
+    OTABlockSerializer,
 )
 
 logger = logging.getLogger(__name__)
 
-# Hold duration in minutes
-HOLD_DURATION_MINUTES = 10
+logger = logging.getLogger(__name__)
 
 
 def get_unavailable_room_ids(check_in, check_out):
@@ -52,7 +56,7 @@ def get_unavailable_room_ids(check_in, check_out):
     """
     now = timezone.now()
 
-    return Booking.objects.filter(
+    booked_ids = Booking.objects.filter(
         check_in__lt=check_out,
         check_out__gt=check_in,
     ).filter(
@@ -62,6 +66,14 @@ def get_unavailable_room_ids(check_in, check_out):
         # Pending holds block only if they haven't expired
         Q(status="pending", hold_expires_at__gt=now)
     ).values_list("room_id", flat=True)
+
+    # Also get rooms blocked by OTA
+    ota_blocked_ids = OTABlock.objects.filter(
+        start_date__lt=check_out,
+        end_date__gt=check_in,
+    ).values_list("room_id", flat=True)
+
+    return set(list(booked_ids) + list(ota_blocked_ids))
 
 
 # =========================================================================
@@ -91,7 +103,8 @@ class SearchRoomsView(APIView):
             )
 
         data = serializer.validated_data
-        city = data["city"]
+        city = data.get("city")
+        property_id = data.get("property_id")
         check_in = data["check_in"]
         check_out = data["check_out"]
         guests = data["guests"]
@@ -109,14 +122,19 @@ class SearchRoomsView(APIView):
         # Step 1: Get IDs of rooms that are booked OR held
         unavailable_ids = get_unavailable_room_ids(check_in, check_out)
 
-        # Step 2: Active rooms in the city with enough capacity, excluding blocked ones
+        # Step 2: Active rooms with enough capacity, excluding blocked ones
         rooms = Room.objects.filter(
             is_active=True,
-            city__iexact=city,
+            operational_status="available",
             capacity__gte=guests,
         ).exclude(
             id__in=unavailable_ids,
         )
+
+        if property_id:
+            rooms = rooms.filter(property_id=property_id)
+        elif city:
+            rooms = rooms.filter(city__iexact=city)
 
         # Step 3: Apply optional filters (same query, no extra DB hits)
         if room_type:
@@ -133,7 +151,12 @@ class SearchRoomsView(APIView):
             rooms = rooms.order_by("price_per_night")
 
         # Serialize and respond
-        room_list = RoomSerializer(rooms, many=True, context={"request": request}).data
+        context = {
+            "request": request,
+            "check_in": check_in,
+            "check_out": check_out,
+        }
+        room_list = RoomSerializer(rooms, many=True, context=context).data
         num_nights = (check_out - check_in).days
 
         if not room_list:
@@ -226,7 +249,7 @@ class HoldRoomView(APIView):
 
         # Verify the room exists
         try:
-            room = Room.objects.get(id=room_id, is_active=True)
+            room = Room.objects.get(id=room_id, is_active=True, operational_status="available")
         except Room.DoesNotExist:
             return Response(
                 {"error": "Room not found or no longer available."},
@@ -240,9 +263,9 @@ class HoldRoomView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Calculate total price
+        # Calculate total price dynamically
         num_nights = (check_out - check_in).days
-        total_price = room.price_per_night * num_nights
+        total_price = room.calculate_price(check_in, check_out)
 
         # ----------------------------------------------------------------
         # DOUBLE-BOOKING PROTECTION
@@ -262,7 +285,14 @@ class HoldRoomView(APIView):
                     | Q(status="pending", hold_expires_at__gt=now)
                 )
 
-                if overlapping.exists():
+                # Lock overlapping OTA blocks
+                overlapping_blocks = OTABlock.objects.select_for_update().filter(
+                    room=room,
+                    start_date__lt=check_out,
+                    end_date__gt=check_in,
+                )
+
+                if overlapping.exists() or overlapping_blocks.exists():
                     return Response(
                         {
                             "error": "Sorry, this room was just taken for the selected dates. Please pick another room.",
@@ -272,7 +302,8 @@ class HoldRoomView(APIView):
                     )
 
                 # Room is available — create PENDING hold
-                hold_expires_at = now + timedelta(minutes=HOLD_DURATION_MINUTES)
+                hold_duration = getattr(settings, 'HOLD_DURATION_MINUTES', 10)
+                hold_expires_at = now + timedelta(minutes=hold_duration)
 
                 booking = Booking.objects.create(
                     room=room,
@@ -303,7 +334,7 @@ class HoldRoomView(APIView):
 
         return Response(
             {
-                "message": f"Room held for {HOLD_DURATION_MINUTES} minutes. Please complete payment.",
+                "message": f"Room held for {hold_duration} minutes. Please complete payment.",
                 "booking": BookingSerializer(booking).data,
             },
             status=status.HTTP_201_CREATED,
@@ -323,6 +354,12 @@ class ProcessPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_id):
+        if not settings.DEBUG:
+            return Response(
+                {"error": "This endpoint is only available in development mode."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         # Find the booking
         try:
             booking = Booking.objects.select_related("room").get(
@@ -417,6 +454,21 @@ class CancelBookingView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Process refund if confirmed
+        refund_message = ""
+        if booking.status == "confirmed":
+            payment = Payment.objects.filter(booking=booking, status="captured").first()
+            if payment and payment.razorpay_payment_id:
+                refund = refund_razorpay_payment(payment.razorpay_payment_id)
+                if refund:
+                    payment.refund_id = refund.get("id")
+                    payment.refund_status = refund.get("status")
+                    payment.status = "refunded"
+                    payment.save()
+                    refund_message = " Refund has been initiated."
+                else:
+                    refund_message = " Cancellation successful, but automatic refund failed. Please contact support."
+
         booking.status = "cancelled"
         booking.hold_expires_at = None
         booking.save(update_fields=["status", "hold_expires_at"])
@@ -425,7 +477,7 @@ class CancelBookingView(APIView):
 
         return Response(
             {
-                "message": "Booking cancelled successfully.",
+                "message": f"Booking cancelled successfully.{refund_message}",
                 "booking": BookingSerializer(booking).data,
             },
             status=status.HTTP_200_OK,
@@ -587,6 +639,112 @@ class MyBookingsView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+# ============================================================================
+# PHASE 5: OTA Calendar API
+# ============================================================================
+
+class CalendarView(APIView):
+    """
+    GET /api/properties/{id}/calendar/
+    Returns 30-day view of bookings, holds, and OTA blocks.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, property_id):
+        from datetime import timedelta
+        today = timezone.now().date()
+        end_date = today + timedelta(days=30)
+        
+        # Get rooms for this property
+        rooms = Room.objects.filter(property_id=property_id, is_active=True)
+        room_ids = rooms.values_list('id', flat=True)
+        
+        # Get bookings for these rooms
+        bookings = Booking.objects.filter(
+            room_id__in=room_ids,
+            check_in__lt=end_date,
+            check_out__gt=today,
+            status__in=['confirmed', 'pending']
+        )
+        
+        # Get OTA blocks
+        blocks = OTABlock.objects.filter(
+            room_id__in=room_ids,
+            start_date__lt=end_date,
+            end_date__gt=today
+        )
+        
+        # Format response
+        calendar_data = []
+        for room in rooms:
+            room_bookings = bookings.filter(room=room)
+            room_blocks = blocks.filter(room=room)
+            
+            events = []
+            for b in room_bookings:
+                # Only include pending if hold hasn't expired
+                if b.status == 'pending' and getattr(b, 'is_hold_expired', False):
+                    continue
+                    
+                color = 'red' if b.status == 'confirmed' else 'yellow'
+                events.append({
+                    "type": "booking",
+                    "status": "HELD" if b.status == "pending" else "CONFIRMED",
+                    "start_date": b.check_in,
+                    "end_date": b.check_out,
+                    "color": color
+                })
+                
+            for bl in room_blocks:
+                events.append({
+                    "type": "block",
+                    "id": bl.id,
+                    "start_date": bl.start_date,
+                    "end_date": bl.end_date,
+                    "reason": bl.reason,
+                    "color": "grey"
+                })
+                
+            calendar_data.append({
+                "room_id": room.id,
+                "room_name": room.name,
+                "events": events
+            })
+            
+        return Response(calendar_data)
+
+
+class BlockRoomView(APIView):
+    """
+    POST /block/
+    Employee endpoint to manually block a room.
+    """
+    permission_classes = [IsEmployee]
+
+    def post(self, request):
+        serializer = OTABlockSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UnblockRoomView(APIView):
+    """
+    POST /unblock/{id}/
+    Employee endpoint to remove a manual block.
+    """
+    permission_classes = [IsEmployee]
+
+    def post(self, request, pk):
+        try:
+            block = OTABlock.objects.get(pk=pk)
+            block.delete()
+            return Response({"message": "Block removed successfully."}, status=status.HTTP_200_OK)
+        except OTABlock.DoesNotExist:
+            return Response({"error": "Block not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 # ============================================================================

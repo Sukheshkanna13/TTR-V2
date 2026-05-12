@@ -51,7 +51,17 @@ class RoomSerializer(serializers.ModelSerializer):
             "description",
             "images",
             "primary_image",
+            "dynamic_total_price",
         ]
+
+    dynamic_total_price = serializers.SerializerMethodField()
+
+    def get_dynamic_total_price(self, obj):
+        check_in = self.context.get("check_in")
+        check_out = self.context.get("check_out")
+        if check_in and check_out:
+            return str(obj.calculate_price(check_in, check_out))
+        return None
 
     def get_primary_image(self, obj):
         """Return the URL of the primary image, or the first image, or None."""
@@ -73,7 +83,11 @@ class SearchSerializer(serializers.Serializer):
 
     city = serializers.CharField(
         max_length=100,
+        required=False,
         error_messages={"required": "City is required."},
+    )
+    property_id = serializers.UUIDField(
+        required=False,
     )
     check_in = serializers.DateField(
         error_messages={
@@ -127,6 +141,14 @@ class SearchSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"check_out": "Check-out date must be after check-in date."}
             )
+            
+        city = data.get("city")
+        property_id = data.get("property_id")
+        if not city and not property_id:
+            raise serializers.ValidationError(
+                {"non_field_errors": "Either city or property_id must be provided."}
+            )
+            
         return data
 
 
@@ -199,3 +221,35 @@ class BookingSerializer(serializers.ModelSerializer):
             "booking_reference",
             "created_at",
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        
+        # Expose pending as HELD in API to match spec terminology
+        if data.get("status") == "pending":
+            data["status"] = "HELD"
+        
+        if request and request.user.is_authenticated:
+            user = request.user
+            # Guests see their own price. Employees with Level A/B see prices.
+            if user == instance.user:
+                return data
+                
+            if hasattr(user, 'userprofile') and user.userprofile.fin_level == 'C':
+                data.pop("total_price", None)
+                data.pop("razorpay_order_id", None)
+                
+        return data
+
+class OTABlockSerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import OTABlock
+        model = OTABlock
+        fields = ['id', 'room', 'start_date', 'end_date', 'reason', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate(self, data):
+        if data['end_date'] < data['start_date']:
+            raise serializers.ValidationError({"end_date": "End date must be after or equal to start date."})
+        return data
