@@ -288,7 +288,7 @@ class Booking(models.Model):
         ordering = ["-created_at"]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(check_out__gt=models.F("check_in")),
+                condition=models.Q(check_out__gt=models.F("check_in")),
                 name="check_out_after_check_in",
             ),
         ]
@@ -351,7 +351,7 @@ class OTABlock(models.Model):
         ordering = ["start_date"]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(end_date__gte=models.F("start_date")),
+                condition=models.Q(end_date__gte=models.F("start_date")),
                 name="ota_end_date_after_start_date",
             ),
         ]
@@ -381,7 +381,7 @@ class RoomRate(models.Model):
         ordering = ["start_date"]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(end_date__gte=models.F("start_date")),
+                condition=models.Q(end_date__gte=models.F("start_date")),
                 name="rate_end_date_after_start_date",
             ),
         ]
