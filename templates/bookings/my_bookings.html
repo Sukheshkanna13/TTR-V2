@@ -85,7 +85,7 @@
   }
 
   function statusClass(s) {
-    return { pending:'tt-status-pending', confirmed:'tt-status-confirmed', cancelled:'tt-status-cancelled',
+    return { pending:'tt-status-pending', HELD:'tt-status-pending', confirmed:'tt-status-confirmed', cancelled:'tt-status-cancelled',
              expired:'tt-status-expired', failed:'tt-status-failed' }[s] || 'tt-status-completed';
   }
 
@@ -116,7 +116,7 @@
 
   function updateStats() {
     const confirmed  = allBookings.filter(b => b.status === 'confirmed').length;
-    const pending    = allBookings.filter(b => b.status === 'pending').length;
+    const pending    = allBookings.filter(b => b.status === 'pending' || b.status === 'HELD').length;
     const totalSpent = allBookings.filter(b => b.status === 'confirmed')
                                   .reduce((s, b) => s + parseFloat(b.total_price), 0);
     document.getElementById('statTotal').textContent     = allBookings.length;
@@ -142,7 +142,7 @@
     list.forEach(b => {
       const sc  = statusClass(b.status);
       let actions = '';
-      if (b.status === 'pending' && b.hold_expires_at) {
+      if ((b.status === 'pending' || b.status === 'HELD') && b.hold_expires_at) {
         actions += `<a href="${CHECKOUT_URL}?booking_id=${b.id}" class="tt-btn tt-btn-primary tt-btn-sm">Complete payment</a>`;
       }
       if (b.can_cancel) {

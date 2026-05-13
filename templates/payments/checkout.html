@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Checkout — Temples &amp; Towns{% endblock %}
 
 {% block content %}
-<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:48px 20px;">
-  <div style="width:100%;max-width:560px;">
+<div style="min-height:60vh;padding:48px 20px;background:var(--bg-soft);">
+  <div style="width:100%;max-width:640px;margin:0 auto;">
 
     <!-- Loading state -->
     <div id="loadingMsg" class="tt-loading" style="padding:60px 0;">
@@ -15,44 +16,61 @@
     <div id="bookingCard" class="hidden">
 
       <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
-        <div>
-          <div class="tt-eyebrow" style="margin-bottom:6px;">Step 2 of 2</div>
-          <h1 style="font-size:26px;font-weight:700;letter-spacing:-.025em;color:var(--ink);margin:0;">Complete your booking</h1>
+      <div style="margin-bottom:28px;">
+        <div class="tt-eyebrow" style="margin-bottom:6px;">Step 2 of 2</div>
+        <h1 class="tt-h2" style="margin:0;">Complete your booking</h1>
+      </div>
+
+      <!-- Hold active notice -->
+      <div style="background:oklch(0.97 0.03 145);border:1px solid oklch(0.88 0.08 145);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="oklch(0.5 0.15 145)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style="font-size:13px;font-weight:600;color:oklch(0.35 0.12 145);">10-minute hold active</span>
         </div>
-        <div class="tt-timer-badge">
-          ⏱ Hold expires in <span id="timer" style="margin-left:4px;">10:00</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:oklch(0.4 0.1 145);">Expires in</span>
+          <span id="timer" style="font-size:15px;font-weight:700;color:oklch(0.35 0.12 145);font-variant-numeric:tabular-nums;">10:00</span>
         </div>
       </div>
 
-      <!-- Booking summary -->
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:24px;margin-bottom:20px;">
-        <div class="tt-eyebrow" style="margin-bottom:12px;">Booking summary</div>
-        <div style="font-size:18px;font-weight:600;color:var(--ink);margin-bottom:16px;" id="roomName"></div>
-
-        <div class="tt-summary-row"><span class="lbl" style="color:var(--text-soft);">Dates</span><span class="val" id="dates"></span></div>
-        <div class="tt-summary-row"><span class="lbl" style="color:var(--text-soft);">Guests</span><span class="val" id="guests"></span></div>
-
-        <div style="border-top:1px solid var(--line);margin-top:4px;padding-top:16px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:16px;font-weight:600;color:var(--ink);">Total amount</span>
-            <span id="totalPrice" style="font-size:22px;font-weight:700;color:var(--accent);"></span>
+      <!-- Room summary card -->
+      <div id="roomSummaryCard" style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;margin-bottom:20px;display:flex;align-items:stretch;min-height:120px;">
+        <div style="width:130px;flex-shrink:0;background:var(--bg-soft);overflow:hidden;">
+          <img id="summaryRoomImg" src="" alt="Room" style="width:100%;height:100%;object-fit:cover;">
+        </div>
+        <div style="flex:1;padding:18px 20px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <div class="tt-eyebrow" style="margin-bottom:4px;">Your room</div>
+            <div id="roomName" style="font-size:17px;font-weight:600;color:var(--ink);margin-bottom:6px;"></div>
+            <div id="dates" style="font-size:13px;color:var(--text-muted);"></div>
+            <div id="guestLine" style="font-size:13px;color:var(--text-muted);margin-top:2px;"></div>
           </div>
-          <p style="font-size:12px;color:var(--text-faint);margin:6px 0 0;">Includes all taxes and fees</p>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;">
+            <span id="totalPrice" style="font-size:22px;font-weight:700;color:var(--accent);"></span>
+            <span style="font-size:12px;color:var(--text-muted);">incl. all taxes</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secure payment notice -->
+      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);">Secure payment</div>
+          <div style="font-size:12px;color:var(--text-muted);">256-bit SSL encryption · Powered by Razorpay · PCI-DSS compliant</div>
         </div>
       </div>
 
       <!-- Error + Pay button -->
-      <div id="errorBox" class="alert hidden" style="margin-bottom:16px;"></div>
+      <div id="errorBox" class="tt-alert hidden" style="margin-bottom:16px;"></div>
 
-      <button id="payBtn" onclick="processPayment()" class="tt-btn tt-btn-primary tt-w-full tt-btn-lg">
+      <button id="payBtn" onclick="processPayment()" class="tt-btn tt-btn-primary tt-w-full tt-btn-lg" style="gap:10px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
         Pay now with Razorpay
       </button>
 
-      <p style="text-align:center;font-size:12px;color:var(--text-faint);margin-top:12px;display:flex;align-items:center;justify-content:center;gap:6px;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Secured by Razorpay · 256-bit SSL encryption
+      <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:14px;">
+        By completing this booking you agree to our cancellation and refund policy.
       </p>
 
     </div>
@@ -74,6 +92,15 @@
   let holdExpiresAt = null;
   let bookingData   = null;
 
+  function getRoomImage(roomType) {
+    const map = {
+      'single':  'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80',
+      'double':  'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=400&q=80',
+      'deluxe':  'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&q=80',
+    };
+    return map[roomType] || 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400&q=80';
+  }
+
   async function loadBooking() {
     if (!bookingId) {
       document.getElementById('loadingMsg').innerHTML = '<p style="color:var(--text-muted);">Invalid booking ID.</p>';
@@ -88,16 +115,24 @@
       }
       const b = data.booking;
       bookingData = b;
-      if (b.status !== 'pending') {
+      if (b.status !== 'pending' && b.status !== 'HELD') {
         document.getElementById('loadingMsg').innerHTML = `<p style="color:var(--text-muted);">Booking is no longer pending (status: ${b.status}).</p>`;
         return;
       }
       document.getElementById('loadingMsg').classList.add('hidden');
       document.getElementById('bookingCard').classList.remove('hidden');
+
+      // Room summary card
       document.getElementById('roomName').textContent  = b.room.name;
       document.getElementById('dates').textContent     = `${b.check_in} → ${b.check_out} (${b.num_nights} night${b.num_nights > 1 ? 's' : ''})`;
-      document.getElementById('guests').textContent    = `${b.guests} guest${b.guests > 1 ? 's' : ''}`;
+      document.getElementById('guestLine').textContent = `${b.guests} guest${b.guests > 1 ? 's' : ''}`;
       document.getElementById('totalPrice').textContent = `₹${Number(b.total_price).toLocaleString('en-IN')}`;
+
+      // Room image
+      const imgEl = document.getElementById('summaryRoomImg');
+      imgEl.src = getRoomImage(b.room.room_type || '');
+      imgEl.alt = b.room.name;
+
       holdExpiresAt = new Date(b.hold_expires_at).getTime();
       startTimer();
     } catch {
@@ -112,6 +147,7 @@
       if (dist < 0) {
         clearInterval(interval);
         timerEl.textContent = 'EXPIRED';
+        timerEl.style.color = 'oklch(0.5 0.2 25)';
         document.getElementById('payBtn').disabled = true;
         document.getElementById('errorBox').textContent = 'Hold expired. Please search again.';
         document.getElementById('errorBox').classList.remove('hidden');
@@ -120,6 +156,7 @@
       const m = Math.floor((dist % 3600000) / 60000);
       const s = Math.floor((dist % 60000) / 1000);
       timerEl.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+      if (dist < 120000) timerEl.style.color = 'oklch(0.5 0.2 25)';
     }, 1000);
   }
 
@@ -175,7 +212,10 @@
         },
         prefill: { name: 'Guest', email: '', contact: '' },
         theme:   { color: '#0a1628' },
-        modal:   { ondismiss: () => { payBtn.disabled = false; payBtn.textContent = 'Pay now with Razorpay'; } }
+        modal:   { ondismiss: () => {
+          payBtn.disabled = false;
+          payBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay now with Razorpay`;
+        }}
       };
 
       const rzp = new Razorpay(options);
@@ -183,7 +223,7 @@
         errorBox.textContent = 'Payment failed or was cancelled.';
         errorBox.classList.remove('hidden');
         payBtn.disabled = false;
-        payBtn.textContent = 'Pay now with Razorpay';
+        payBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay now with Razorpay`;
       });
       rzp.open();
 
@@ -191,7 +231,7 @@
       errorBox.textContent = err.message || 'Network error.';
       errorBox.classList.remove('hidden');
       payBtn.disabled = false;
-      payBtn.textContent = 'Pay now with Razorpay';
+      payBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay now with Razorpay`;
     }
   }
 

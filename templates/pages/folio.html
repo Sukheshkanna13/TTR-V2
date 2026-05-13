@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Guest Folio — Temples & Towns{% endblock %}
+
+{% block content %}
+
+{% if not user.is_authenticated %}
+<script>window.location.href = "{% url 'accounts:login-page' %}";</script>
+{% endif %}
+
+<!-- ============================================================
+     PAGE HEADER
+     ============================================================ -->
+<section class="tt-section-sm" style="border-bottom:1px solid var(--line);padding-bottom:2.5rem;margin-bottom:0;">
+  <div class="tt-page">
+    <p class="tt-eyebrow" style="margin-bottom:0.75rem;">GUEST FOLIO</p>
+    <h1 class="tt-h1" style="margin-bottom:0.25rem;">
+      Welcome back, <em class="tt-italic-soft">{{ user.full_name }}</em>
+    </h1>
+    <p class="tt-sub tt-muted" style="margin-top:0.5rem;">Your stays, rewards, and profile — all in one place.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATS BAR
+     ============================================================ -->
+<section style="background:var(--bg-soft);border-bottom:1px solid var(--line);padding:2rem 0;">
+  <div class="tt-page">
+    <div class="tt-stats-grid">
+      <div class="tt-stat-card">
+        <div class="tt-stat-num">{{ total_bookings }}</div>
+        <div class="tt-stat-label">Total Bookings</div>
+      </div>
+      <div class="tt-stat-card">
+        <div class="tt-stat-num">{{ confirmed_count }}</div>
+        <div class="tt-stat-label">Confirmed</div>
+      </div>
+      <div class="tt-stat-card">
+        <div class="tt-stat-num">{{ nights_stayed }}</div>
+        <div class="tt-stat-label">Nights Stayed</div>
+      </div>
+      <div class="tt-stat-card">
+        <div class="tt-stat-num">₹{{ total_spent|floatformat:0 }}</div>
+        <div class="tt-stat-label">Total Spent</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     MAIN CONTENT (two-column: bookings + sidebar)
+     ============================================================ -->
+<section class="tt-section-sm">
+  <div class="tt-page">
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:3rem;align-items:start;">
+
+      <!-- LEFT: Recent Bookings -->
+      <div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.5rem;">
+          <h2 class="tt-h2" style="margin:0;">My Stays</h2>
+          <a href="{% url 'core:home' %}" class="tt-btn tt-btn-ghost tt-btn-sm">Find a room</a>
+        </div>
+        <div class="tt-hr" style="margin-bottom:1.75rem;"></div>
+
+        {% if bookings %}
+        {% for booking in bookings %}
+        <div class="tt-card"
+          style="border-left:4px solid {% if booking.status == 'confirmed' %}#16a34a{% elif booking.status == 'completed' %}#2563eb{% elif booking.status == 'pending' %}#d97706{% elif booking.status == 'cancelled' %}#dc2626{% else %}#9ca3af{% endif %};margin-bottom:1.25rem;padding:1.5rem 1.5rem 1.5rem 1.75rem;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            <!-- Left: room + property info -->
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+                <span class="tt-card-name" style="margin:0;">{{ booking.room.name }}</span>
+                {% if booking.status == 'confirmed' %}
+                <span
+                  style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.04em;background:#dcfce7;color:#166534;text-transform:uppercase;">Confirmed</span>
+                {% elif booking.status == 'completed' %}
+                <span
+                  style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.04em;background:#dbeafe;color:#1d4ed8;text-transform:uppercase;">Completed</span>
+                {% elif booking.status == 'pending' %}
+                <span
+                  style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.04em;background:#fef3c7;color:#92400e;text-transform:uppercase;">HELD</span>
+                {% elif booking.status == 'cancelled' %}
+                <span
+                  style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.04em;background:#fee2e2;color:#991b1b;text-transform:uppercase;">Cancelled</span>
+                {% elif booking.status == 'expired' %}
+                <span
+                  style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.04em;background:#f3f4f6;color:#6b7280;text-transform:uppercase;">Expired</span>
+                {% else %}
+                <span
+                  style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.04em;background:#f3f4f6;color:#6b7280;text-transform:uppercase;">{{
+                  booking.status|capfirst }}</span>
+                {% endif %}
+              </div>
+
+              <div class="tt-card-area" style="margin-bottom:0.85rem;">
+                {{ booking.room.property.name }}{% if booking.room.city %} &middot; {{ booking.room.city }}{% endif %}
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;gap:1.25rem;">
+                <div>
+                  <div class="tt-muted"
+                    style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Check-in
+                  </div>
+                  <div style="font-size:14px;font-weight:500;color:var(--ink);">{{ booking.check_in|date:"j M Y" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="tt-muted"
+                    style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Check-out
+                  </div>
+                  <div style="font-size:14px;font-weight:500;color:var(--ink);">{{ booking.check_out|date:"j M Y" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="tt-muted"
+                    style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Duration
+                  </div>
+                  <div style="font-size:14px;font-weight:500;color:var(--ink);">{{ booking.num_nights }} night{{
+                    booking.num_nights|pluralize }} &middot; {{ booking.guests }} guest{{ booking.guests|pluralize }}
+                  </div>
+                </div>
+              </div>
+
+              {% if booking.booking_reference %}
+              <div class="tt-muted" style="font-size:12px;margin-top:0.75rem;">
+                Ref: <span style="font-family:monospace;letter-spacing:.04em;">{{ booking.booking_reference }}</span>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Right: price -->
+            <div style="text-align:right;white-space:nowrap;">
+              <div class="tt-card-price" style="font-size:1.25rem;">₹{{ booking.total_price|floatformat:0 }}</div>
+              <div class="tt-muted" style="font-size:12px;margin-top:2px;">total</div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+        {% else %}
+        <!-- Empty state -->
+        <div style="text-align:center;padding:4rem 2rem;border:1px dashed var(--line);border-radius:var(--r-lg);">
+          <p class="tt-italic-soft" style="font-size:1.5rem;color:var(--text-soft);margin-bottom:0.75rem;">No stays yet
+          </p>
+          <p class="tt-muted" style="margin-bottom:1.5rem;">Your journey starts here.</p>
+          <a href="{% url 'core:home' %}" class="tt-btn tt-btn-primary">Find a stay &rarr;</a>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- RIGHT SIDEBAR -->
+      <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+        <!-- WAYFARER REWARDS CARD -->
+        <div class="tt-card" style="padding:1.75rem;">
+          <p class="tt-eyebrow" style="margin-bottom:1rem;">WAYFARER REWARDS</p>
+
+          {% if nights_stayed < 5 %}
+            <!-- Inline tier block -->
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+              <div style="width:42px;height:42px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:1.25rem;">🥉</div>
+              <div>
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:1px;">Current Tier</div>
+                <div style="font-weight:700;color:#b45309;letter-spacing:.04em;">BRONZE</div>
+              </div>
+            </div>
+            <div style="margin-bottom:1rem;">
+              <div style="font-size:1.5rem;font-weight:700;color:var(--ink);">{{ nights_stayed|default:"0" }} <span style="font-size:0.85rem;font-weight:400;color:var(--text-soft);">pts earned</span></div>
+              <div class="tt-muted" style="font-size:13px;">{{ nights_stayed|default:0 }} nights &times; 100 pts</div>
+            </div>
+            <!-- Progress to Silver (500 pts = 5 nights) -->
+            <div style="margin-bottom:1.25rem;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px;">
+                <span>{{ nights_stayed|default:0 }} pts</span><span>500 pts (Silver)</span>
+              </div>
+              <div style="height:6px;background:var(--line);border-radius:100px;overflow:hidden;">
+                <div style="height:100%;width:{% widthratio nights_stayed 5 100 %}%;max-width:100%;background:#b45309;border-radius:100px;transition:width .4s;"></div>
+              </div>
+            </div>
+
+          {% elif nights_stayed < 15 %}
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+              <div style="width:42px;height:42px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:1.25rem;">🥈</div>
+              <div>
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:1px;">Current Tier</div>
+                <div style="font-weight:700;color:#64748b;letter-spacing:.04em;">SILVER</div>
+              </div>
+            </div>
+            <div style="margin-bottom:1rem;">
+              <div style="font-size:1.5rem;font-weight:700;color:var(--ink);">{{ nights_stayed }} <span style="font-size:0.85rem;font-weight:400;color:var(--text-soft);">pts earned</span></div>
+              <div class="tt-muted" style="font-size:13px;">{{ nights_stayed }} nights &times; 100 pts</div>
+            </div>
+            <!-- Progress to Gold (1500 pts = 15 nights) -->
+            <div style="margin-bottom:1.25rem;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px;">
+                <span>{{ nights_stayed|default:0 }} pts</span><span>1500 pts (Gold)</span>
+              </div>
+              <div style="height:6px;background:var(--line);border-radius:100px;overflow:hidden;">
+                <div style="height:100%;width:{% widthratio nights_stayed 15 100 %}%;max-width:100%;background:#64748b;border-radius:100px;transition:width .4s;"></div>
+              </div>
+            </div>
+
+          {% else %}
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+          <div
+            style="width:42px;height:42px;border-radius:50%;background:#fefce8;display:flex;align-items:center;justify-content:center;font-size:1.25rem;">
+            🥇</div>
+          <div>
+            <div
+              style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:1px;">
+              Current Tier</div>
+            <div style="font-weight:700;color:#a16207;letter-spacing:.04em;">GOLD</div>
+          </div>
+        </div>
+        <div style="margin-bottom:1.25rem;">
+          <div style="font-size:1.5rem;font-weight:700;color:var(--ink);">{{ nights_stayed }} <span
+              style="font-size:0.85rem;font-weight:400;color:var(--text-soft);">pts earned</span></div>
+          <div class="tt-muted" style="font-size:13px;">{{ nights_stayed }} nights &times; 100 pts</div>
+        </div>
+        <div
+          style="background:#fefce8;border-radius:var(--r-sm);padding:0.6rem 0.875rem;font-size:13px;color:#a16207;font-weight:500;margin-bottom:1.25rem;">
+          You're at our highest tier. Enjoy 12% off every stay.
+        </div>
+        {% endif %}
+
+        <!-- Tier benefits table -->
+        <div class="tt-hr" style="margin:1rem 0;"></div>
+        <div
+          style="font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:0.75rem;">
+          Tier Benefits</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--line);">
+              <th style="text-align:left;padding:6px 0;font-weight:600;color:var(--text-soft);">Tier</th>
+              <th style="text-align:center;padding:6px 0;font-weight:600;color:var(--text-soft);">From</th>
+              <th style="text-align:right;padding:6px 0;font-weight:600;color:var(--text-soft);">Benefit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line);">
+              <td style="padding:8px 0;color:#b45309;font-weight:600;">Bronze</td>
+              <td style="padding:8px 0;text-align:center;color:var(--text-muted);">0 pts</td>
+              <td style="padding:8px 0;text-align:right;color:var(--ink);">Base rate</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line);">
+              <td style="padding:8px 0;color:#64748b;font-weight:600;">Silver</td>
+              <td style="padding:8px 0;text-align:center;color:var(--text-muted);">500 pts</td>
+              <td style="padding:8px 0;text-align:right;color:var(--ink);">5% off</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;color:#a16207;font-weight:600;">Gold</td>
+              <td style="padding:8px 0;text-align:center;color:var(--text-muted);">1500 pts</td>
+              <td style="padding:8px 0;text-align:right;color:var(--ink);">12% off</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PROFILE CARD -->
+      <div class="tt-card" style="padding:1.75rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+          <p class="tt-eyebrow" style="margin:0;">MY PROFILE</p>
+          <a href="#" class="tt-btn tt-btn-ghost tt-btn-sm" style="font-size:12px;">Edit</a>
+        </div>
+        <div class="tt-hr" style="margin-bottom:1.25rem;"></div>
+        <div style="display:flex;flex-direction:column;gap:0.875rem;">
+          <div>
+            <div
+              style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:3px;">
+              Full Name</div>
+            <div style="font-size:14px;font-weight:500;color:var(--ink);">{{ user.full_name }}</div>
+          </div>
+          <div>
+            <div
+              style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:3px;">
+              Email</div>
+            <div style="font-size:14px;color:var(--ink);">{{ user.email }}</div>
+          </div>
+          {% if user.phone %}
+          <div>
+            <div
+              style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:3px;">
+              Phone</div>
+            <div style="font-size:14px;color:var(--ink);">{{ user.phone }}</div>
+          </div>
+          {% endif %}
+          <div>
+            <div
+              style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:3px;">
+              Member Since</div>
+            <div style="font-size:14px;color:var(--ink);">{{ user.date_joined|date:"F Y" }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- /RIGHT SIDEBAR -->
+
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     CTA SECTION
+     ============================================================ -->
+<section style="background:var(--bg-soft);border-top:1px solid var(--line);padding:3.5rem 0;margin-top:2rem;">
+  <div class="tt-page" style="text-align:center;">
+    <p class="tt-eyebrow" style="margin-bottom:0.75rem;">PLAN YOUR NEXT VISIT</p>
+    <h2 class="tt-h2" style="margin-bottom:0.5rem;">Ready for your next stay?</h2>
+    <p class="tt-sub tt-muted" style="margin-bottom:1.75rem;">Discover heritage havens across Pondicherry, Bengaluru,
+      and beyond.</p>
+    <a href="{% url 'core:home' %}" class="tt-btn tt-btn-primary">Find a room &rarr;</a>
+  </div>
+</section>
+
+{% endblock %}

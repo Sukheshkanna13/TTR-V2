@@ -80,47 +80,68 @@ def get_unavailable_room_ids(check_in, check_out):
 
 class SearchRoomsView(APIView):
     """
-    GET /rooms/search/
+    GET  /rooms/search/?check_in=&check_out=&city=&guests=   — URL-param search (homepage redirect)
+    POST /rooms/search/  with FormData{check_in, check_out, city, guests, ...} + X-CSRFToken header
 
-    Search for available rooms with filters and sorting.
-    All filtering happens in a single database query.
-
-    Required params: city, check_in, check_out, guests
-    Optional params: room_type, min_price, max_price, sort
+    Both methods share the same business logic via _handle_search().
+    guests defaults to 1 when omitted or zero — never an error.
+    city and property_id are both optional; omitting both returns all active rooms.
     """
 
     permission_classes = [AllowAny]
 
     def get(self, request):
-        serializer = SearchSerializer(data=request.query_params)
+        # Form data comes as URL query params (redirect from homepage search form)
+        return self._handle_search(request, request.query_params)
+
+    def post(self, request):
+        # Form data comes in request body as application/x-www-form-urlencoded or JSON.
+        # CSRF token is validated automatically by Django's CSRF middleware via the
+        # X-CSRFToken header that the frontend sends with every POST.
+        return self._handle_search(request, request.data)
+
+    def _handle_search(self, request, source_data):
+        serializer = SearchSerializer(data=source_data)
 
         if not serializer.is_valid():
+            # Return human-readable errors — flatten nested dicts for the frontend
+            flat_errors = {}
+            for field, msgs in serializer.errors.items():
+                if isinstance(msgs, list):
+                    flat_errors[field] = msgs[0] if msgs else "Invalid value."
+                elif isinstance(msgs, dict):
+                    # nested validation error (e.g. non_field_errors)
+                    for k, v in msgs.items():
+                        flat_errors[k] = v[0] if isinstance(v, list) else str(v)
+                else:
+                    flat_errors[field] = str(msgs)
             return Response(
-                {"errors": serializer.errors},
+                {"errors": flat_errors, "message": "Please fix the highlighted fields."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         data = serializer.validated_data
-        city = data.get("city")
+        city        = data.get("city")
         property_id = data.get("property_id")
-        check_in = data["check_in"]
-        check_out = data["check_out"]
-        guests = data["guests"]
+        check_in    = data["check_in"]
+        check_out   = data["check_out"]
+        # guests is always at least 1 after serializer validation
+        guests      = max(1, data.get("guests", 1))
 
         # Optional filters
         room_type = data.get("room_type")
         min_price = data.get("min_price")
         max_price = data.get("max_price")
-        sort = data.get("sort")
+        sort      = data.get("sort")
 
         # ----------------------------------------------------------------
-        # SINGLE QUERY: find available rooms
+        # SINGLE QUERY: find available rooms across requested dates
         # ----------------------------------------------------------------
 
-        # Step 1: Get IDs of rooms that are booked OR held
+        # Step 1: rooms blocked by confirmed bookings, active holds, or OTA blocks
         unavailable_ids = get_unavailable_room_ids(check_in, check_out)
 
-        # Step 2: Active rooms with enough capacity, excluding blocked ones
+        # Step 2: active, available rooms with sufficient capacity
         rooms = Room.objects.filter(
             is_active=True,
             operational_status="available",
@@ -129,12 +150,17 @@ class SearchRoomsView(APIView):
             id__in=unavailable_ids,
         )
 
-        if property_id:
+        # Step 3: scope to property > city > all (in that priority order)
+        # We treat property_id='0' or empty as "All Properties"
+        is_all_properties = not property_id or str(property_id).lower() in ["0", "all", "none", ""]
+        
+        if not is_all_properties:
             rooms = rooms.filter(property_id=property_id)
         elif city:
             rooms = rooms.filter(city__iexact=city)
+        # else: no scope — return all cities/properties
 
-        # Step 3: Apply optional filters (same query, no extra DB hits)
+        # Step 4: apply optional refinement filters (no extra DB round-trips)
         if room_type:
             rooms = rooms.filter(room_type=room_type)
         if min_price is not None:
@@ -142,25 +168,21 @@ class SearchRoomsView(APIView):
         if max_price is not None:
             rooms = rooms.filter(price_per_night__lte=max_price)
 
-        # Step 4: Apply sorting
+        # Step 5: sorting
         if sort == "price_desc":
             rooms = rooms.order_by("-price_per_night")
         else:
             rooms = rooms.order_by("price_per_night")
 
-        # Serialize and respond
-        context = {
-            "request": request,
-            "check_in": check_in,
-            "check_out": check_out,
-        }
-        room_list = RoomSerializer(rooms, many=True, context=context).data
+        context = {"request": request, "check_in": check_in, "check_out": check_out}
+        room_list  = RoomSerializer(rooms, many=True, context=context).data
         num_nights = (check_out - check_in).days
 
+        location_label = city or "All locations"
         if not room_list:
             return Response(
                 {
-                    "message": "No rooms available for these dates. Try different dates or a different city.",
+                    "message": f"No rooms available in {location_label} for those dates. Try adjusting your dates or destination.",
                     "rooms": [],
                     "search": {
                         "city": city,
@@ -175,7 +197,7 @@ class SearchRoomsView(APIView):
 
         return Response(
             {
-                "message": f"{len(room_list)} room(s) found.",
+                "message": f"{len(room_list)} room{'s' if len(room_list) != 1 else ''} available in {location_label}.",
                 "rooms": room_list,
                 "search": {
                     "city": city,
