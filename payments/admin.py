@@ -1,15 +1,14 @@
 """
-Admin configuration for payments with django-unfold.
+Admin configuration for payments.
 """
 
 from django.contrib import admin
-from unfold.admin import ModelAdmin
 
 from .models import Payment
 
 
 @admin.register(Payment)
-class PaymentAdmin(ModelAdmin):
+class PaymentAdmin(admin.ModelAdmin):
     list_display = (
         "razorpay_order_id",
         "razorpay_payment_id",

@@ -13,7 +13,7 @@ Phase 3 endpoints:
 """
 
 import logging
-from datetime import timedelta
+from datetime import datetime, time as dt_time, timedelta
 
 from django.conf import settings
 from django.db import transaction
@@ -36,8 +36,6 @@ from .serializers import (
     SearchSerializer,
     OTABlockSerializer,
 )
-
-logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -587,8 +585,6 @@ class MyBookingsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from datetime import timedelta as td
-
         all_bookings = Booking.objects.select_related("room").filter(
             user=request.user,
         ).order_by("-created_at")
@@ -599,7 +595,7 @@ class MyBookingsView(APIView):
 
         # Re-fetch after potential status changes
         today = timezone.now().date()
-        cutoff_24h = timezone.now() + td(hours=24)
+        cutoff_24h = timezone.now() + timedelta(hours=24)
 
         upcoming = Booking.objects.select_related("room").filter(
             user=request.user,
@@ -619,7 +615,7 @@ class MyBookingsView(APIView):
                 can_cancel = (
                     b.status in ("pending", "confirmed")
                     and timezone.make_aware(
-                        timezone.datetime.combine(b.check_in, timezone.datetime.min.time())
+                        datetime.combine(b.check_in, dt_time.min)
                     ) > cutoff_24h
                 )
                 data["can_cancel"] = can_cancel

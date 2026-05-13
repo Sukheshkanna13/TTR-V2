@@ -54,79 +54,14 @@ SITE_ID = 1
 
 
 # =============================================================================
-# DJANGO-UNFOLD ADMIN THEME
+# ADMIN CUSTOMISATION
 # =============================================================================
 
-UNFOLD = {
-    "SITE_TITLE": "Hotel Booking Admin",
-    "SITE_HEADER": "Hotel Booking",
-    "SITE_SUBHEADER": "Management Dashboard",
-    "DASHBOARD_CALLBACK": "hotel_booking.dashboard.dashboard_callback",
-    "SIDEBAR": {
-        "navigation": [
-            {
-                "title": "Dashboard",
-                "items": [
-                    {
-                        "title": "Home",
-                        "icon": "home",
-                        "link": "/admin/",
-                    },
-                ],
-            },
-            {
-                "title": "Bookings & Payments",
-                "items": [
-                    {
-                        "title": "Bookings",
-                        "icon": "book_online",
-                        "link": "/admin/rooms/booking/",
-                    },
-                    {
-                        "title": "Payments",
-                        "icon": "payments",
-                        "link": "/admin/payments/payment/",
-                    },
-                ],
-            },
-            {
-                "title": "Hotel",
-                "items": [
-                    {
-                        "title": "Properties",
-                        "icon": "business",
-                        "link": "/admin/rooms/property/",
-                    },
-                    {
-                        "title": "Rooms",
-                        "icon": "hotel",
-                        "link": "/admin/rooms/room/",
-                    },
-                ],
-            },
-            {
-                "title": "Users & Auth",
-                "items": [
-                    {
-                        "title": "Users",
-                        "icon": "people",
-                        "link": "/admin/accounts/user/",
-                    },
-                    {
-                        "title": "OTP Codes",
-                        "icon": "pin",
-                        "link": "/admin/accounts/otp/",
-                    },
-                    {
-                        "title": "Login Attempts",
-                        "icon": "security",
-                        "link": "/admin/accounts/loginattempt/",
-                    },
-                ],
-            },
-        ],
-    },
-}
+# Customise the standard Django admin site header/title
+from django.contrib import admin as _admin  # noqa: E402 — imported here to avoid circular issues at module level
+_admin.AdminSite.site_header  = "Temples & Towns"
+_admin.AdminSite.site_title   = "T&T Admin"
+_admin.AdminSite.index_title  = "Management Dashboard"
 
 
 # =============================================================================
@@ -201,10 +136,10 @@ AUTHENTICATION_BACKENDS = [
 
 # Allauth Settings
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_VERIFICATION = 'none' # We handle OTP separately
+# allauth ≥65 API
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"  # OTP handled separately
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
