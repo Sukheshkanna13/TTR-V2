@@ -9,8 +9,7 @@ Provides:
 """
 
 from django.contrib import admin
-from django.db.models import Count
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 
 from .models import Booking, OTABlock, Property, Room, RoomImage, RoomRate
 
@@ -82,7 +81,7 @@ class RoomAdmin(admin.ModelAdmin):
     def image_count(self, obj):
         count = obj.images.count()
         if count == 0:
-            return format_html('<span style="color: #ef4444;">0 ⚠</span>')
+            return mark_safe('<span style="color: #ef4444;">0 ⚠</span>')
         return count
 
     def get_queryset(self, request):
