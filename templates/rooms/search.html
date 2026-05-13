@@ -1,160 +1,183 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Search Results - GrandStay{% endblock %}
-
-{% block extra_css %}
-<style>
-    .search-layout { display: grid; grid-template-columns: 280px 1fr; gap: 2rem; margin-top: 2rem; }
-    .sidebar { background: var(--surface); padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); height: fit-content; position: sticky; top: 2rem; }
-    .room-card { display: flex; gap: 1.5rem; }
-    .room-info { flex: 1; }
-    .room-price { text-align: right; min-width: 150px; display: flex; flex-direction: column; justify-content: center; align-items: flex-end;}
-    .price-text { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
-    .results-grid { display: grid; gap: 1.5rem; }
-
-    @media (max-width: 768px) {
-        .search-layout { grid-template-columns: 1fr; }
-        .room-card { flex-direction: column; }
-        .room-price { text-align: left; align-items: flex-start; }
-        .sidebar { position: static; }
-    }
-</style>
-{% endblock %}
+{% block title %}Search Results — Temples &amp; Towns{% endblock %}
 
 {% block content %}
-    <div class="container search-layout">
-        <aside class="sidebar">
-            <h3 style="margin-bottom: 1.5rem; font-size: 1.2rem;">Filter Results</h3>
-            <form id="filterForm">
-                <div class="form-group">
-                    <label>Min Price (Rs.)</label>
-                    <input type="number" id="min_price" name="min_price" placeholder="e.g. 1000">
-                </div>
-                <div class="form-group">
-                    <label>Max Price (Rs.)</label>
-                    <input type="number" id="max_price" name="max_price" placeholder="e.g. 10000">
-                </div>
-                <div class="form-group">
-                    <label>Room Type</label>
-                    <select id="room_type" name="room_type">
-                        <option value="">All Types</option>
-                        <option value="standard">Standard</option>
-                        <option value="deluxe">Deluxe</option>
-                        <option value="suite">Suite</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Sort By</label>
-                    <select id="sort" name="sort">
-                        <option value="">Recommended</option>
-                        <option value="price_asc">Price: Low to High</option>
-                        <option value="price_desc">Price: High to Low</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Apply Filters</button>
-            </form>
-        </aside>
+<div class="tt-page">
+  <div class="tt-results-layout">
 
-        <main>
-            <h2 id="searchTitle" style="margin-bottom: 1.5rem;">Loading results...</h2>
-            <div id="errorBox" class="alert hidden"></div>
-            <div id="results" class="results-grid"></div>
-        </main>
-    </div>
+    <!-- Filter sidebar -->
+    <aside class="tt-sidebar">
+      <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:20px;">Filter stays</div>
+      <form id="filterForm">
+        <div class="tt-field" style="margin-bottom:16px;">
+          <label class="tt-field-label">Min price (₹)</label>
+          <input class="tt-input" type="number" id="min_price" name="min_price" placeholder="e.g. 1,000">
+        </div>
+        <div class="tt-field" style="margin-bottom:16px;">
+          <label class="tt-field-label">Max price (₹)</label>
+          <input class="tt-input" type="number" id="max_price" name="max_price" placeholder="e.g. 10,000">
+        </div>
+        <div class="tt-field" style="margin-bottom:16px;">
+          <label class="tt-field-label">Room type</label>
+          <select class="tt-select" id="room_type" name="room_type">
+            <option value="">All types</option>
+            <option value="standard">Standard</option>
+            <option value="deluxe">Deluxe</option>
+            <option value="suite">Suite</option>
+          </select>
+        </div>
+        <div class="tt-field" style="margin-bottom:24px;">
+          <label class="tt-field-label">Sort by</label>
+          <select class="tt-select" id="sort" name="sort">
+            <option value="">Recommended</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+          </select>
+        </div>
+        <button type="submit" class="tt-btn tt-btn-primary tt-w-full">Apply filters</button>
+      </form>
+
+      <div class="tt-hr"></div>
+      <a href="{% url 'core:home' %}" class="tt-btn tt-btn-ghost tt-w-full tt-btn-sm">← New search</a>
+    </aside>
+
+    <!-- Results -->
+    <main>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+        <h2 id="searchTitle" class="tt-h3" style="margin:0;">Loading…</h2>
+      </div>
+      <div id="errorBox" class="alert hidden" style="margin-bottom:20px;"></div>
+      <div id="results" style="display:flex;flex-direction:column;gap:16px;"></div>
+    </main>
+
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        const ROOM_DETAIL_URL = "{% url 'rooms:room-detail-page' %}";
-        const SEARCH_API_URL = "{% url 'rooms:search' %}";
-        const HOLD_API_URL = "{% url 'bookings:hold' %}";
-        const LOGIN_PAGE_URL = "{% url 'accounts:login-page' %}";
-        const CHECKOUT_URL = "{% url 'payments:checkout-page' %}";
+<script>
+  const ROOM_DETAIL_URL = "{% url 'rooms:room-detail-page' %}";
+  const SEARCH_API_URL  = "{% url 'rooms:search' %}";
+  const CHECKOUT_URL    = "{% url 'payments:checkout-page' %}";
+  const LOGIN_PAGE_URL  = "{% url 'accounts:login-page' %}";
 
-        const params = new URLSearchParams(window.location.search);
-        let searchParams = {
-            city: params.get('city'),
-            check_in: params.get('check_in'),
-            check_out: params.get('check_out'),
-            guests: params.get('guests')
+  const urlParams  = new URLSearchParams(window.location.search);
+  let searchParams = {
+    city:     urlParams.get('city'),
+    check_in: urlParams.get('check_in'),
+    check_out: urlParams.get('check_out'),
+    guests:   urlParams.get('guests')
+  };
+
+  document.getElementById('filterForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    ['min_price','max_price','room_type','sort'].forEach(k => {
+      const v = fd.get(k);
+      if (v) searchParams[k] = v; else delete searchParams[k];
+    });
+    loadRooms();
+  });
+
+  function roomDetailUrl(roomId) {
+    return `${ROOM_DETAIL_URL}?id=${roomId}&check_in=${searchParams.check_in}&check_out=${searchParams.check_out}&guests=${searchParams.guests}`;
+  }
+
+  function badgeColor(type) {
+    return { standard:'oklch(0.92 0.05 230)', deluxe:'oklch(0.92 0.06 290)', suite:'oklch(0.92 0.06 75)' }[type] || 'var(--bg-soft)';
+  }
+
+  async function loadRooms() {
+    const resultsDiv = document.getElementById('results');
+    const errorBox   = document.getElementById('errorBox');
+    resultsDiv.innerHTML = `
+      <div class="tt-loading">
+        <div class="tt-spinner"></div>
+        <p>Finding the best rooms for you…</p>
+      </div>`;
+    errorBox.classList.add('hidden');
+
+    try {
+      const res  = await fetch(`${SEARCH_API_URL}?${new URLSearchParams(searchParams)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        errorBox.textContent = 'Error: ' + JSON.stringify(data.errors || data);
+        errorBox.classList.remove('hidden');
+        resultsDiv.innerHTML = '';
+        return;
+      }
+
+      document.getElementById('searchTitle').textContent = data.message;
+      resultsDiv.innerHTML = '';
+
+      if (data.rooms.length === 0) {
+        resultsDiv.innerHTML = `
+          <div class="tt-empty">
+            <div class="icon">🔍</div>
+            <h3>No rooms found</h3>
+            <p>Try adjusting your dates, destination, or filters.</p>
+            <a href="{% url 'core:home' %}" class="tt-btn tt-btn-primary tt-btn-sm">Back to search</a>
+          </div>`;
+        return;
+      }
+
+      data.rooms.forEach(room => {
+        const detailUrl = roomDetailUrl(room.id);
+        const amenityChips = room.amenities_list.slice(0,4)
+          .map(a => `<span class="tt-chip tt-chip-tonal" style="font-size:12px;padding:5px 10px;">${a}</span>`)
+          .join('');
+        const extra = room.amenities_list.length > 4
+          ? `<span style="font-size:12px;color:var(--accent);font-weight:500;padding:5px 4px;">+${room.amenities_list.length - 4} more</span>`
+          : '';
+
+        const card = document.createElement('div');
+        card.className = 'tt-card tt-room-card';
+        card.style.cursor = 'pointer';
+        card.onclick = (e) => {
+          if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
+          window.location.href = detailUrl;
         };
+        card.innerHTML = `
+          <div class="tt-room-card-img">
+            <div class="tt-img" style="height:100%;min-height:160px;">
+              <div class="tt-img-stripes" style="--tone:${badgeColor(room.room_type)};"></div>
+              <div style="position:absolute;inset:0;display:flex;align-items:flex-end;padding:12px;">
+                <span class="tt-tag" style="font-size:11px;padding:4px 10px;">${room.room_type}</span>
+              </div>
+            </div>
+          </div>
+          <div class="tt-room-card-info">
+            <div>
+              <div class="tt-card-name">${room.name}</div>
+              <div class="tt-card-area" style="margin-top:4px;">
+                ${room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1)} · Max ${room.capacity} guests
+              </div>
+            </div>
+            <p class="tt-card-blurb" style="margin:0;">
+              ${room.description ? room.description.substring(0,130) + '…' : 'Comfortable room with premium amenities.'}
+            </p>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${amenityChips}${extra}</div>
+          </div>
+          <div class="tt-room-card-price">
+            <div>
+              <div class="tt-eyebrow" style="margin-bottom:4px;">From</div>
+              <div class="tt-card-price">₹${Number(room.price_per_night).toLocaleString('en-IN')}</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">per night</div>
+            </div>
+            <a href="${detailUrl}" class="tt-btn tt-btn-primary tt-btn-sm">View details</a>
+          </div>`;
+        resultsDiv.appendChild(card);
+      });
 
-        document.getElementById('filterForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const min_price = formData.get('min_price');
-            const max_price = formData.get('max_price');
-            const room_type = formData.get('room_type');
-            const sort = formData.get('sort');
+    } catch (err) {
+      errorBox.textContent = 'Network error fetching rooms.';
+      errorBox.classList.remove('hidden');
+      resultsDiv.innerHTML = '';
+    }
+  }
 
-            if (min_price) searchParams.min_price = min_price; else delete searchParams.min_price;
-            if (max_price) searchParams.max_price = max_price; else delete searchParams.max_price;
-            if (room_type) searchParams.room_type = room_type; else delete searchParams.room_type;
-            if (sort) searchParams.sort = sort; else delete searchParams.sort;
-            loadRooms();
-        });
-
-        function roomDetailUrl(roomId) {
-            return ROOM_DETAIL_URL + 
-                   `?id=${roomId}&check_in=${searchParams.check_in}&check_out=${searchParams.check_out}&guests=${searchParams.guests}`;
-        }
-
-        async function loadRooms() {
-            try {
-                const resultsDiv = document.getElementById('results');
-                resultsDiv.innerHTML = '<p>Loading...</p>';
-                document.getElementById('errorBox').classList.add('hidden');
-
-                const query = new URLSearchParams(searchParams).toString();
-                const res = await fetch(`${SEARCH_API_URL}?${query}`);
-                const data = await res.json();
-
-                if (!res.ok) {
-                    document.getElementById('errorBox').textContent = "Error: " + JSON.stringify(data.errors || data);
-                    document.getElementById('errorBox').classList.remove('hidden');
-                    resultsDiv.innerHTML = '';
-                    return;
-                }
-
-                document.getElementById('searchTitle').textContent = data.message;
-                resultsDiv.innerHTML = '';
-                if (data.rooms.length === 0) {
-                    resultsDiv.innerHTML = '<div class="card"><p style="text-align: center; padding: 2rem;">No rooms match your criteria. Try adjusting your filters.</p></div>';
-                    return;
-                }
-
-                data.rooms.forEach(room => {
-                    const detailUrl = roomDetailUrl(room.id);
-                    const card = document.createElement('div');
-                    card.className = 'card room-card';
-                    card.style.cursor = 'pointer';
-                    card.onclick = (e) => { if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return; window.location.href = detailUrl; };
-                    card.innerHTML = `
-                        <div class="room-info">
-                            <h3 style="margin-bottom: 0.5rem; font-size: 1.3rem;">${room.name}</h3>
-                            <p style="color: #666; font-size: 0.9rem; margin-bottom: 0.8rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">${room.room_type} • Max ${room.capacity} Guests</p>
-                            <p style="margin-bottom: 1rem; line-height: 1.6; color: var(--text-light);">${room.description ? room.description.substring(0, 120) + '...' : 'Comfortable room with premium amenities.'}</p>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                ${room.amenities_list.slice(0, 4).map(a => `<span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">${a}</span>`).join('')}
-                                ${room.amenities_list.length > 4 ? `<span style="color: var(--primary); font-size: 0.8rem; font-weight: 600; padding: 4px 6px;">+${room.amenities_list.length - 4} more</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="room-price">
-                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.2rem;">From</div>
-                            <div class="price-text">Rs. ${room.price_per_night}</div>
-                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">per night</div>
-                            <a href="${detailUrl}" class="btn" style="width: 100%; text-align: center; font-size: 0.9rem;">View Details</a>
-                        </div>
-                    `;
-                    resultsDiv.appendChild(card);
-                });
-            } catch (err) {
-                document.getElementById('errorBox').textContent = 'Network error fetching rooms.';
-                document.getElementById('errorBox').classList.remove('hidden');
-                document.getElementById('results').innerHTML = '';
-            }
-        }
-
-        loadRooms();
-    </script>
+  loadRooms();
+</script>
 {% endblock %}

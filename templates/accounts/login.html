@@ -1,64 +1,92 @@
 {% extends "base.html" %}
-{% block title %}Login - GrandStay{% endblock %}
+{% block title %}Sign in — Temples &amp; Towns{% endblock %}
 
 {% block content %}
-    <div class="container" style="max-width: 400px;">
-        <div class="card">
-            <h2 style="margin-bottom: 1rem;">Login</h2>
-            <div id="errorBox" class="alert hidden"></div>
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="email" required placeholder="john@example.com">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="password" required placeholder="Your password">
-                </div>
-                <button type="submit" class="btn">Login</button>
-            </form>
-            <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
-                Don't have an account? <a href="{% url 'accounts:register-page' %}" style="color: var(--primary); text-decoration: none; font-weight: 600;">Sign Up here</a>
-            </p>
-        </div>
+<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:48px 20px;">
+  <div style="width:100%;max-width:420px;">
+
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:22px;font-weight:700;letter-spacing:-.03em;color:var(--ink);margin-bottom:8px;">
+        Temples <em class="tt-italic-soft">&amp;</em> Towns
+      </div>
+      <h1 style="font-size:26px;font-weight:700;letter-spacing:-.025em;color:var(--ink);margin:0 0 8px;">Welcome back</h1>
+      <p style="font-size:14px;color:var(--text-muted);margin:0;">Sign in to your account to manage bookings.</p>
     </div>
+
+    <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:36px;">
+
+      <div id="errorBox" class="alert hidden" style="margin-bottom:20px;"></div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="tt-field" style="margin-bottom:16px;">
+          <label class="tt-field-label" for="email">Email address</label>
+          <input class="tt-input" type="email" id="email" required placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="tt-field" style="margin-bottom:24px;">
+          <label class="tt-field-label" for="password">Password</label>
+          <input class="tt-input" type="password" id="password" required placeholder="Your password" autocomplete="current-password">
+        </div>
+        <button type="submit" class="tt-btn tt-btn-primary tt-w-full" id="loginBtn">
+          Sign in
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </form>
+
+      <div class="tt-hr" style="margin:24px 0;"></div>
+
+      <p style="text-align:center;font-size:14px;color:var(--text-soft);margin:0;">
+        Don't have an account?
+        <a href="{% url 'accounts:register-page' %}" style="color:var(--ink);font-weight:600;text-decoration:none;border-bottom:1px solid var(--ink);">Create one</a>
+      </p>
+
+    </div>
+
+    <p style="text-align:center;font-size:12px;color:var(--text-faint);margin-top:20px;display:flex;align-items:center;justify-content:center;gap:6px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      SSL secured · Your data is never shared
+    </p>
+
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        async function handleLogin(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const errorBox = document.getElementById('errorBox');
+<script>
+  async function handleLogin(e) {
+    e.preventDefault();
+    const loginBtn = document.getElementById('loginBtn');
+    const errorBox = document.getElementById('errorBox');
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Signing in…';
+    errorBox.classList.add('hidden');
 
-            try {
-                const res = await fetch("{% url 'accounts:login' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: JSON.stringify({ email, password }),
-                    credentials: 'include'
-                });
+    try {
+      const res = await fetch("{% url 'accounts:login' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({
+          email:    document.getElementById('email').value,
+          password: document.getElementById('password').value
+        }),
+        credentials: 'include'
+      });
 
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.user && data.user.is_staff) {
-                        window.location.href = "/admin/";
-                    } else {
-                        window.location.href = "{% url 'core:home' %}";
-                    }
-                } else {
-                    const data = await res.json();
-                    errorBox.textContent = data.detail || data.error || 'Login failed';
-                    errorBox.classList.remove('hidden');
-                }
-            } catch (err) {
-                errorBox.textContent = 'Network error';
-                errorBox.classList.remove('hidden');
-            }
-        }
-    </script>
+      if (res.ok) {
+        const data = await res.json();
+        window.location.href = data.user && data.user.is_staff ? '/admin/' : "{% url 'core:home' %}";
+      } else {
+        const data = await res.json();
+        errorBox.textContent = data.detail || data.error || 'Login failed. Please try again.';
+        errorBox.classList.remove('hidden');
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = 'Sign in <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+      }
+    } catch (err) {
+      errorBox.textContent = 'Network error. Please check your connection.';
+      errorBox.classList.remove('hidden');
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Sign in';
+    }
+  }
+</script>
 {% endblock %}
