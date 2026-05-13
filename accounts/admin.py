@@ -1,11 +1,10 @@
 """
-Admin configuration for the accounts app with django-unfold.
+Admin configuration for the accounts app.
 """
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from unfold.admin import ModelAdmin
 
 from .models import LoginAttempt, OTP
 
@@ -13,7 +12,7 @@ User = get_user_model()
 
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin, ModelAdmin):
+class UserAdmin(BaseUserAdmin, admin.ModelAdmin):
     """Custom admin view for the User model."""
 
     list_display = ("email", "full_name", "phone", "is_active", "is_staff", "date_joined")
@@ -41,7 +40,7 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 
 
 @admin.register(OTP)
-class OTPAdmin(ModelAdmin):
+class OTPAdmin(admin.ModelAdmin):
     """Admin view for OTP records."""
 
     list_display = ("email", "code", "attempts", "created_at", "expires_at", "is_expired_display")
@@ -55,7 +54,7 @@ class OTPAdmin(ModelAdmin):
 
 
 @admin.register(LoginAttempt)
-class LoginAttemptAdmin(ModelAdmin):
+class LoginAttemptAdmin(admin.ModelAdmin):
     """Admin view for login attempt tracking."""
 
     list_display = ("email", "attempts", "locked_until", "last_attempt_at", "is_locked_display")

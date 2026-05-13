@@ -13,7 +13,7 @@ Phase 3 endpoints:
 """
 
 import logging
-from datetime import timedelta
+from datetime import datetime, time as dt_time, timedelta
 
 from django.conf import settings
 from django.db import transaction
@@ -36,8 +36,6 @@ from .serializers import (
     SearchSerializer,
     OTABlockSerializer,
 )
-
-logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -332,13 +330,47 @@ class HoldRoomView(APIView):
             hold_expires_at,
         )
 
-        return Response(
-            {
-                "message": f"Room held for {hold_duration} minutes. Please complete payment.",
-                "booking": BookingSerializer(booking).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        # ----------------------------------------------------------------
+        # IMMEDIATELY create Razorpay order — return everything the
+        # frontend needs to open the payment modal in one shot.
+        # ----------------------------------------------------------------
+        payment_details = None
+        try:
+            from payments.models import Payment
+            from payments.utils import create_razorpay_order
+
+            order = create_razorpay_order(
+                amount_inr=booking.total_price,
+                booking_id=booking.id,
+            )
+            booking.razorpay_order_id = order["id"]
+            booking.save(update_fields=["razorpay_order_id"])
+
+            Payment.objects.create(
+                booking=booking,
+                razorpay_order_id=order["id"],
+                amount=booking.total_price,
+                status="created",
+            )
+
+            payment_details = {
+                "order_id": order["id"],
+                "amount": order["amount"],       # paise
+                "currency": order["currency"],
+                "key_id": settings.RAZORPAY_KEY_ID,
+            }
+        except Exception as pay_err:
+            logger.error("Razorpay order creation failed for booking %s: %s", booking.id, str(pay_err))
+            # Don't block the hold — frontend can call /payments/create-order/ separately
+
+        response_data = {
+            "message": f"Room held for {hold_duration} minutes. Please complete payment.",
+            "booking": BookingSerializer(booking).data,
+        }
+        if payment_details:
+            response_data["payment"] = payment_details
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class ProcessPaymentView(APIView):
@@ -587,8 +619,6 @@ class MyBookingsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from datetime import timedelta as td
-
         all_bookings = Booking.objects.select_related("room").filter(
             user=request.user,
         ).order_by("-created_at")
@@ -599,7 +629,7 @@ class MyBookingsView(APIView):
 
         # Re-fetch after potential status changes
         today = timezone.now().date()
-        cutoff_24h = timezone.now() + td(hours=24)
+        cutoff_24h = timezone.now() + timedelta(hours=24)
 
         upcoming = Booking.objects.select_related("room").filter(
             user=request.user,
@@ -619,7 +649,7 @@ class MyBookingsView(APIView):
                 can_cancel = (
                     b.status in ("pending", "confirmed")
                     and timezone.make_aware(
-                        timezone.datetime.combine(b.check_in, timezone.datetime.min.time())
+                        datetime.combine(b.check_in, dt_time.min)
                     ) > cutoff_24h
                 )
                 data["can_cancel"] = can_cancel

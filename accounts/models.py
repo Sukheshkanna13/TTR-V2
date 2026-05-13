@@ -137,6 +137,49 @@ class OTP(models.Model):
         super().save(*args, **kwargs)
 
 
+class PendingRegistration(models.Model):
+    """
+    Temporary store for signup data before OTP is verified.
+
+    Flow:
+      Step 1: POST /accounts/register/      → store email/name/phone here, send OTP
+      Step 2: POST /accounts/verify-otp/    → verify OTP, mark email_verified=True
+      Step 3: POST /accounts/set-password/  → create real User, delete this row
+
+    No User row is ever created until all 3 steps complete.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True, db_index=True)
+    full_name = models.CharField(max_length=150)
+    phone = models.CharField(max_length=15)
+    email_verified = models.BooleanField(
+        default=False,
+        help_text="Set to True once OTP is successfully verified.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(
+        help_text="This pending record expires if not completed in time.",
+    )
+
+    class Meta:
+        verbose_name = "pending registration"
+        verbose_name_plural = "pending registrations"
+
+    def __str__(self):
+        return f"PendingRegistration({self.email}, verified={self.email_verified})"
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            # Expire 30 minutes after creation (3x OTP window)
+            self.expires_at = timezone.now() + timezone.timedelta(minutes=30)
+        super().save(*args, **kwargs)
+
+
 class LoginAttempt(models.Model):
     """
     Tracks failed login attempts per email in PostgreSQL.
