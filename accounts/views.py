@@ -239,23 +239,37 @@ class SetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Guard: if a user already exists with this email (race condition)
-        if User.objects.filter(email=email).exists():
+        # Guard: if a user already exists with this email
+        # If they are already active, they must log in.
+        # If they are NOT active (ghost/legacy), we update them and complete registration.
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user and existing_user.is_active:
             pending.delete()
             return Response(
-                {"error": "An account with this email already exists. Please log in."},
+                {"error": "An account with this email already exists and is active. Please log in."},
                 status=status.HTTP_409_CONFLICT,
             )
 
-        # Create the User — everything confirmed at this point
-        user = User.objects.create_user(
-            email=pending.email,
-            full_name=pending.full_name,
-            phone=pending.phone,
-            password=password,
-        )
-        user.is_active = True  # Already verified
-        user.save(update_fields=["is_active"])
+        if existing_user:
+            # Adopt existing unverified user
+            user = existing_user
+            user.full_name = pending.full_name
+            user.phone = pending.phone
+            user.set_password(password)
+            user.is_active = True
+            user.save()
+            logger.info("Existing unverified user '%s' adopted and activated via registration flow.", email)
+        else:
+            # Create a brand new User
+            user = User.objects.create_user(
+                email=pending.email,
+                full_name=pending.full_name,
+                phone=pending.phone,
+                password=password,
+            )
+            user.is_active = True
+            user.save(update_fields=["is_active"])
+            logger.info("New user '%s' created and activated.", email)
 
         # Clean up pending record
         pending.delete()
@@ -405,6 +419,30 @@ def login_page(request):
 
 def register_page(request):
     return render(request, "accounts/register.html")
+
+
+# =============================================================================
+# FOLIO PAGE (Guest Dashboard)
+# =============================================================================
+
+from django.contrib.auth.decorators import login_required
+
+
+@login_required(login_url='/accounts/login/page/')
+def folio_page(request):
+    from rooms.models import Booking
+    bookings = Booking.objects.filter(user=request.user).select_related('room', 'room__property').order_by('-created_at')
+    confirmed_bookings = bookings.filter(status='confirmed')
+    total_spent = sum(b.total_price for b in confirmed_bookings)
+    nights_stayed = sum(b.num_nights for b in bookings.filter(status__in=['confirmed', 'completed']))
+    context = {
+        'bookings': bookings[:10],
+        'total_bookings': bookings.count(),
+        'confirmed_count': confirmed_bookings.count(),
+        'total_spent': total_spent,
+        'nights_stayed': nights_stayed,
+    }
+    return render(request, 'pages/folio.html', context)
 
 
 # =============================================================================

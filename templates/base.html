@@ -16,19 +16,16 @@
   <div class="tt-utility">
     <div class="tt-utility-inner">
       <div class="tt-utility-left">
-        <span>Pondicherry</span>
+        <span>Reservations &amp; support</span>
         <span style="color:var(--line-strong);">·</span>
-        <span>Bengaluru</span>
+        <span>
+          <span style="color:#22c55e;font-size:10px;vertical-align:middle;">●</span>
+          &nbsp;<a href="tel:+918553441449" style="color:var(--ink);text-decoration:none;font-weight:500;">+91-8553441449</a>
+        </span>
       </div>
       <div class="tt-utility-right">
-        {% if user.is_authenticated %}
-          <span style="color:var(--ink);font-weight:500;">{{ user.full_name }}</span>
-          <a href="{% url 'bookings:my-bookings-page' %}">My Bookings</a>
-          <a role="button" onclick="logout()" style="cursor:pointer;">Sign out</a>
-        {% else %}
-          <a href="{% url 'accounts:login-page' %}">Sign in</a>
-          <a href="{% url 'accounts:register-page' %}">Create account</a>
-        {% endif %}
+        <a href="#">Trip Planner</a>
+        <a href="#">Events</a>
       </div>
     </div>
   </div>
@@ -36,21 +33,34 @@
   <!-- Main navigation -->
   <nav class="tt-nav">
     <div class="tt-nav-inner">
-      <a href="{% url 'core:home' %}" class="tt-logo">
-        <span class="tt-logo-wordmark">Temples <em class="tt-italic-soft">&amp;</em> Towns</span>
+      <a href="{% url 'core:home' %}" class="tt-logo" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+        <img src="{% static 'images/logo.png' %}" alt="Temple and Towns" style="height:40px;width:auto;">
+        <span class="tt-logo-wordmark" style="font-size:17px;font-weight:700;letter-spacing:-.03em;color:var(--ink);">Temple and Towns</span>
       </a>
       <div class="tt-nav-links">
-        <a href="{% url 'core:home' %}" class="tt-nav-link">Stays</a>
-        <a href="#" class="tt-nav-link">Experiences</a>
-        <a href="#" class="tt-nav-link">Wellness</a>
+        {% with url_name=request.resolver_match.url_name %}
+        <a href="{% url 'core:home' %}" class="tt-nav-link"
+          {% if url_name == 'home' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Stays</a>
+        <a href="{% url 'core:experiences' %}" class="tt-nav-link"
+          {% if url_name == 'experiences' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Guest Experience</a>
+        <a href="{% url 'core:things-to-do' %}" class="tt-nav-link"
+          {% if url_name == 'things-to-do' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Things to do</a>
+        <a href="{% url 'core:cause' %}" class="tt-nav-link"
+          {% if url_name == 'cause' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Travel for a Cause</a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'accounts:folio' %}" class="tt-nav-link"
+            {% if url_name == 'folio' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Guest folio</a>
+        {% else %}
+          <a href="{% url 'accounts:login-page' %}" class="tt-nav-link">Guest folio</a>
+        {% endif %}
+        {% endwith %}
       </div>
       <div class="tt-nav-right">
         {% if user.is_authenticated %}
-          <a href="{% url 'bookings:my-bookings-page' %}" class="tt-btn tt-btn-ghost tt-btn-sm">My Bookings</a>
-          <button onclick="logout()" class="tt-btn tt-btn-primary tt-btn-sm">Sign out</button>
+          <span style="color:var(--ink);font-weight:500;font-size:14px;">{{ user.full_name }}</span>
+          <button onclick="logout()" class="tt-btn tt-btn-ghost tt-btn-sm">Sign out</button>
         {% else %}
-          <a href="{% url 'accounts:login-page' %}" class="tt-btn tt-btn-ghost tt-btn-sm">Sign in</a>
-          <a href="{% url 'accounts:register-page' %}" class="tt-btn tt-btn-primary tt-btn-sm">Join</a>
+          <a href="{% url 'accounts:login-page' %}" class="tt-btn tt-btn-ghost tt-btn-sm">Login</a>
         {% endif %}
       </div>
     </div>
@@ -75,29 +85,30 @@
         <div>
           <h4>Stays</h4>
           <ul>
-            <li><a href="{% url 'core:home' %}">Search Rooms</a></li>
+            <li><a href="{% url 'rooms:search-page' %}">Search Rooms</a></li>
             <li><a href="{% url 'rooms:search-page' %}?city=Pondicherry">Pondicherry</a></li>
             <li><a href="{% url 'rooms:search-page' %}?city=Bengaluru">Bengaluru</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Explore</h4>
+          <ul>
+            <li><a href="{% url 'core:experiences' %}">Guest Experience</a></li>
+            <li><a href="{% url 'core:things-to-do' %}">Things to do</a></li>
+            <li><a href="{% url 'core:cause' %}">Travel for a Cause</a></li>
           </ul>
         </div>
         <div>
           <h4>Account</h4>
           <ul>
             {% if user.is_authenticated %}
+              <li><a href="{% url 'accounts:folio' %}">Guest Folio</a></li>
               <li><a href="{% url 'bookings:my-bookings-page' %}">My Bookings</a></li>
-              <li><span role="button" onclick="logout()">Sign out</span></li>
+              <li><span role="button" onclick="logout()" style="cursor:pointer;">Sign out</span></li>
             {% else %}
               <li><a href="{% url 'accounts:login-page' %}">Sign in</a></li>
               <li><a href="{% url 'accounts:register-page' %}">Create account</a></li>
             {% endif %}
-          </ul>
-        </div>
-        <div>
-          <h4>Support</h4>
-          <ul>
-            <li><a href="#">Help centre</a></li>
-            <li><a href="#">Cancellation policy</a></li>
-            <li><a href="#">Contact us</a></li>
           </ul>
         </div>
       </div>
@@ -109,7 +120,7 @@
   </footer>
 
   <!-- WhatsApp FAB -->
-  <a href="https://wa.me/919999999999" class="tt-wa-fab" target="_blank" rel="noopener" aria-label="Contact on WhatsApp">
+  <a href="https://wa.me/918553441449" class="tt-wa-fab" target="_blank" rel="noopener" aria-label="Contact on WhatsApp">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
     </svg>

@@ -41,7 +41,7 @@ class InitiateRegistrationSerializer(serializers.Serializer):
         email = value.lower().strip()
         # Block if a fully-active user already exists
         if User.objects.filter(email=email, is_active=True).exists():
-            raise serializers.ValidationError("An account with this email already exists.")
+            raise serializers.ValidationError("An account with this email already exists and is active. Please log in.")
         return email
 
     def validate_phone(self, value):

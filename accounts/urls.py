@@ -5,6 +5,7 @@ Routes:
     Page Views:
         /accounts/login/page/       — User login page
         /accounts/register/page/    — User registration page
+        /accounts/folio/            — Guest folio / dashboard (login required)
     
     API Endpoints:
         POST /accounts/register/    — Register new user
@@ -25,6 +26,7 @@ urlpatterns = [
     # Page views
     path("login/page/", views.login_page, name="login-page"),
     path("register/page/", views.register_page, name="register-page"),
+    path("folio/", views.folio_page, name="folio"),
 
     # API endpoints
     path("register/", views.RegisterView.as_view(), name="register"),

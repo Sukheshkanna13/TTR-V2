@@ -23,53 +23,141 @@
   <div id="mainContent" class="hidden">
 
     <!-- Back link -->
-    <a id="backLink" href="#" style="display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--accent);font-weight:500;margin-bottom:20px;text-decoration:none;">
+    <a id="backLink" href="#" style="display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--accent);font-weight:500;margin-bottom:24px;text-decoration:none;">
       ← Back to results
     </a>
 
-    <!-- Room hero -->
-    <div class="tt-room-hero" style="margin-bottom:0;">
-      <img src="{% static 'images/room-hero.png' %}" alt="Room photo" id="heroImg">
-      <div class="tt-room-hero-overlay">
-        <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-          <div>
-            <h1 id="roomName" style="font-size:28px;font-weight:700;margin:0 0 8px;"></h1>
-            <span id="roomBadge" class="tt-tag" style="font-size:12px;padding:5px 12px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3);"></span>
-          </div>
-        </div>
+    <!-- Check-in/out summary bar -->
+    <div id="dateBar" style="background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 20px;margin-bottom:28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span style="font-size:13px;color:var(--text-muted);font-weight:500;">Check-in</span>
+        <span id="barCheckin" style="font-size:14px;font-weight:600;color:var(--ink);"></span>
+      </div>
+      <div style="width:1px;height:20px;background:var(--line);"></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span style="font-size:13px;color:var(--text-muted);font-weight:500;">Check-out</span>
+        <span id="barCheckout" style="font-size:14px;font-weight:600;color:var(--ink);"></span>
+      </div>
+      <div style="width:1px;height:20px;background:var(--line);"></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span style="font-size:13px;color:var(--text-muted);font-weight:500;">Guests</span>
+        <span id="barGuests" style="font-size:14px;font-weight:600;color:var(--ink);"></span>
+      </div>
+      <div style="margin-left:auto;">
+        <span id="barNights" style="font-size:13px;color:var(--text-soft);"></span>
       </div>
     </div>
 
-    <!-- Details layout -->
+    <!-- Top section: image gallery + info -->
+    <div style="display:grid;grid-template-columns:60% 40%;gap:28px;margin-bottom:36px;align-items:start;">
+
+      <!-- Left: image gallery -->
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="position:relative;border-radius:var(--r-md);overflow:hidden;height:400px;background:var(--bg-soft);">
+          <img id="heroImg" src="" alt="Room photo" style="width:100%;height:100%;object-fit:cover;">
+          <div id="heroOverlay" style="position:absolute;top:14px;left:14px;">
+            <span id="heroBadge" class="tt-tag" style="font-size:12px;padding:5px 14px;"></span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="border-radius:var(--r-sm);overflow:hidden;height:180px;background:var(--bg-soft);">
+            <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80" alt="Heritage interior" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div style="border-radius:var(--r-sm);overflow:hidden;height:180px;background:var(--bg-soft);">
+            <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=80" alt="Garden view" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: room info -->
+      <div style="display:flex;flex-direction:column;gap:18px;padding-top:4px;">
+
+        <!-- Badge + name + city -->
+        <div>
+          <span id="typeBadge" class="tt-chip" style="font-size:12px;margin-bottom:10px;display:inline-block;"></span>
+          <h1 id="roomName" class="tt-h2" style="margin:0 0 6px;"></h1>
+          <div id="roomCity" style="font-size:14px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span></span>
+          </div>
+        </div>
+
+        <!-- Star rating -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;gap:2px;color:#f59e0b;">
+            <span>★</span><span>★</span><span>★</span><span>★</span>
+            <span style="position:relative;display:inline-block;">
+              <span style="color:var(--line-strong);">★</span>
+              <span style="position:absolute;left:0;top:0;overflow:hidden;width:50%;color:#f59e0b;">★</span>
+            </span>
+          </div>
+          <span style="font-size:13px;font-weight:600;color:var(--ink);">4.5</span>
+          <span style="font-size:13px;color:var(--text-muted);">· Highly rated</span>
+        </div>
+
+        <!-- Amenities chips -->
+        <div id="amenityChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+
+        <!-- Description -->
+        <p id="roomDescription" style="font-size:14px;color:var(--text-soft);line-height:1.75;margin:0;"></p>
+
+        <!-- Capacity note -->
+        <div id="capacityNote" style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span></span>
+        </div>
+
+        <div class="tt-hr" style="margin:0;"></div>
+
+        <!-- Pricing -->
+        <div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">
+            <span id="infoPrice" style="font-size:28px;font-weight:700;color:var(--ink);letter-spacing:-.02em;"></span>
+            <span style="font-size:14px;color:var(--text-muted);">per night</span>
+          </div>
+          <div id="totalLine" style="font-size:13px;color:var(--text-soft);margin-bottom:16px;"></div>
+          <button id="bookBtn" onclick="bookRoom()" class="tt-btn tt-btn-primary tt-w-full tt-btn-lg">
+            Hold this room →
+          </button>
+          <div id="bookErrorBox" class="tt-alert hidden" style="margin-top:12px;font-size:13px;"></div>
+          <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:10px;">
+            10-minute hold — no charge until you pay
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Details layout: description, amenities, policies -->
     <div class="tt-details-layout">
 
       <!-- Left column -->
       <div style="display:flex;flex-direction:column;gap:20px;">
 
-        <!-- Quick info -->
-        <div class="tt-quick-info" id="quickInfo"></div>
-
-        <!-- Description -->
+        <!-- About this room -->
         <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:24px;">
-          <div style="font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">About this room</div>
-          <p id="roomDescription" style="color:var(--text-soft);line-height:1.75;margin:0;font-size:15px;"></p>
+          <div class="tt-eyebrow" style="margin-bottom:12px;">About this room</div>
+          <p id="roomDescriptionFull" style="color:var(--text-soft);line-height:1.75;margin:0;font-size:15px;"></p>
         </div>
 
         <!-- Amenities -->
         <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:24px;">
-          <div style="font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;">Amenities &amp; facilities</div>
+          <div class="tt-eyebrow" style="margin-bottom:16px;">Amenities &amp; facilities</div>
           <div class="tt-amenity-grid" id="amenitiesGrid"></div>
         </div>
 
-        <!-- Gallery -->
+        <!-- Gallery (from uploaded images if any) -->
         <div id="gallerySection" class="hidden" style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:24px;">
-          <div style="font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;">Photo gallery</div>
+          <div class="tt-eyebrow" style="margin-bottom:16px;">Photo gallery</div>
           <div class="tt-gallery" id="photoGallery"></div>
         </div>
 
         <!-- Policies -->
         <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:24px;">
-          <div style="font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;">Hotel policies</div>
+          <div class="tt-eyebrow" style="margin-bottom:16px;">Hotel policies</div>
           <div class="tt-policies-grid">
             <div class="tt-policy"><h4>🕑 Check-in</h4><p>From 2:00 PM. Early check-in subject to availability.</p></div>
             <div class="tt-policy"><h4>🕙 Check-out</h4><p>Until 11:00 AM. Late check-out available on request.</p></div>
@@ -80,7 +168,7 @@
 
       </div>
 
-      <!-- Booking sidebar -->
+      <!-- Booking sidebar (sticky) -->
       <div class="tt-summary">
         <div class="tt-summary-price">
           <div class="amount" id="sidebarPrice"></div>
@@ -95,11 +183,10 @@
           <span>Total</span>
           <span class="val" id="sidebarTotal"></span>
         </div>
-        <div id="bookErrorBox" class="alert hidden" style="margin-top:12px;margin-bottom:0;font-size:13px;"></div>
-        <button id="bookBtn" onclick="bookRoom()" class="tt-btn tt-btn-primary tt-w-full" style="margin-top:16px;">
-          Book now — Reserve this room
+        <button id="sidebarBookBtn" onclick="bookRoom()" class="tt-btn tt-btn-primary tt-w-full" style="margin-top:16px;">
+          Hold this room →
         </button>
-        <p style="text-align:center;font-size:12px;color:var(--text-faint);margin-top:12px;">
+        <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:12px;">
           You won't be charged yet — a 10-minute hold will be placed.
         </p>
       </div>
@@ -144,6 +231,15 @@
     return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
   }
 
+  function getRoomImage(roomType) {
+    const map = {
+      'single':  'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80',
+      'double':  'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=80',
+      'deluxe':  'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&q=80',
+    };
+    return map[roomType] || 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80';
+  }
+
   async function loadRoom() {
     if (!roomId) { showError(); return; }
     try {
@@ -170,13 +266,19 @@
     const backParams = new URLSearchParams({ city: room.city, check_in: checkIn, check_out: checkOut, guests });
     document.getElementById('backLink').href = `${SEARCH_URL}?${backParams}`;
 
-    // Hero
-    document.getElementById('roomName').textContent = room.name;
-    document.getElementById('roomBadge').textContent =
-      room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1) + ' Room';
-    if (room.primary_image) document.getElementById('heroImg').src = room.primary_image;
+    // Date bar
+    document.getElementById('barCheckin').textContent  = formatDate(checkIn);
+    document.getElementById('barCheckout').textContent = formatDate(checkOut);
+    document.getElementById('barGuests').textContent   = `${guests} Guest${guests > 1 ? 's' : ''}`;
+    const numNights = Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / 86400000));
+    document.getElementById('barNights').textContent   = `${numNights} Night${numNights > 1 ? 's' : ''}`;
 
-    // Gallery
+    // Hero image
+    const heroSrc = room.primary_image || getRoomImage(room.room_type);
+    document.getElementById('heroImg').src = heroSrc;
+    document.getElementById('heroImg').alt = room.name;
+
+    // Gallery from uploaded images
     if (room.images && room.images.length > 0) {
       document.getElementById('gallerySection').classList.remove('hidden');
       document.getElementById('photoGallery').innerHTML = room.images.map(img =>
@@ -185,25 +287,38 @@
       ).join('');
     }
 
-    // Quick info
-    document.getElementById('quickInfo').innerHTML = `
-      <div class="tt-quick-item"><span>📍</span>${room.city}</div>
-      <div class="tt-quick-item"><span>👥</span>Up to ${room.capacity} guests</div>
-      <div class="tt-quick-item"><span>🏷️</span>${room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1)}</div>`;
+    // Type badge + name + city
+    const typeLabel = room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1);
+    document.getElementById('typeBadge').textContent = typeLabel + ' Room';
+    document.getElementById('heroBadge').textContent = typeLabel + ' Room';
+    document.getElementById('roomName').textContent  = room.name;
+    document.querySelector('#roomCity span').textContent = room.city;
 
-    // Description
-    document.getElementById('roomDescription').textContent =
-      room.description || 'Experience the perfect blend of comfort and elegance in this beautifully appointed room.';
+    // Capacity
+    document.querySelector('#capacityNote span').textContent = `Up to ${room.capacity} guests`;
 
-    // Amenities
+    // Amenity chips (top info panel, first 6)
     const amenities = room.amenities_list.length > 0 ? room.amenities_list : ['WiFi','AC','TV','Room Service'];
+    document.getElementById('amenityChips').innerHTML = amenities.slice(0,6).map(a =>
+      `<span class="tt-chip tt-chip-tonal" style="font-size:12px;">${a}</span>`
+    ).join('');
+
+    // Description (short for top panel, full for detail section)
+    const desc = room.description || 'Experience the perfect blend of comfort and elegance in this beautifully appointed room.';
+    document.getElementById('roomDescription').textContent = desc.length > 200 ? desc.substring(0,200) + '…' : desc;
+    document.getElementById('roomDescriptionFull').textContent = desc;
+
+    // Pricing (top info panel)
+    const totalPrice = (parseFloat(room.price_per_night) * numNights).toFixed(2);
+    document.getElementById('infoPrice').textContent = `₹${Number(room.price_per_night).toLocaleString('en-IN')}`;
+    document.getElementById('totalLine').textContent = `${numNights} night${numNights > 1 ? 's' : ''} · Total: ₹${Number(totalPrice).toLocaleString('en-IN')}`;
+
+    // Amenities full grid
     document.getElementById('amenitiesGrid').innerHTML = amenities.map(a =>
       `<div class="tt-amenity"><span class="tt-amenity-icon">${getAmenityIcon(a)}</span>${a}</div>`
     ).join('');
 
     // Sidebar
-    const numNights  = Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / 86400000));
-    const totalPrice = (parseFloat(room.price_per_night) * numNights).toFixed(2);
     document.getElementById('sidebarPrice').textContent    = `₹${Number(room.price_per_night).toLocaleString('en-IN')}`;
     document.getElementById('sidebarCheckin').textContent  = formatDate(checkIn);
     document.getElementById('sidebarCheckout').textContent = formatDate(checkOut);
@@ -213,10 +328,10 @@
   }
 
   async function bookRoom() {
-    const bookBtn  = document.getElementById('bookBtn');
-    const errorBox = document.getElementById('bookErrorBox');
-    bookBtn.disabled = true;
-    bookBtn.textContent = 'Reserving…';
+    const bookBtn      = document.getElementById('bookBtn');
+    const sidebarBtn   = document.getElementById('sidebarBookBtn');
+    const errorBox     = document.getElementById('bookErrorBox');
+    [bookBtn, sidebarBtn].forEach(b => { b.disabled = true; b.textContent = 'Reserving…'; });
     errorBox.classList.add('hidden');
 
     try {
@@ -237,14 +352,12 @@
       } else {
         errorBox.textContent = data.error || 'Failed to hold this room. Please try again.';
         errorBox.classList.remove('hidden');
-        bookBtn.disabled = false;
-        bookBtn.textContent = 'Book now — Reserve this room';
+        [bookBtn, sidebarBtn].forEach(b => { b.disabled = false; b.textContent = 'Hold this room →'; });
       }
     } catch {
       errorBox.textContent = 'Network error. Please try again.';
       errorBox.classList.remove('hidden');
-      bookBtn.disabled = false;
-      bookBtn.textContent = 'Book now — Reserve this room';
+      [bookBtn, sidebarBtn].forEach(b => { b.disabled = false; b.textContent = 'Hold this room →'; });
     }
   }
 

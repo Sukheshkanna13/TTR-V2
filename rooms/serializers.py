@@ -86,8 +86,9 @@ class SearchSerializer(serializers.Serializer):
         required=False,
         error_messages={"required": "City is required."},
     )
-    property_id = serializers.UUIDField(
+    property_id = serializers.CharField(
         required=False,
+        allow_blank=True,
     )
     check_in = serializers.DateField(
         error_messages={
@@ -101,12 +102,12 @@ class SearchSerializer(serializers.Serializer):
             "invalid": "Enter a valid date (YYYY-MM-DD).",
         },
     )
+    # guests is optional — defaults to 1 if missing or 0; never block the request over a missing count
     guests = serializers.IntegerField(
-        min_value=1,
-        error_messages={
-            "required": "Number of guests is required.",
-            "min_value": "At least 1 guest is required.",
-        },
+        required=False,
+        default=1,
+        min_value=0,
+        error_messages={"min_value": "Guests cannot be negative."},
     )
 
     # Optional filters
@@ -141,14 +142,9 @@ class SearchSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"check_out": "Check-out date must be after check-in date."}
             )
-            
-        city = data.get("city")
-        property_id = data.get("property_id")
-        if not city and not property_id:
-            raise serializers.ValidationError(
-                {"non_field_errors": "Either city or property_id must be provided."}
-            )
-            
+        # guests=0 means "any" — normalise to 1 so capacity filter still makes sense
+        if data.get("guests", 1) < 1:
+            data["guests"] = 1
         return data
 
 
