@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Create account — Temples &amp; Towns{% endblock %}
+{% block title %}Create account — Temples & Towns{% endblock %}
 
 {% block content %}
 <div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:48px 20px;">
@@ -7,18 +7,25 @@
 
     <div style="text-align:center;margin-bottom:32px;">
       <div style="font-size:22px;font-weight:700;letter-spacing:-.03em;color:var(--ink);margin-bottom:8px;">
-        Temples <em class="tt-italic-soft">&amp;</em> Towns
+        Temples <em class="tt-italic-soft">&</em> Towns
       </div>
-      <h1 style="font-size:26px;font-weight:700;letter-spacing:-.025em;color:var(--ink);margin:0 0 8px;">Create your account</h1>
-      <p style="font-size:14px;color:var(--text-muted);margin:0;">Join to unlock curated stays and member rates.</p>
+      <h1 id="pageHeading" style="font-size:26px;font-weight:700;letter-spacing:-.025em;color:var(--ink);margin:0 0 8px;">Create your account</h1>
+      <p id="pageSubheading" style="font-size:14px;color:var(--text-muted);margin:0;">Join to unlock curated stays and member rates.</p>
     </div>
 
-    <!-- Registration form -->
-    <div id="registerCard" style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:36px;">
+    <!-- ── STEP INDICATOR ──────────────────────────────────────────── -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:28px;" id="stepIndicator">
+      <div class="step-dot active" id="dot1">1</div>
+      <div style="flex:1;max-width:48px;height:1px;background:var(--line);" id="line1"></div>
+      <div class="step-dot" id="dot2">2</div>
+      <div style="flex:1;max-width:48px;height:1px;background:var(--line);" id="line2"></div>
+      <div class="step-dot" id="dot3">3</div>
+    </div>
 
-      <div id="regErrorBox" class="alert hidden" style="margin-bottom:20px;"></div>
-
-      <form id="registerForm" onsubmit="handleRegister(event)">
+    <!-- ── STEP 1: Details ──────────────────────────────────────────── -->
+    <div id="step1Card" style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:36px;">
+      <div id="s1ErrorBox" class="alert hidden" style="margin-bottom:20px;"></div>
+      <form id="step1Form" onsubmit="handleStep1(event)">
         <div class="tt-field" style="margin-bottom:16px;">
           <label class="tt-field-label" for="full_name">Full name</label>
           <input class="tt-input" type="text" id="full_name" required placeholder="Aarav Menon" autocomplete="name">
@@ -27,56 +34,74 @@
           <label class="tt-field-label" for="email">Email address</label>
           <input class="tt-input" type="email" id="email" required placeholder="you@example.com" autocomplete="email">
         </div>
-        <div class="tt-field" style="margin-bottom:16px;">
+        <div class="tt-field" style="margin-bottom:24px;">
           <label class="tt-field-label" for="phone_number">Phone number</label>
           <input class="tt-input" type="text" id="phone_number" required placeholder="+91 98765 43210" autocomplete="tel">
         </div>
-        <div class="tt-field" style="margin-bottom:24px;">
-          <label class="tt-field-label" for="password">Password</label>
-          <input class="tt-input" type="password" id="password" required placeholder="Min 8 characters" autocomplete="new-password">
-        </div>
-        <button type="submit" class="tt-btn tt-btn-primary tt-w-full" id="regBtn">
-          Create account
+        <button type="submit" class="tt-btn tt-btn-primary tt-w-full" id="s1Btn">
+          Send verification code
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
       </form>
-
       <div class="tt-hr" style="margin:24px 0;"></div>
-
       <p style="text-align:center;font-size:14px;color:var(--text-soft);margin:0;">
         Already have an account?
         <a href="{% url 'accounts:login-page' %}" style="color:var(--ink);font-weight:600;text-decoration:none;border-bottom:1px solid var(--ink);">Sign in</a>
       </p>
     </div>
 
-    <!-- OTP verification (hidden initially) -->
-    <div id="otpCard" class="hidden" style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:36px;text-align:center;">
+    <!-- ── STEP 2: Verify OTP ───────────────────────────────────────── -->
+    <div id="step2Card" class="hidden" style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:36px;text-align:center;">
       <div style="width:64px;height:64px;background:var(--bg-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;">✉️</div>
       <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--ink);margin:0 0 8px;">Verify your email</h2>
       <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin:0 0 28px;">
         We sent a 6-digit code to <strong id="sentEmailText" style="color:var(--ink);"></strong>
       </p>
-
-      <div id="otpErrorBox" class="alert hidden" style="margin-bottom:20px;text-align:left;"></div>
-
-      <form id="otpForm" onsubmit="handleVerifyOTP(event)">
+      <div id="s2ErrorBox" class="alert hidden" style="margin-bottom:20px;text-align:left;"></div>
+      <form id="step2Form" onsubmit="handleStep2(event)">
         <div class="tt-field" style="margin-bottom:24px;">
           <input class="tt-input" type="text" id="otp_code" required placeholder="000000"
             maxlength="6" inputmode="numeric"
             style="text-align:center;font-size:28px;font-weight:700;letter-spacing:12px;padding:16px;">
         </div>
-        <button type="submit" class="tt-btn tt-btn-primary tt-w-full" id="otpBtn">
-          Verify &amp; continue
+        <button type="submit" class="tt-btn tt-btn-primary tt-w-full" id="s2Btn">
+          Verify code
         </button>
       </form>
-
       <p style="font-size:13px;color:var(--text-muted);margin-top:20px;">
         Didn't receive the code?
         <button onclick="handleResendOTP()" id="resendBtn"
           style="background:none;border:none;color:var(--ink);font-weight:600;cursor:pointer;font-size:13px;border-bottom:1px solid var(--ink);padding:0;">
-          Resend OTP
+          Resend
         </button>
       </p>
+    </div>
+
+    <!-- ── STEP 3: Set Password ─────────────────────────────────────── -->
+    <div id="step3Card" class="hidden" style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:36px;">
+      <div style="width:64px;height:64px;background:var(--bg-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;">🔒</div>
+      <h2 style="font-size:22px;font-weight:700;text-align:center;letter-spacing:-.02em;color:var(--ink);margin:0 0 8px;">Create your password</h2>
+      <p style="font-size:14px;color:var(--text-muted);text-align:center;margin:0 0 28px;line-height:1.6;">
+        Almost there! Set a strong password to secure your account.
+      </p>
+      <div id="s3ErrorBox" class="alert hidden" style="margin-bottom:20px;"></div>
+      <form id="step3Form" onsubmit="handleStep3(event)">
+        <div class="tt-field" style="margin-bottom:16px;">
+          <label class="tt-field-label" for="password">Password</label>
+          <input class="tt-input" type="password" id="password" required placeholder="Min 8 characters" autocomplete="new-password">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+            Must contain uppercase, lowercase, digit & special character
+          </div>
+        </div>
+        <div class="tt-field" style="margin-bottom:24px;">
+          <label class="tt-field-label" for="password2">Confirm password</label>
+          <input class="tt-input" type="password" id="password2" required placeholder="Repeat password" autocomplete="new-password">
+        </div>
+        <button type="submit" class="tt-btn tt-btn-primary tt-w-full" id="s3Btn">
+          Create account
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </form>
     </div>
 
     <p style="text-align:center;font-size:12px;color:var(--text-faint);margin-top:20px;display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -86,120 +111,180 @@
 
   </div>
 </div>
+
+<style>
+  .step-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    background: var(--bg-soft); color: var(--text-muted);
+    border: 1px solid var(--line); transition: all .3s ease;
+  }
+  .step-dot.active {
+    background: var(--ink); color: #fff; border-color: var(--ink);
+  }
+  .step-dot.done {
+    background: #16a34a; color: #fff; border-color: #16a34a;
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
   let registeredEmail = '';
 
-  async function handleResendOTP() {
-    const resendBtn = document.getElementById('resendBtn');
-    const errorBox  = document.getElementById('otpErrorBox');
-    resendBtn.disabled = true;
-    resendBtn.textContent = 'Sending…';
-    errorBox.classList.add('hidden');
-
-    try {
-      const res = await fetch("{% url 'accounts:resend-otp' %}", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-        body: JSON.stringify({ email: registeredEmail })
-      });
-      if (res.ok) {
-        errorBox.textContent = 'A new code has been sent to your email!';
-        errorBox.classList.remove('hidden');
-        errorBox.classList.add('success');
-        errorBox.classList.remove('alert');
-      } else {
-        const data = await res.json();
-        errorBox.textContent = data.error || 'Failed to resend OTP.';
-        errorBox.classList.remove('hidden');
-        errorBox.classList.remove('success');
-        errorBox.classList.add('alert');
-      }
-    } catch (err) {
-      errorBox.textContent = 'Network error resending OTP.';
-      errorBox.classList.remove('hidden');
-    } finally {
-      setTimeout(() => { resendBtn.disabled = false; resendBtn.textContent = 'Resend OTP'; }, 30000);
+  /* ── helpers ──────────────────────────────────────── */
+  function showError(boxId, msg) {
+    const box = document.getElementById(boxId);
+    box.textContent = msg;
+    box.classList.remove('hidden');
+  }
+  function hideError(boxId) {
+    document.getElementById(boxId).classList.add('hidden');
+  }
+  function setStep(n) {
+    ['step1Card','step2Card','step3Card'].forEach((id, i) => {
+      document.getElementById(id).classList.toggle('hidden', i !== n - 1);
+    });
+    const headings = [
+      ['Create your account',       'Join to unlock curated stays and member rates.'],
+      ['Verify your email',         'Enter the 6-digit code we sent you.'],
+      ['Create your password',      'One last step — secure your account.'],
+    ];
+    document.getElementById('pageHeading').textContent    = headings[n-1][0];
+    document.getElementById('pageSubheading').textContent = headings[n-1][1];
+    // Update step dots
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById('dot' + i);
+      dot.classList.remove('active','done');
+      if (i < n)  dot.classList.add('done');
+      if (i === n) dot.classList.add('active');
     }
   }
 
-  async function handleRegister(e) {
+  /* ── STEP 1: name / email / phone ─────────────────── */
+  async function handleStep1(e) {
     e.preventDefault();
-    const regBtn   = document.getElementById('regBtn');
-    const errorBox = document.getElementById('regErrorBox');
-    regBtn.disabled = true;
-    regBtn.textContent = 'Sending code…';
-    errorBox.classList.add('hidden');
-
-    const payload = {
-      full_name: document.getElementById('full_name').value,
-      email:     document.getElementById('email').value,
-      password:  document.getElementById('password').value
-    };
-    const phone = document.getElementById('phone_number').value;
-    if (phone) payload.phone = phone;
+    hideError('s1ErrorBox');
+    const btn = document.getElementById('s1Btn');
+    btn.disabled = true; btn.textContent = 'Sending code…';
 
     try {
-      const res  = await fetch("{% url 'accounts:register' %}", {
+      const res = await fetch("{% url 'accounts:register' %}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          full_name: document.getElementById('full_name').value.trim(),
+          email:     document.getElementById('email').value.trim(),
+          phone:     document.getElementById('phone_number').value.trim(),
+        })
       });
       const data = await res.json();
       if (res.ok) {
         registeredEmail = data.email;
         document.getElementById('sentEmailText').textContent = registeredEmail;
-        document.getElementById('registerCard').classList.add('hidden');
-        document.getElementById('otpCard').classList.remove('hidden');
+        setStep(2);
       } else {
-        let errMsg = 'Registration failed.';
+        let msg = 'Registration failed.';
         if (data.errors) {
-          for (const [k, msgs] of Object.entries(data.errors)) { errMsg += ` ${k}: ${msgs[0]}`; }
-        } else { errMsg = data.detail || 'Something went wrong.'; }
-        errorBox.innerText = errMsg;
-        errorBox.classList.remove('hidden');
-        regBtn.disabled = false;
-        regBtn.textContent = 'Create account';
+          msg = Object.values(data.errors).flat().join(' ');
+        } else if (data.error) { msg = data.error; }
+        showError('s1ErrorBox', msg);
+        btn.disabled = false;
+        btn.innerHTML = 'Send verification code <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
       }
     } catch (err) {
-      errorBox.textContent = 'Network error during registration.';
-      errorBox.classList.remove('hidden');
-      regBtn.disabled = false;
-      regBtn.textContent = 'Create account';
+      showError('s1ErrorBox', 'Network error. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Send verification code';
     }
   }
 
-  async function handleVerifyOTP(e) {
+  /* ── STEP 2: OTP ──────────────────────────────────── */
+  async function handleStep2(e) {
     e.preventDefault();
-    const otpBtn   = document.getElementById('otpBtn');
-    const errorBox = document.getElementById('otpErrorBox');
-    otpBtn.disabled = true;
-    otpBtn.textContent = 'Verifying…';
-    errorBox.classList.add('hidden');
+    hideError('s2ErrorBox');
+    const btn = document.getElementById('s2Btn');
+    btn.disabled = true; btn.textContent = 'Verifying…';
 
     try {
-      const res  = await fetch("{% url 'accounts:verify-otp' %}", {
+      const res = await fetch("{% url 'accounts:verify-otp' %}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
         body: JSON.stringify({ email: registeredEmail, otp: document.getElementById('otp_code').value }),
         credentials: 'include'
       });
       const data = await res.json();
+      if (res.ok && data.next_step === 'set-password') {
+        setStep(3);
+      } else if (!res.ok) {
+        showError('s2ErrorBox', data.error || 'Verification failed.');
+        btn.disabled = false; btn.textContent = 'Verify code';
+      } else {
+        // Legacy user — already logged in, go home
+        window.location.href = "{% url 'core:home' %}";
+      }
+    } catch (err) {
+      showError('s2ErrorBox', 'Network error. Please try again.');
+      btn.disabled = false; btn.textContent = 'Verify code';
+    }
+  }
+
+  /* ── STEP 3: Password ─────────────────────────────── */
+  async function handleStep3(e) {
+    e.preventDefault();
+    hideError('s3ErrorBox');
+    const btn = document.getElementById('s3Btn');
+    const pw1 = document.getElementById('password').value;
+    const pw2 = document.getElementById('password2').value;
+    if (pw1 !== pw2) {
+      showError('s3ErrorBox', 'Passwords do not match.');
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Creating account…';
+
+    try {
+      const res = await fetch("{% url 'accounts:set-password' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ email: registeredEmail, password: pw1 }),
+        credentials: 'include'
+      });
+      const data = await res.json();
       if (res.ok) {
         window.location.href = "{% url 'core:home' %}";
       } else {
-        errorBox.textContent = data.error || 'Verification failed.';
-        errorBox.classList.remove('hidden');
-        otpBtn.disabled = false;
-        otpBtn.textContent = 'Verify & continue';
+        let msg = data.error || 'Something went wrong.';
+        if (data.errors) { msg = Object.values(data.errors).flat().join(' '); }
+        showError('s3ErrorBox', msg);
+        btn.disabled = false;
+        btn.textContent = 'Create account';
       }
     } catch (err) {
-      errorBox.textContent = 'Network error during verification.';
-      errorBox.classList.remove('hidden');
-      otpBtn.disabled = false;
-      otpBtn.textContent = 'Verify & continue';
+      showError('s3ErrorBox', 'Network error. Please try again.');
+      btn.disabled = false; btn.textContent = 'Create account';
+    }
+  }
+
+  /* ── Resend OTP ───────────────────────────────────── */
+  async function handleResendOTP() {
+    const btn = document.getElementById('resendBtn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    hideError('s2ErrorBox');
+    try {
+      const res = await fetch("{% url 'accounts:resend-otp' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ email: registeredEmail })
+      });
+      const box = document.getElementById('s2ErrorBox');
+      box.textContent = res.ok ? 'A new code has been sent!' : 'Failed to resend. Try again.';
+      box.classList.remove('hidden');
+      box.style.color = res.ok ? '#16a34a' : '';
+    } catch {
+      showError('s2ErrorBox', 'Network error resending code.');
+    } finally {
+      setTimeout(() => { btn.disabled = false; btn.textContent = 'Resend'; }, 30000);
     }
   }
 </script>
