@@ -1,0 +1,5 @@
+# Development-only dependencies — do NOT install in production
+# Install with: pip install -r requirements-dev.txt
+
+# Code review visualisation and analysis
+code-review-graph>=2.3.3
