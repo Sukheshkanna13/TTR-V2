@@ -414,22 +414,131 @@ img { display: block; max-width: 100%; }
   .tt-room-hero { height: 280px; }
   .tt-policies-grid { grid-template-columns: 1fr; }
 }
+/* ── Hamburger button (hidden on desktop) ── */
+.tt-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.tt-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 2px;
+  transition: transform .2s, opacity .2s;
+}
+
+/* ── Mobile nav drawer ── */
+.tt-nav-mobile {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity .2s;
+  pointer-events: none;
+}
+.tt-nav-mobile.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.tt-nav-mobile-inner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(300px, 85vw);
+  height: 100%;
+  background: #fff;
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+}
+.tt-nav-mobile.open .tt-nav-mobile-inner {
+  transform: translateX(0);
+}
+.tt-nav-mobile-link {
+  display: block;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  min-height: 44px;
+  line-height: 1.2;
+}
+.tt-nav-mobile-link.active { color: var(--accent); }
+.tt-nav-mobile-link:hover  { background: var(--bg-soft); }
+.tt-nav-mobile-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 8px 0;
+}
+
+/* ── Sticky booking bar (room detail, mobile only) ── */
+.tt-sticky-booking-bar {
+  display: none;
+}
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
-  .tt-nav-links { display: none; }
+  .tt-nav-links   { display: none; }
+  .tt-nav-username { display: none; }
+  .tt-hamburger   { display: flex; }
+  .tt-nav-mobile  { display: block; }
   .tt-utility-inner { padding: 12px 20px; }
-  .tt-nav-inner { padding: 16px 20px; }
-  .tt-page { padding: 0 20px; }
+  .tt-nav-inner   { padding: 16px 20px; }
+  .tt-page        { padding: 0 20px; }
   .tt-results-layout { grid-template-columns: 1fr; }
-  .tt-sidebar { position: static; }
-  .tt-room-card { flex-direction: column; }
+  .tt-sidebar     { position: static; }
+  .tt-room-card   { flex-direction: column; }
   .tt-room-card-img { width: 100%; height: 200px; }
   .tt-room-card-price { border-left: none; border-top: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
-  .tt-stats-grid { grid-template-columns: repeat(2,1fr); }
-  .tt-grid-2 { grid-template-columns: 1fr; }
-  .tt-grid-4 { grid-template-columns: 1fr; }
+  .tt-stats-grid  { grid-template-columns: repeat(2,1fr); }
+  .tt-grid-2      { grid-template-columns: 1fr; }
+  .tt-grid-4      { grid-template-columns: 1fr; }
   .tt-footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  /* folio two-col layout → single col */
+  .tt-folio-layout { grid-template-columns: 1fr !important; }
+  /* Sticky booking bar visible on mobile */
+  .tt-sticky-booking-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 900;
+    background: #fff;
+    border-top: 1px solid var(--line);
+    padding: 12px 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,.08);
+  }
+  /* Ensure tap targets are 44px minimum */
+  .tt-btn { min-height: 44px; }
+  .tt-input, .tt-select { min-height: 44px; }
 }
 @media (max-width: 480px) {
-  .tt-search { grid-template-columns: 1fr; }
-  .tt-search-go { grid-column: 1; }
+  .tt-search     { grid-template-columns: 1fr; }
+  .tt-search-go  { grid-column: 1; }
+  .tt-footer-grid { grid-template-columns: 1fr; }
+  .tt-stats-grid  { grid-template-columns: repeat(2,1fr); }
 }

@@ -195,6 +195,14 @@
     </div>
   </div>
 </div>
+<!-- Sticky booking bar — visible only on mobile -->
+<div class="tt-sticky-booking-bar" id="stickyBar">
+  <div>
+    <div id="stickyPrice" style="font-size:18px;font-weight:700;color:var(--ink);"></div>
+    <div style="font-size:12px;color:var(--text-muted);">per night · 10-min hold</div>
+  </div>
+  <button onclick="bookRoom()" id="stickyBookBtn" class="tt-btn tt-btn-primary" style="white-space:nowrap;">Hold this room →</button>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -313,6 +321,8 @@
     const totalPrice = (parseFloat(room.price_per_night) * numNights).toFixed(2);
     document.getElementById('infoPrice').textContent = `₹${Number(room.price_per_night).toLocaleString('en-IN')}`;
     document.getElementById('totalLine').textContent = `${numNights} night${numNights > 1 ? 's' : ''} · Total: ₹${Number(totalPrice).toLocaleString('en-IN')}`;
+    const stickyPriceEl = document.getElementById('stickyPrice');
+    if (stickyPriceEl) stickyPriceEl.textContent = `₹${Number(room.price_per_night).toLocaleString('en-IN')}`;
 
     // Amenities full grid
     document.getElementById('amenitiesGrid').innerHTML = amenities.map(a =>
@@ -331,8 +341,9 @@
   async function bookRoom() {
     const bookBtn      = document.getElementById('bookBtn');
     const sidebarBtn   = document.getElementById('sidebarBookBtn');
+    const stickyBtn    = document.getElementById('stickyBookBtn');
     const errorBox     = document.getElementById('bookErrorBox');
-    [bookBtn, sidebarBtn].forEach(b => { b.disabled = true; b.textContent = 'Reserving…'; });
+    [bookBtn, sidebarBtn, stickyBtn].filter(Boolean).forEach(b => { b.disabled = true; b.textContent = 'Reserving…'; });
     errorBox.classList.add('hidden');
 
     try {
@@ -353,7 +364,7 @@
       } else {
         errorBox.textContent = data.error || 'Failed to hold this room. Please try again.';
         errorBox.classList.remove('hidden');
-        [bookBtn, sidebarBtn].forEach(b => { b.disabled = false; b.textContent = 'Hold this room →'; });
+        [bookBtn, sidebarBtn, stickyBtn].filter(Boolean).forEach(b => { b.disabled = false; b.textContent = 'Hold this room →'; });
       }
     } catch {
       errorBox.textContent = 'Network error. Please try again.';
