@@ -7,8 +7,15 @@ from django.shortcuts import render
 
 
 def home_page(request):
-    """Render the landing page template."""
-    return render(request, "pages/index.html")
+    """Render the landing page — passes DB-driven city list for the search select."""
+    from rooms.models import Property
+    cities = list(
+        Property.objects.filter(is_active=True)
+        .values_list('city', flat=True)
+        .distinct()
+        .order_by('city')
+    )
+    return render(request, "pages/index.html", {'cities': cities})
 
 
 def experiences_page(request):

@@ -804,13 +804,28 @@ class UnblockRoomView(APIView):
 # ============================================================================
 
 def search_page(request):
-    """Render the room search page template."""
-    return render(request, "rooms/search.html")
+    """Render the room search page — passes DB-driven city list for the filter select."""
+    cities = list(
+        Property.objects.filter(is_active=True)
+        .values_list('city', flat=True)
+        .distinct()
+        .order_by('city')
+    )
+    selected_city = request.GET.get('city', '')
+    return render(request, "rooms/search.html", {
+        'cities': cities,
+        'selected_city': selected_city,
+        'back_url': '/',
+        'back_label': 'Back to home',
+    })
 
 
 def room_detail_page(request):
     """Render the room detail page template."""
-    return render(request, "rooms/room_details.html")
+    return render(request, "rooms/room_details.html", {
+        'back_url': request.META.get('HTTP_REFERER', '/rooms/search/'),
+        'back_label': 'Back to search results',
+    })
 
 
 def my_bookings_page(request):

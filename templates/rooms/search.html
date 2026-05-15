@@ -4,6 +4,7 @@
 
 {% block content %}
 <div class="tt-page">
+  {% include "components/_back_nav.html" with back_url=back_url back_label=back_label %}
   <div class="tt-results-layout">
 
     <!-- Filter sidebar -->
@@ -12,11 +13,24 @@
       <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:20px;">Filter stays</div>
       <form id="filterForm">
 
+        <!-- City -->
+        <div class="tt-field" style="margin-bottom:16px;">
+          <label class="tt-field-label">Destination</label>
+          <select class="tt-select" id="city_filter" name="city">
+            <option value="">All locations</option>
+            {% for c in cities %}<option value="{{ c }}" {% if c == selected_city %}selected{% endif %}>{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+
         <!-- Guests — directly affects which rooms appear (capacity filter) -->
         <div class="tt-field" style="margin-bottom:16px;">
           <label class="tt-field-label">Guests</label>
-          <input class="tt-input" type="number" id="guests" name="guests"
-                 min="1" max="20" placeholder="e.g. 2">
+          <div style="display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:#fff;">
+            <button type="button" onclick="stepGuests(-1)" style="padding:8px 12px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink);">&#8722;</button>
+            <input type="number" id="guests" name="guests" min="1" max="10" value="2" readonly
+                   style="width:32px;text-align:center;border:none;font-size:14px;color:var(--ink);background:transparent;padding:0;">
+            <button type="button" onclick="stepGuests(1)" style="padding:8px 12px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink);">&#43;</button>
+          </div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
             Only rooms with enough capacity will show.
           </div>
@@ -88,9 +102,20 @@
     guests:    Math.max(1, parseInt(urlParams.get('guests')) || 2),
   };
 
-  // Pre-fill the guests input in the filter sidebar from URL
+  function stepGuests(delta) {
+    const input = document.getElementById('guests');
+    const next = Math.min(10, Math.max(1, parseInt(input.value) + delta));
+    input.value = next;
+    searchParams.guests = next;
+  }
+
+  // Pre-fill sidebar controls from URL params
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('guests').value = searchParams.guests;
+    const citySelect = document.getElementById('city_filter');
+    if (citySelect && searchParams.city) {
+      citySelect.value = searchParams.city;
+    }
   });
 
   // Filter form: merge new values into searchParams and re-fetch
@@ -98,7 +123,11 @@
     e.preventDefault();
     const fd = new FormData(e.target);
 
-    // guests from filter sidebar — must be ≥ 1
+    // city from select
+    const cityVal = fd.get('city');
+    searchParams.city = cityVal || '';
+
+    // guests from stepper — must be ≥ 1
     const gVal = parseInt(fd.get('guests'));
     searchParams.guests = (!isNaN(gVal) && gVal >= 1) ? gVal : searchParams.guests;
 

@@ -56,13 +56,19 @@
         </div>
         <div style="flex:1;min-width:140px;">
           <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">DESTINATION</div>
-          <input type="text" id="city" placeholder="Pondicherry or Bengaluru"
-                 style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:14px;color:var(--ink);background:#fff;box-sizing:border-box;">
+          <select id="city" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:14px;color:var(--ink);background:#fff;box-sizing:border-box;">
+            <option value="">All locations</option>
+            {% for city in cities %}<option value="{{ city }}">{{ city }}</option>{% endfor %}
+          </select>
         </div>
-        <div style="flex:0 0 110px;min-width:90px;">
+        <div style="flex:0 0 130px;min-width:110px;">
           <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">GUESTS</div>
-          <input type="number" id="guests" min="1" max="20" value="2" required
-                 style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:14px;color:var(--ink);background:#fff;box-sizing:border-box;">
+          <div style="display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:#fff;">
+            <button type="button" onclick="changeGuests(-1)" style="padding:10px 13px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink);line-height:1;">&#8722;</button>
+            <input type="number" id="guests" min="1" max="10" value="2" readonly
+                   style="width:28px;text-align:center;border:none;font-size:14px;color:var(--ink);background:transparent;padding:0;-moz-appearance:textfield;">
+            <button type="button" onclick="changeGuests(1)" style="padding:10px 13px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink);line-height:1;">&#43;</button>
+          </div>
         </div>
         <button type="submit" class="tt-btn tt-btn-primary" style="flex-shrink:0;padding:11px 28px;">
           Search stays
@@ -288,10 +294,18 @@
     window.location.href = "{% url 'rooms:search-page' %}?" + params.toString();
   }
 
-  // Default dates: tomorrow + day after
+  function changeGuests(delta) {
+    const input = document.getElementById('guests');
+    input.value = Math.min(10, Math.max(1, parseInt(input.value) + delta));
+  }
+
+  // Default dates: tomorrow + day after; enforce min=today
   const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
   const cin   = new Date(today); cin.setDate(cin.getDate() + 1);
   const cout  = new Date(today); cout.setDate(cout.getDate() + 2);
+  document.getElementById('check_in').min   = todayStr;
+  document.getElementById('check_out').min  = todayStr;
   document.getElementById('check_in').value  = cin.toISOString().split('T')[0];
   document.getElementById('check_out').value = cout.toISOString().split('T')[0];
 </script>

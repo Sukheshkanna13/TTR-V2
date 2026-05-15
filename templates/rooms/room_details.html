@@ -4,6 +4,7 @@
 
 {% block content %}
 <div class="tt-page" style="padding-top:32px;padding-bottom:80px;">
+  {% include "components/_back_nav.html" with back_url=back_url back_label=back_label %}
 
   <!-- Loading state -->
   <div id="loadingState" class="tt-loading">

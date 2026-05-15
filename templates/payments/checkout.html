@@ -5,6 +5,7 @@
 {% block content %}
 <div style="min-height:60vh;padding:48px 20px;background:var(--bg-soft);">
   <div style="width:100%;max-width:640px;margin:0 auto;">
+    {% include "components/_back_nav.html" with back_url="/rooms/search/" back_label="Back to search" back_warn=True %}
 
     <!-- Loading state -->
     <div id="loadingMsg" class="tt-loading" style="padding:60px 0;">
