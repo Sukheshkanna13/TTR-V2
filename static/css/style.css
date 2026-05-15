@@ -404,6 +404,7 @@ img { display: block; max-width: 100%; }
   .tt-search { grid-template-columns: 1fr 1fr; }
   .tt-search-go { grid-column: span 2; padding: 18px; justify-content: center; }
   .tt-grid-3 { grid-template-columns: repeat(2,1fr); }
+  .tt-grid-4 { grid-template-columns: repeat(2,1fr); }
   .tt-footer-grid { grid-template-columns: 1fr 1fr; }
   .tt-stats-grid { grid-template-columns: repeat(2,1fr); }
 }
@@ -425,6 +426,7 @@ img { display: block; max-width: 100%; }
   .tt-room-card-price { border-left: none; border-top: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
   .tt-stats-grid { grid-template-columns: repeat(2,1fr); }
   .tt-grid-2 { grid-template-columns: 1fr; }
+  .tt-grid-4 { grid-template-columns: 1fr; }
   .tt-footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
 }
 @media (max-width: 480px) {
