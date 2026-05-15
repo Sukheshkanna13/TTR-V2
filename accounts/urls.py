@@ -27,6 +27,8 @@ urlpatterns = [
     path("login/page/", views.login_page, name="login-page"),
     path("register/page/", views.register_page, name="register-page"),
     path("folio/", views.folio_page, name="folio"),
+    path("profile/edit/", views.edit_profile_page, name="edit-profile"),
+    path("profile/update/", views.update_profile, name="update-profile"),
 
     # API endpoints
     path("register/", views.RegisterView.as_view(), name="register"),

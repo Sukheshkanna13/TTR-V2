@@ -435,14 +435,89 @@ def folio_page(request):
     confirmed_bookings = bookings.filter(status='confirmed')
     total_spent = sum(b.total_price for b in confirmed_bookings)
     nights_stayed = sum(b.num_nights for b in bookings.filter(status__in=['confirmed', 'completed']))
+    profile = getattr(request.user, 'userprofile', None)
     context = {
         'bookings': bookings[:10],
         'total_bookings': bookings.count(),
         'confirmed_count': confirmed_bookings.count(),
         'total_spent': total_spent,
         'nights_stayed': nights_stayed,
+        'loyalty_points': getattr(profile, 'loyalty_points', 0),
+        'loyalty_tier': getattr(profile, 'loyalty_tier', None),
     }
     return render(request, 'pages/folio.html', context)
+
+
+@login_required(login_url='/accounts/login/page/')
+def edit_profile_page(request):
+    return render(request, 'accounts/edit_profile.html', {
+        'back_url': '/accounts/folio/',
+        'back_label': 'Back to folio',
+    })
+
+
+@login_required(login_url='/accounts/login/page/')
+def update_profile(request):
+    """AJAX endpoint: update name/phone immediately; email requires OTP."""
+    import json
+    import re
+    if request.method != 'POST':
+        from django.http import JsonResponse
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        from django.http import JsonResponse
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    from django.http import JsonResponse
+    from django.core.cache import cache
+    user = request.user
+    field = data.get('field', '')
+
+    if field == 'name':
+        name = data.get('value', '').strip()
+        if not name:
+            return JsonResponse({'error': 'Name cannot be empty.'}, status=400)
+        user.full_name = name
+        user.save(update_fields=['full_name'])
+        return JsonResponse({'message': 'Name updated successfully.'})
+
+    if field == 'phone':
+        phone = data.get('value', '').strip()
+        if not re.match(r'^[6-9]\d{9}$', phone):
+            return JsonResponse({'error': 'Enter a valid 10-digit Indian mobile number.'}, status=400)
+        user.phone = phone
+        user.save(update_fields=['phone'])
+        return JsonResponse({'message': 'Phone updated successfully.'})
+
+    if field == 'email_request':
+        new_email = data.get('value', '').strip().lower()
+        if not new_email or '@' not in new_email:
+            return JsonResponse({'error': 'Enter a valid email address.'}, status=400)
+        if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+            return JsonResponse({'error': 'That email is already in use.'}, status=400)
+        otp_code = create_and_store_otp(new_email)
+        send_otp_email(new_email, otp_code)
+        cache.set(f'email_change:{user.pk}:{new_email}', True, timeout=600)
+        return JsonResponse({'message': f'Verification code sent to {new_email}. Enter it below.'})
+
+    if field == 'email_verify':
+        new_email = data.get('email', '').strip().lower()
+        otp = data.get('otp', '').strip()
+        if not cache.get(f'email_change:{user.pk}:{new_email}'):
+            return JsonResponse({'error': 'OTP expired or not initiated. Request a new one.'}, status=400)
+        result = verify_otp(new_email, otp)
+        if not result['success']:
+            return JsonResponse({'error': result['error']}, status=400)
+        if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+            return JsonResponse({'error': 'That email is already in use.'}, status=400)
+        user.email = new_email
+        user.save(update_fields=['email'])
+        cache.delete(f'email_change:{user.pk}:{new_email}')
+        return JsonResponse({'message': 'Email updated successfully.'})
+
+    return JsonResponse({'error': 'Unknown field.'}, status=400)
 
 
 # =============================================================================
