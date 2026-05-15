@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "accounts",
     "rooms",
     "payments",
+    "superadmin",
+    "employeeadmin",
 ]
 
 SITE_ID = 1

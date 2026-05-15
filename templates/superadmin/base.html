@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Super Admin{% endblock %} — Temples & Towns</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;}
+.sa-nav{background:#1e293b;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155;position:sticky;top:0;z-index:10;}
+.sa-brand{font-weight:700;font-size:15px;color:#f8fafc;letter-spacing:-.02em;}
+.sa-nav-links{display:flex;gap:8px;}
+.sa-nav-links a{color:#94a3b8;text-decoration:none;font-size:13px;padding:6px 12px;border-radius:6px;}
+.sa-nav-links a:hover,.sa-nav-links a.active{background:#334155;color:#f8fafc;}
+.sa-main{max-width:1200px;margin:0 auto;padding:32px 24px;}
+.sa-page-title{font-size:22px;font-weight:700;color:#f8fafc;margin-bottom:24px;}
+.sa-card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:24px;margin-bottom:20px;}
+.sa-stats{display:flex;gap:24px;flex-wrap:wrap;}
+.sa-stat{flex:1;min-width:140px;}
+.sa-stat-val{font-size:30px;font-weight:700;color:#f8fafc;}
+.sa-stat-label{font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:.06em;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{text-align:left;padding:10px 12px;border-bottom:1px solid #334155;color:#64748b;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
+tbody td{padding:10px 12px;border-bottom:1px solid rgba(51,65,85,.5);color:#cbd5e1;}
+tbody tr:hover td{background:rgba(51,65,85,.3);}
+.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+.badge-green{background:#064e3b;color:#6ee7b7;}
+.badge-slate{background:#1e3a5f;color:#93c5fd;}
+.badge-red{background:#450a0a;color:#fca5a5;}
+</style>
+</head>
+<body>
+<nav class="sa-nav">
+  <span class="sa-brand">Temples & Towns · Super Admin</span>
+  <div class="sa-nav-links">
+    <a href="/super-admin/dashboard/" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
+    <a href="/super-admin/employees/" {% if request.resolver_match.url_name == 'employees' %}class="active"{% endif %}>Employees</a>
+    <a href="/super-admin/bookings/" {% if request.resolver_match.url_name == 'bookings' %}class="active"{% endif %}>Bookings</a>
+    <a href="/accounts/logout/" style="margin-left:8px;color:#ef4444;">Sign out</a>
+  </div>
+</nav>
+<div class="sa-main">{% block content %}{% endblock %}</div>
+</body>
+</html>

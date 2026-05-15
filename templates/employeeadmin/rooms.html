@@ -1,0 +1,24 @@
+{% extends "employeeadmin/base.html" %}
+{% block title %}Rooms{% endblock %}
+{% block content %}
+<h1 class="ea-page-title">Rooms</h1>
+<div class="ea-card">
+  <table>
+    <thead><tr><th>Name</th><th>City</th><th>Type</th><th>Price/night</th><th>Capacity</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for r in rooms %}
+    <tr>
+      <td>{{ r.name }}</td>
+      <td>{{ r.city }}</td>
+      <td>{{ r.room_type }}</td>
+      <td>₹{{ r.price_per_night|floatformat:0 }}</td>
+      <td>{{ r.capacity }}</td>
+      <td><span class="badge badge-{% if r.operational_status == 'available' %}green{% else %}red{% endif %}">{{ r.operational_status }}</span></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6" style="color:#5eead4;padding:24px 12px;">No rooms found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

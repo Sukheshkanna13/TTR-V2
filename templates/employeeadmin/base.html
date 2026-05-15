@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Staff Portal{% endblock %} — Temples & Towns</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f1f1e;color:#e2e8f0;min-height:100vh;}
+.ea-nav{background:#134e4a;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #0d9488;position:sticky;top:0;z-index:10;}
+.ea-brand{font-weight:700;font-size:15px;color:#f0fdfa;letter-spacing:-.02em;}
+.ea-nav-links{display:flex;gap:8px;}
+.ea-nav-links a{color:#99f6e4;text-decoration:none;font-size:13px;padding:6px 12px;border-radius:6px;}
+.ea-nav-links a:hover,.ea-nav-links a.active{background:rgba(13,148,136,.4);color:#f0fdfa;}
+.ea-main{max-width:1100px;margin:0 auto;padding:32px 24px;}
+.ea-page-title{font-size:22px;font-weight:700;color:#f0fdfa;margin-bottom:24px;}
+.ea-card{background:#134e4a;border:1px solid #0d9488;border-radius:10px;padding:24px;margin-bottom:20px;}
+.ea-stats{display:flex;gap:24px;flex-wrap:wrap;}
+.ea-stat{flex:1;min-width:140px;}
+.ea-stat-val{font-size:30px;font-weight:700;color:#f0fdfa;}
+.ea-stat-label{font-size:11px;color:#5eead4;margin-top:4px;text-transform:uppercase;letter-spacing:.06em;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{text-align:left;padding:10px 12px;border-bottom:1px solid #0d9488;color:#5eead4;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
+tbody td{padding:10px 12px;border-bottom:1px solid rgba(13,148,136,.2);color:#ccfbf1;}
+tbody tr:hover td{background:rgba(13,148,136,.15);}
+.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+.badge-green{background:#064e3b;color:#6ee7b7;}
+.badge-red{background:#450a0a;color:#fca5a5;}
+.badge-slate{background:#1e293b;color:#93c5fd;}
+</style>
+</head>
+<body>
+<nav class="ea-nav">
+  <span class="ea-brand">Temples & Towns · Staff Portal</span>
+  <div class="ea-nav-links">
+    <a href="/admin-portal/dashboard/" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
+    <a href="/admin-portal/bookings/" {% if request.resolver_match.url_name == 'bookings' %}class="active"{% endif %}>Bookings</a>
+    <a href="/admin-portal/rooms/" {% if request.resolver_match.url_name == 'rooms' %}class="active"{% endif %}>Rooms</a>
+    <a href="/accounts/logout/" style="margin-left:8px;color:#f87171;">Sign out</a>
+  </div>
+</nav>
+<div class="ea-main">{% block content %}{% endblock %}</div>
+</body>
+</html>

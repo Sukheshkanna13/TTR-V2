@@ -1,0 +1,25 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Dashboard</h1>
+<div class="sa-card">
+  <div class="sa-stats">
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ active_bookings }}</div>
+      <div class="sa-stat-label">Active stays</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">₹{{ today_revenue|floatformat:0 }}</div>
+      <div class="sa-stat-label">Today revenue</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">₹{{ month_revenue|floatformat:0 }}</div>
+      <div class="sa-stat-label">This month</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ total_rooms }}</div>
+      <div class="sa-stat-label">Total rooms</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

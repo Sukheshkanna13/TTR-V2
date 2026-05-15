@@ -1,0 +1,47 @@
+{% extends "employeeadmin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1 class="ea-page-title">Today — {{ today }}</h1>
+<div class="ea-card">
+  <div class="ea-stats">
+    <div class="ea-stat">
+      <div class="ea-stat-val">{{ active_bookings }}</div>
+      <div class="ea-stat-label">Active stays</div>
+    </div>
+    <div class="ea-stat">
+      <div class="ea-stat-val">{{ upcoming_checkouts|length }}</div>
+      <div class="ea-stat-label">Check-outs today</div>
+    </div>
+    <div class="ea-stat">
+      <div class="ea-stat-val">{{ upcoming_checkins|length }}</div>
+      <div class="ea-stat-label">Check-ins today</div>
+    </div>
+  </div>
+</div>
+{% if upcoming_checkins %}
+<div class="ea-card">
+  <div style="font-size:13px;font-weight:600;color:#5eead4;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em;">Arriving today</div>
+  <table>
+    <thead><tr><th>Guest</th><th>Room</th><th>Ref</th></tr></thead>
+    <tbody>
+    {% for b in upcoming_checkins %}
+    <tr><td>{{ b.user.full_name|default:b.user.email }}</td><td>{{ b.room.name }}</td><td style="font-family:monospace;font-size:11px;">{{ b.booking_reference }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% if upcoming_checkouts %}
+<div class="ea-card">
+  <div style="font-size:13px;font-weight:600;color:#5eead4;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em;">Departing today</div>
+  <table>
+    <thead><tr><th>Guest</th><th>Room</th><th>Ref</th></tr></thead>
+    <tbody>
+    {% for b in upcoming_checkouts %}
+    <tr><td>{{ b.user.full_name|default:b.user.email }}</td><td>{{ b.room.name }}</td><td style="font-family:monospace;font-size:11px;">{{ b.booking_reference }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

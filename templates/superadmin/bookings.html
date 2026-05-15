@@ -1,0 +1,29 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Bookings{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">All Bookings</h1>
+<div class="sa-card">
+  <table>
+    <thead><tr><th>Ref</th><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for b in bookings %}
+    <tr>
+      <td style="font-family:monospace;font-size:12px;">{{ b.booking_reference }}</td>
+      <td>{{ b.user.full_name|default:b.user.email }}</td>
+      <td>{{ b.room.name }}</td>
+      <td>{{ b.check_in }}</td>
+      <td>{{ b.check_out }}</td>
+      <td>₹{{ b.total_price|floatformat:0 }}</td>
+      <td>
+        {% if b.status == 'CONFIRMED' %}<span class="badge badge-green">{{ b.status }}</span>
+        {% elif b.status == 'CANCELLED' %}<span class="badge badge-red">{{ b.status }}</span>
+        {% else %}<span class="badge badge-slate">{{ b.status }}</span>{% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" style="color:#64748b;padding:24px 12px;">No bookings found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
