@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Explore — Temples & Towns{% endblock %}
+
+{% block content %}
+<div class="tt-page">
+
+  <div class="tt-eyebrow" style="margin-bottom:12px;">EXPLORE</div>
+  <h1 class="tt-h1" style="margin-bottom:8px;">Things to do near our stays</h1>
+  <p class="tt-sub" style="color:var(--text-muted);margin-bottom:36px;max-width:560px;">
+    Temples, beaches, restaurants, and hidden corners — curated by our team.
+  </p>
+
+  <!-- Category filter tabs -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px;">
+    <a href="{% url 'core:explore' %}"
+       style="padding:6px 16px;border-radius:100px;font-size:13px;font-weight:500;text-decoration:none;
+              {% if not selected_category %}background:var(--ink);color:#fff;{% else %}border:1px solid var(--line);color:var(--ink);background:#fff;{% endif %}">
+      All
+    </a>
+    {% for key, label in categories %}
+    <a href="{% url 'core:explore' %}?category={{ key }}"
+       style="padding:6px 16px;border-radius:100px;font-size:13px;font-weight:500;text-decoration:none;
+              {% if selected_category == key %}background:var(--ink);color:#fff;{% else %}border:1px solid var(--line);color:var(--ink);background:#fff;{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if attractions %}
+  <div class="tt-grid-3" style="gap:24px;">
+    {% for a in attractions %}
+    <div class="tt-card" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);">
+      {% with photo=a.primary_photo %}
+      {% if photo %}
+      <img src="{{ photo.image.url }}" alt="{{ a.name }}"
+           style="width:100%;height:200px;object-fit:cover;display:block;"
+           onerror="this.style.display='none'">
+      {% else %}
+      <div style="width:100%;height:200px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--line-strong)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      <div style="padding:20px;">
+        <span style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;
+                     background:var(--bg-soft);color:var(--text-muted);margin-bottom:10px;
+                     text-transform:uppercase;letter-spacing:.06em;">
+          {{ a.get_category_display }}
+        </span>
+        <div class="tt-card-name" style="margin-bottom:4px;">{{ a.name }}</div>
+        <div class="tt-card-area" style="margin-bottom:10px;">
+          {{ a.city }}{% if a.address %} &middot; {{ a.address }}{% endif %}
+        </div>
+        {% if a.description %}
+        <p style="font-size:13px;color:var(--text-soft);line-height:1.6;margin:0 0 10px;">
+          {{ a.description|truncatewords:25 }}
+        </p>
+        {% endif %}
+        {% if a.opening_hrs %}
+        <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:5px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          {{ a.opening_hrs }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div style="text-align:center;padding:4rem 2rem;border:1px dashed var(--line);border-radius:var(--r-lg);">
+    <p style="font-size:18px;color:var(--text-soft);font-style:italic;margin-bottom:8px;">
+      {% if selected_category %}No attractions in this category yet.{% else %}No attractions listed yet.{% endif %}
+    </p>
+    <p style="color:var(--text-muted);">Check back soon — our team is curating this list.</p>
+    <div style="margin-top:24px;">
+      <a href="{% url 'core:home' %}" class="tt-btn tt-btn-ghost tt-btn-sm">Back to home</a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

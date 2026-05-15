@@ -24,3 +24,17 @@ def things_to_do_page(request):
 def cause_page(request):
     """Render the Travel for a Cause page."""
     return render(request, "pages/cause.html")
+
+
+def explore_page(request):
+    """Render the Explore page with Attraction model data and category filter."""
+    from .models import Attraction
+    category = request.GET.get('category', '')
+    qs = Attraction.objects.filter(is_visible=True).prefetch_related('photos')
+    if category:
+        qs = qs.filter(category=category)
+    return render(request, "pages/explore.html", {
+        'attractions': qs,
+        'categories': Attraction.CATEGORY_CHOICES,
+        'selected_category': category,
+    })
