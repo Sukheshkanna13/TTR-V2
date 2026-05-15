@@ -29,6 +29,8 @@ urlpatterns = [
     path("bookings/", include("rooms.booking_urls")),
     path("payments/", include("payments.urls")),
     path("admin-api/employees/create/", accounts_views.CreateEmployeeView.as_view(), name="create_employee"),
+    path("admin-portal/login/", accounts_views.employee_login_page, name="admin-portal-login"),
+    path("super-admin/login/", accounts_views.super_admin_login_page, name="super-admin-login"),
     path("api/properties/<uuid:property_id>/calendar/", rooms_views.CalendarView.as_view(), name="property_calendar"),
     path("api/block/", rooms_views.BlockRoomView.as_view(), name="block_room"),
     path("api/unblock/<uuid:pk>/", rooms_views.UnblockRoomView.as_view(), name="unblock_room"),

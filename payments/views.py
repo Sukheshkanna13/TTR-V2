@@ -24,8 +24,10 @@ from rooms.serializers import BookingSerializer
 from .models import Payment
 from .serializers import CreateOrderSerializer, VerifyPaymentSerializer
 from .utils import (
+    award_loyalty_points,
     create_razorpay_order,
     send_booking_confirmation_email,
+    send_invoice_email,
     verify_razorpay_signature,
     verify_webhook_signature,
 )
@@ -252,6 +254,10 @@ class VerifyPaymentView(APIView):
         # Send confirmation email (async-safe, won't block on failure)
         send_booking_confirmation_email(booking)
 
+        # Send invoice email and award loyalty points (both wrapped in try/except)
+        send_invoice_email(booking)
+        award_loyalty_points(booking)
+
         # Queue WhatsApp confirmation
         if booking.user.phone:
             async_task(
@@ -379,6 +385,10 @@ class WebhookView(APIView):
 
             # Send confirmation email
             send_booking_confirmation_email(booking)
+
+            # Send invoice email and award loyalty points (both wrapped in try/except)
+            send_invoice_email(booking)
+            award_loyalty_points(booking)
 
             # Queue WhatsApp confirmation
             if booking.user.phone:

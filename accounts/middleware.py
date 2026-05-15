@@ -39,16 +39,57 @@ class ForcePasswordChangeMiddleware:
         if request.user.is_authenticated and hasattr(request.user, 'userprofile'):
             if request.user.userprofile.must_change_password:
                 # Need to avoid redirect loop if they are already on the change password page or logging out
-                # Assuming the change password url name is 'change-password' or similar. 
+                # Assuming the change password url name is 'change-password' or similar.
                 # We'll match the path for simplicity.
                 exempt_paths = [
                     '/accounts/change-password/',
                     '/admin/logout/',
                     '/api/auth/logout/'
                 ]
-                
+
                 if not any(request.path.startswith(p) for p in exempt_paths):
                     return redirect('/accounts/change-password/')
+
+        response = self.get_response(request)
+        return response
+
+
+class RoleRoutingMiddleware:
+    """
+    Middleware to route users to the correct login/portal based on role.
+
+    Rules:
+    - Staff/employee/super_admin trying to reach /accounts/login/page/
+      → redirect to /admin-portal/login/
+    - Unauthenticated user hitting /admin-portal/ or /super-admin/
+      → redirect to /accounts/login/page/
+    - Authenticated guest hitting /admin-portal/ or /super-admin/
+      → redirect to /accounts/folio/
+    """
+
+    STAFF_PORTALS = ('/admin-portal/', '/super-admin/')
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path
+
+        # Staff/admin users who land on the guest login page → send to staff login
+        if path == '/accounts/login/page/':
+            if request.user.is_authenticated and hasattr(request.user, 'userprofile'):
+                role = request.user.userprofile.role
+                if role in ('employee', 'super_admin'):
+                    return redirect('/admin-portal/login/')
+
+        # Anyone (authenticated or not) hitting staff portals
+        if any(path.startswith(portal) for portal in self.STAFF_PORTALS):
+            if not request.user.is_authenticated:
+                return redirect('/accounts/login/page/')
+            if hasattr(request.user, 'userprofile'):
+                role = request.user.userprofile.role
+                if role == 'guest':
+                    return redirect('/accounts/folio/')
 
         response = self.get_response(request)
         return response

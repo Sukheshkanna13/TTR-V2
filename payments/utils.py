@@ -7,7 +7,7 @@ import hmac
 import logging
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage, send_mail
 from django.template.loader import render_to_string
 
 import razorpay
@@ -159,3 +159,93 @@ def send_booking_confirmation_email(booking):
     except Exception as e:
         # Email failure should NOT block the booking confirmation
         logger.error("Failed to send confirmation email to %s: %s", booking.user.email, str(e))
+
+
+# =========================================================================
+# Email: Invoice (post-payment)
+# =========================================================================
+
+def send_invoice_email(booking):
+    """
+    Send an HTML invoice email after payment is confirmed.
+
+    Renders templates/emails/invoice.html and delivers it via Gmail SMTP.
+    Failures are logged but never re-raised — they must not break the
+    payment confirmation response.
+    """
+    try:
+        num_nights = (booking.check_out - booking.check_in).days
+        subject = (
+            f"Booking Confirmed — {booking.room.name} "
+            f"| Ref: {booking.booking_reference}"
+        )
+        html_body = render_to_string(
+            "emails/invoice.html",
+            {
+                "booking": booking,
+                "room": booking.room,
+                "guest": booking.user,
+                "num_nights": num_nights,
+            },
+        )
+        email = EmailMessage(
+            subject=subject,
+            body=html_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[booking.user.email],
+        )
+        email.content_subtype = "html"
+        email.send(fail_silently=False)
+        logger.info(
+            "Invoice email sent to %s for booking %s",
+            booking.user.email,
+            booking.booking_reference,
+        )
+    except Exception as e:
+        logger.error(
+            "Failed to send invoice email to %s (booking %s): %s",
+            booking.user.email,
+            booking.booking_reference,
+            str(e),
+        )
+
+
+# =========================================================================
+# Loyalty: Award points after confirmed booking
+# =========================================================================
+
+def award_loyalty_points(booking):
+    """
+    Credit loyalty points to the guest's UserProfile after a confirmed booking.
+
+    Formula: 100 points per night stayed.
+    Tier is recalculated immediately after the points are saved.
+    Failures are logged but never re-raised — they must not break the
+    payment confirmation response.
+    """
+    try:
+        from accounts.models import UserProfile
+
+        num_nights = (booking.check_out - booking.check_in).days
+        points = num_nights * 100
+
+        profile, _ = UserProfile.objects.get_or_create(user=booking.user)
+        profile.loyalty_points += points
+        profile.save(update_fields=["loyalty_points"])
+        profile.recalculate_tier()
+
+        logger.info(
+            "Awarded %d loyalty points to %s (booking %s). Total: %d, Tier: %s",
+            points,
+            booking.user.email,
+            booking.booking_reference,
+            profile.loyalty_points,
+            profile.loyalty_tier,
+        )
+    except Exception as e:
+        logger.error(
+            "Failed to award loyalty points for booking %s (user %s): %s",
+            getattr(booking, "booking_reference", "unknown"),
+            getattr(booking.user, "email", "unknown"),
+            str(e),
+        )

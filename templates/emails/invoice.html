@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a;">
+<h2>Booking Confirmed</h2>
+<p>Hi {{ guest.full_name }},</p>
+<p>Your stay at <strong>{{ room.name }}</strong> is confirmed.</p>
+<table style="border-collapse:collapse;width:100%;margin:16px 0;">
+  <tr><td style="padding:8px 0;color:#666;">Booking ref</td><td style="padding:8px 0;font-weight:600;">{{ booking.booking_reference }}</td></tr>
+  <tr><td style="padding:8px 0;color:#666;">Check-in</td><td style="padding:8px 0;">{{ booking.check_in }}</td></tr>
+  <tr><td style="padding:8px 0;color:#666;">Check-out</td><td style="padding:8px 0;">{{ booking.check_out }}</td></tr>
+  <tr><td style="padding:8px 0;color:#666;">Nights</td><td style="padding:8px 0;">{{ num_nights }}</td></tr>
+  <tr><td style="padding:8px 0;color:#666;">Total paid</td><td style="padding:8px 0;font-weight:600;">&#8377;{{ booking.total_price }}</td></tr>
+</table>
+<p>Thank you for choosing Temples &amp; Towns.</p>
+</body></html>

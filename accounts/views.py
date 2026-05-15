@@ -13,7 +13,7 @@ import logging
 import secrets
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -419,6 +419,58 @@ def login_page(request):
 
 def register_page(request):
     return render(request, "accounts/register.html")
+
+
+def employee_login_page(request):
+    """
+    Staff login page for employees.
+    GET  — render the login form.
+    POST — authenticate with email + password; on success redirect to /admin-portal/dashboard/.
+    """
+    from django.contrib.auth import authenticate as auth_authenticate, login as auth_login
+
+    if request.user.is_authenticated and hasattr(request.user, 'userprofile'):
+        if request.user.userprofile.role == 'employee':
+            return redirect('/admin-portal/dashboard/')
+
+    error = None
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        password = request.POST.get('password', '')
+        user = auth_authenticate(request, username=email, password=password)
+        if user is not None and hasattr(user, 'userprofile') and user.userprofile.role == 'employee':
+            auth_login(request, user, backend='accounts.backends.EmailBackend')
+            return redirect('/admin-portal/dashboard/')
+        else:
+            error = 'Invalid credentials or insufficient permissions.'
+
+    return render(request, 'accounts/employee_login.html', {'error': error})
+
+
+def super_admin_login_page(request):
+    """
+    Super Admin login page.
+    GET  — render the login form.
+    POST — authenticate with email + password; on success redirect to /super-admin/dashboard/.
+    """
+    from django.contrib.auth import authenticate as auth_authenticate, login as auth_login
+
+    if request.user.is_authenticated and hasattr(request.user, 'userprofile'):
+        if request.user.userprofile.role == 'super_admin':
+            return redirect('/super-admin/dashboard/')
+
+    error = None
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        password = request.POST.get('password', '')
+        user = auth_authenticate(request, username=email, password=password)
+        if user is not None and hasattr(user, 'userprofile') and user.userprofile.role == 'super_admin':
+            auth_login(request, user, backend='accounts.backends.EmailBackend')
+            return redirect('/super-admin/dashboard/')
+        else:
+            error = 'Invalid credentials or insufficient permissions.'
+
+    return render(request, 'accounts/super_admin_login.html', {'error': error})
 
 
 # =============================================================================

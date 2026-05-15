@@ -224,7 +224,8 @@ class LoginAttempt(models.Model):
 
 class UserProfile(models.Model):
     """
-    Profile for user roles, financial access levels, and employee settings.
+    Profile for user roles, financial access levels, employee settings,
+    and guest loyalty programme.
     """
     ROLE_CHOICES = [
         ('guest', 'Guest'),
@@ -236,12 +237,29 @@ class UserProfile(models.Model):
         ('B', 'Level B (Limited Financial Access)'),
         ('C', 'Level C (No Financial Access)'),
     ]
+    TIER_CHOICES = [
+        ('bronze', 'Bronze'),
+        ('silver', 'Silver'),
+        ('gold', 'Gold'),
+    ]
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='userprofile')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='guest')
     fin_level = models.CharField(max_length=1, choices=FIN_LEVEL_CHOICES, null=True, blank=True)
     assigned_properties = models.ManyToManyField('rooms.Property', blank=True, related_name='assigned_employees')
     must_change_password = models.BooleanField(default=False)
+    loyalty_points = models.PositiveIntegerField(default=0)
+    loyalty_tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='bronze')
 
     def __str__(self):
         return f"{self.user.email} Profile ({self.role})"
+
+    def recalculate_tier(self):
+        """Update loyalty_tier based on current loyalty_points and save."""
+        if self.loyalty_points >= 1500:
+            self.loyalty_tier = 'gold'
+        elif self.loyalty_points >= 500:
+            self.loyalty_tier = 'silver'
+        else:
+            self.loyalty_tier = 'bronze'
+        self.save(update_fields=['loyalty_tier'])

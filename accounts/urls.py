@@ -29,6 +29,8 @@ urlpatterns = [
     path("folio/", views.folio_page, name="folio"),
     path("profile/edit/", views.edit_profile_page, name="edit-profile"),
     path("profile/update/", views.update_profile, name="update-profile"),
+    path("employee-login/", views.employee_login_page, name="employee-login-page"),
+    path("super-admin-login/", views.super_admin_login_page, name="super-admin-login-page"),
 
     # API endpoints
     path("register/", views.RegisterView.as_view(), name="register"),
