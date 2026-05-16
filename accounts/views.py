@@ -425,24 +425,35 @@ def employee_login_page(request):
     """
     Staff login page for employees.
     GET  — render the login form.
-    POST — authenticate with email + password; on success redirect to /admin-portal/dashboard/.
+    POST — authenticate with email + password; rate-limited; redirect to /admin-portal/dashboard/.
     """
     from django.contrib.auth import authenticate as auth_authenticate, login as auth_login
 
     if request.user.is_authenticated and hasattr(request.user, 'userprofile'):
-        if request.user.userprofile.role == 'employee':
+        if request.user.userprofile.role in ('employee', 'super_admin'):
             return redirect('/admin-portal/dashboard/')
 
     error = None
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
-        user = auth_authenticate(request, username=email, password=password)
-        if user is not None and hasattr(user, 'userprofile') and user.userprofile.role == 'employee':
-            auth_login(request, user, backend='accounts.backends.EmailBackend')
-            return redirect('/admin-portal/dashboard/')
+
+        lock = check_login_lock(email)
+        if lock['locked']:
+            error = f"Too many failed attempts. Try again in {lock['remaining_minutes']} minute(s)."
         else:
-            error = 'Invalid credentials or insufficient permissions.'
+            user = auth_authenticate(request, username=email, password=password)
+            if user is not None and hasattr(user, 'userprofile') and user.userprofile.role in ('employee', 'super_admin'):
+                reset_login_attempts(email)
+                auth_login(request, user, backend='accounts.backends.EmailBackend')
+                return redirect('/admin-portal/dashboard/')
+            else:
+                record_failed_login(email)
+                lock = check_login_lock(email)
+                if lock['locked']:
+                    error = f"Account locked after too many attempts. Try again in {lock['remaining_minutes']} minute(s)."
+                else:
+                    error = 'Invalid credentials or insufficient permissions.'
 
     return render(request, 'accounts/employee_login.html', {'error': error})
 
@@ -451,7 +462,7 @@ def super_admin_login_page(request):
     """
     Super Admin login page.
     GET  — render the login form.
-    POST — authenticate with email + password; on success redirect to /super-admin/dashboard/.
+    POST — authenticate with email + password; rate-limited; redirect to /super-admin/dashboard/.
     """
     from django.contrib.auth import authenticate as auth_authenticate, login as auth_login
 
@@ -463,12 +474,23 @@ def super_admin_login_page(request):
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
-        user = auth_authenticate(request, username=email, password=password)
-        if user is not None and hasattr(user, 'userprofile') and user.userprofile.role == 'super_admin':
-            auth_login(request, user, backend='accounts.backends.EmailBackend')
-            return redirect('/super-admin/dashboard/')
+
+        lock = check_login_lock(email)
+        if lock['locked']:
+            error = f"Too many failed attempts. Try again in {lock['remaining_minutes']} minute(s)."
         else:
-            error = 'Invalid credentials or insufficient permissions.'
+            user = auth_authenticate(request, username=email, password=password)
+            if user is not None and hasattr(user, 'userprofile') and user.userprofile.role == 'super_admin':
+                reset_login_attempts(email)
+                auth_login(request, user, backend='accounts.backends.EmailBackend')
+                return redirect('/super-admin/dashboard/')
+            else:
+                record_failed_login(email)
+                lock = check_login_lock(email)
+                if lock['locked']:
+                    error = f"Account locked after too many attempts. Try again in {lock['remaining_minutes']} minute(s)."
+                else:
+                    error = 'Invalid credentials or insufficient permissions.'
 
     return render(request, 'accounts/super_admin_login.html', {'error': error})
 

@@ -59,37 +59,51 @@ class RoleRoutingMiddleware:
     Middleware to route users to the correct login/portal based on role.
 
     Rules:
-    - Staff/employee/super_admin trying to reach /accounts/login/page/
-      → redirect to /admin-portal/login/
-    - Unauthenticated user hitting /admin-portal/ or /super-admin/
-      → redirect to /accounts/login/page/
-    - Authenticated guest hitting /admin-portal/ or /super-admin/
-      → redirect to /accounts/folio/
+    - Staff/employee/super_admin on /accounts/login/page/ → /admin-portal/login/
+    - /admin-portal/*: requires employee or super_admin role
+    - /super-admin/*: requires super_admin role only
+    - /admin/*: requires is_superuser (Django built-in admin)
+    - Guests hitting any staff path → /accounts/folio/
+    - Unauthenticated hitting staff paths → appropriate login page
     """
-
-    STAFF_PORTALS = ('/admin-portal/', '/super-admin/')
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         path = request.path
+        user = request.user
+        role = None
+        if user.is_authenticated and hasattr(user, 'userprofile'):
+            try:
+                role = user.userprofile.role
+            except Exception:
+                pass
 
-        # Staff/admin users who land on the guest login page → send to staff login
-        if path == '/accounts/login/page/':
-            if request.user.is_authenticated and hasattr(request.user, 'userprofile'):
-                role = request.user.userprofile.role
-                if role in ('employee', 'super_admin'):
-                    return redirect('/admin-portal/login/')
+        # Staff hitting guest login → staff login
+        if path == '/accounts/login/page/' and role in ('employee', 'super_admin'):
+            return redirect('/admin-portal/login/')
 
-        # Anyone (authenticated or not) hitting staff portals
-        if any(path.startswith(portal) for portal in self.STAFF_PORTALS):
-            if not request.user.is_authenticated:
-                return redirect('/accounts/login/page/')
-            if hasattr(request.user, 'userprofile'):
-                role = request.user.userprofile.role
-                if role == 'guest':
-                    return redirect('/accounts/folio/')
+        # Django admin → superuser only
+        if path.startswith('/admin/') and not path.startswith('/admin-portal/'):
+            if not user.is_authenticated:
+                return redirect('/super-admin/login/')
+            if not user.is_superuser:
+                return redirect('/super-admin/dashboard/' if role == 'super_admin' else '/accounts/folio/')
+
+        # Super admin portal → super_admin role only
+        if path.startswith('/super-admin/') and not path == '/super-admin/login/':
+            if not user.is_authenticated:
+                return redirect('/super-admin/login/')
+            if role != 'super_admin':
+                return redirect('/accounts/folio/' if role == 'guest' else '/admin-portal/dashboard/')
+
+        # Employee portal → employee or super_admin role
+        if path.startswith('/admin-portal/') and not path == '/admin-portal/login/':
+            if not user.is_authenticated:
+                return redirect('/admin-portal/login/')
+            if role == 'guest':
+                return redirect('/accounts/folio/')
 
         response = self.get_response(request)
         return response
