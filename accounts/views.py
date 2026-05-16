@@ -401,6 +401,12 @@ class LogoutView(APIView):
         logout(request)
         return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
 
+    def get(self, request):
+        """Allow GET logout for sidebar <a href> links in admin portals."""
+        logger.info("User logged out (GET): %s", request.user.email)
+        logout(request)
+        return redirect('/accounts/login/page/')
+
 
 class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
