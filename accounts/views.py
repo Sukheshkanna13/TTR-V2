@@ -485,7 +485,7 @@ def folio_page(request):
     from rooms.models import Booking
     bookings = Booking.objects.filter(user=request.user).select_related('room', 'room__property').order_by('-created_at')
     confirmed_bookings = bookings.filter(status='confirmed')
-    total_spent = sum(b.total_price for b in confirmed_bookings)
+    total_spent = sum(b.total_price for b in bookings.filter(status__in=['confirmed', 'completed']))
     nights_stayed = sum(b.num_nights for b in bookings.filter(status__in=['confirmed', 'completed']))
     profile = getattr(request.user, 'userprofile', None)
     context = {

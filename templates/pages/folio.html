@@ -95,7 +95,7 @@
               </div>
 
               <div class="tt-card-area" style="margin-bottom:0.85rem;">
-                {{ booking.room.property.name }}{% if booking.room.city %} &middot; {{ booking.room.city }}{% endif %}
+                {{ booking.room.property.name|default:booking.room.city }}{% if booking.room.property and booking.room.city %} &middot; {{ booking.room.city }}{% endif %}
               </div>
 
               <div style="display:flex;flex-wrap:wrap;gap:1.25rem;">

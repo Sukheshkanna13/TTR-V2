@@ -11,18 +11,18 @@ def dashboard(request):
     today = timezone.now().date()
 
     active_bookings = Booking.objects.filter(
-        status='CONFIRMED',
+        status='confirmed',
         check_in__lte=today,
         check_out__gt=today,
     ).count()
 
     upcoming_checkouts = Booking.objects.filter(
-        status='CONFIRMED',
+        status='confirmed',
         check_out=today,
     ).select_related('user', 'room')
 
     upcoming_checkins = Booking.objects.filter(
-        status='CONFIRMED',
+        status='confirmed',
         check_in=today,
     ).select_related('user', 'room')
 
@@ -37,7 +37,7 @@ def dashboard(request):
 @require_employee
 def bookings_list(request):
     bookings = Booking.objects.filter(
-        status__in=('CONFIRMED', 'COMPLETED', 'CANCELLED'),
+        status__in=('confirmed', 'completed', 'cancelled'),
     ).select_related('user', 'room').order_by('-check_in')[:50]
     return render(request, 'employeeadmin/bookings.html', {'bookings': bookings})
 

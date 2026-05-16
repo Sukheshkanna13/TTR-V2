@@ -12,18 +12,18 @@ def dashboard(request):
     month_start = today.replace(day=1)
 
     active_bookings = Booking.objects.filter(
-        status='CONFIRMED',
+        status='confirmed',
         check_in__lte=today,
         check_out__gt=today,
     ).count()
 
     today_revenue = Booking.objects.filter(
-        status='CONFIRMED',
+        status='confirmed',
         check_in=today,
     ).aggregate(total=Sum('total_price'))['total'] or 0
 
     month_revenue = Booking.objects.filter(
-        status='CONFIRMED',
+        status='confirmed',
         check_in__gte=month_start,
     ).aggregate(total=Sum('total_price'))['total'] or 0
 
