@@ -1,0 +1,56 @@
+{% extends "employeeadmin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div class="grid-3" style="margin-bottom:20px;">
+  <div class="card">
+    <div class="card-title">Active Guests</div>
+    <div class="card-value">{{ active_bookings }}</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Check-outs Today</div>
+    <div class="card-value">{{ upcoming_checkouts|length }}</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Check-ins Today</div>
+    <div class="card-value">{{ upcoming_checkins|length }}</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="section-head"><h2>Check-outs Today</h2></div>
+    <table class="ea-table">
+      <thead><tr><th>Guest</th><th>Room</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for b in upcoming_checkouts %}
+        <tr>
+          <td>{% if fin != 'C' %}{{ b.user.full_name|default:b.user.email }}{% else %}<span class="redacted">████████</span>{% endif %}</td>
+          <td>{{ b.room.name }}</td>
+          <td><span class="badge badge-yellow">Checkout</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:14px;">None today</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Check-ins Today</h2></div>
+    <table class="ea-table">
+      <thead><tr><th>Guest</th><th>Room</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for b in upcoming_checkins %}
+        <tr>
+          <td>{% if fin != 'C' %}{{ b.user.full_name|default:b.user.email }}{% else %}<span class="redacted">████████</span>{% endif %}</td>
+          <td>{{ b.room.name }}</td>
+          <td><span class="badge badge-green">Arriving</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:14px;">None today</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

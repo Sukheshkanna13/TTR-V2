@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Employee Portal{% endblock %} — Temples & Towns</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #21262d;
+    --accent: #3fb950;
+    --accent-dim: rgba(63,185,80,.08);
+    --text: #c9d1d9;
+    --muted: #484f58;
+    --danger: #f85149;
+    --warning: #e3b341;
+    --sidebar-w: 210px;
+  }
+  body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+  .ea-sidebar { width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; }
+  .ea-logo { padding: 18px 16px; border-bottom: 1px solid var(--border); }
+  .ea-logo span { color: var(--accent); font-weight: 700; font-size: .95rem; }
+  .ea-logo small { display: block; color: var(--muted); font-size: .7rem; margin-top: 2px; }
+  .ea-nav { flex: 1; padding: 10px 0; }
+  .ea-nav a { display: flex; align-items: center; gap: 9px; padding: 9px 16px; color: var(--muted); text-decoration: none; font-size: .85rem; transition: background .12s, color .12s; }
+  .ea-nav a:hover, .ea-nav a.active { background: var(--accent-dim); color: var(--accent); }
+  .ea-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .ea-footer a { color: var(--muted); font-size: .8rem; text-decoration: none; }
+  .ea-main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+  .ea-topbar { padding: 14px 22px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; }
+  .ea-topbar h1 { font-size: 1rem; font-weight: 600; }
+  .ea-topbar .chip { background: var(--border); border-radius: 20px; padding: 3px 10px; font-size: .75rem; color: var(--muted); }
+  .ea-content { padding: 22px; flex: 1; }
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+  .card-title { font-size: .75rem; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px; }
+  .card-value { font-size: 1.8rem; font-weight: 700; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media(max-width: 800px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+  /* Table */
+  .ea-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  .ea-table th { text-align: left; padding: 9px 11px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); font-size: .75rem; text-transform: uppercase; }
+  .ea-table td { padding: 9px 11px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .ea-table tr:last-child td { border-bottom: none; }
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: .72rem; font-weight: 500; }
+  .badge-green { background: rgba(63,185,80,.15); color: var(--accent); }
+  .badge-red { background: rgba(248,81,73,.15); color: var(--danger); }
+  .badge-yellow { background: rgba(227,179,65,.15); color: var(--warning); }
+  .badge-grey { background: rgba(72,79,88,.2); color: var(--muted); }
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 6px; font-size: .8rem; font-weight: 500; cursor: pointer; border: none; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-danger { background: rgba(248,81,73,.15); color: var(--danger); }
+  .btn-ghost { background: var(--border); color: var(--text); }
+  .btn-sm { padding: 4px 9px; font-size: .75rem; }
+  /* Forms */
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: 4px; }
+  .form-control { width: 100%; padding: 7px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-size: .85rem; }
+  .form-control:focus { outline: none; border-color: var(--accent); }
+  /* Section head */
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-head h2 { font-size: .95rem; font-weight: 600; }
+  /* Redacted */
+  .redacted { background: var(--border); border-radius: 4px; color: transparent; user-select: none; }
+</style>
+</head>
+<body>
+<aside class="ea-sidebar">
+  <div class="ea-logo">
+    <span>Temples &amp; Towns</span>
+    <small>Employee Portal</small>
+  </div>
+  <nav class="ea-nav">
+    <a href="{% url 'employeeadmin:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
+    <a href="{% url 'employeeadmin:bookings' %}" class="{% if request.resolver_match.url_name == 'bookings' %}active{% endif %}">📋 Bookings</a>
+    <a href="{% url 'employeeadmin:rooms' %}" class="{% if request.resolver_match.url_name == 'rooms' %}active{% endif %}">🏠 Rooms</a>
+    <a href="{% url 'employeeadmin:availability' %}" class="{% if request.resolver_match.url_name == 'availability' %}active{% endif %}">📅 Availability</a>
+  </nav>
+  <div class="ea-footer">
+    <a href="{% url 'accounts:logout' %}">↩ Logout</a>
+  </div>
+</aside>
+<main class="ea-main">
+  <div class="ea-topbar">
+    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+    <span class="chip">{{ request.user.email }}</span>
+  </div>
+  <div class="ea-content">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+</body>
+</html>

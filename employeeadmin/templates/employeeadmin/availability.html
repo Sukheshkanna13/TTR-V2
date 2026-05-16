@@ -1,0 +1,151 @@
+{% extends "employeeadmin/base.html" %}
+{% block title %}Availability{% endblock %}
+{% block page_title %}Availability & Blocks{% endblock %}
+{% block content %}
+<!-- Room selector -->
+<div class="card" style="margin-bottom:18px;">
+  <form method="get" style="display:flex;align-items:center;gap:12px;">
+    <label style="color:var(--muted);font-size:.85rem;white-space:nowrap;">Select Room:</label>
+    <select name="room" class="form-control" style="max-width:280px;" onchange="this.form.submit()">
+      <option value="">— choose room —</option>
+      {% for room in rooms %}
+      <option value="{{ room.pk }}" {% if selected_room and room.pk == selected_room.pk %}selected{% endif %}>
+        {{ room.name }}{% if room.property %} ({{ room.property.name }}){% endif %}
+      </option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{% if selected_room %}
+<div class="grid-2">
+  <!-- OTA Blocks -->
+  <div class="card">
+    <div class="section-head">
+      <h2>Blocked Dates</h2>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('blockForm').style.display='block'">+ Add Block</button>
+    </div>
+
+    <div id="blockForm" style="display:none;background:var(--bg);border-radius:6px;padding:14px;margin-bottom:14px;">
+      <form onsubmit="addBlock(event)">
+        {% csrf_token %}
+        <input type="hidden" name="room_id" value="{{ selected_room.pk }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group" style="margin:0;"><label>Start Date</label><input type="date" name="start_date" class="form-control" required></div>
+          <div class="form-group" style="margin:0;"><label>End Date</label><input type="date" name="end_date" class="form-control" required></div>
+        </div>
+        <div class="form-group" style="margin:8px 0 10px;"><label>Reason</label><input type="text" name="reason" class="form-control" value="Manual Block" placeholder="OTA hold, deep clean…"></div>
+        <button type="submit" class="btn btn-primary btn-sm">Create Block</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('blockForm').style.display='none'">Cancel</button>
+      </form>
+    </div>
+
+    <table class="ea-table">
+      <thead><tr><th>Start</th><th>End</th><th>Reason</th><th></th></tr></thead>
+      <tbody id="blockList">
+        {% for block in ota_blocks %}
+        <tr id="b{{ block.pk }}">
+          <td>{{ block.start_date }}</td>
+          <td>{{ block.end_date }}</td>
+          <td style="font-size:.8rem;color:var(--muted);">{{ block.reason }}</td>
+          <td>
+            <button class="btn btn-danger btn-sm" onclick="deleteBlock('{{ block.pk }}')">Remove</button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr id="emptyBlocks"><td colspan="4" style="text-align:center;color:var(--muted);padding:14px;">No blocks.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Seasonal Rates (fin A/B only) -->
+  <div class="card">
+    <div class="section-head">
+      <h2>Seasonal Rates</h2>
+      {% if fin == 'A' %}
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('rateForm').style.display='block'">+ Add Rate</button>
+      {% endif %}
+    </div>
+
+    {% if fin == 'C' %}
+    <p style="color:var(--muted);font-size:.85rem;padding:14px 0;">Financial access required to view rates.</p>
+    {% else %}
+
+    {% if fin == 'A' %}
+    <div id="rateForm" style="display:none;background:var(--bg);border-radius:6px;padding:14px;margin-bottom:14px;">
+      <form onsubmit="addRate(event)">
+        {% csrf_token %}
+        <input type="hidden" name="room_id" value="{{ selected_room.pk }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div class="form-group" style="margin:0;"><label>Start</label><input type="date" name="start_date" class="form-control" required></div>
+          <div class="form-group" style="margin:0;"><label>End</label><input type="date" name="end_date" class="form-control" required></div>
+          <div class="form-group" style="margin:0;"><label>Price (₹/night)</label><input type="number" name="price" class="form-control" min="1" required></div>
+        </div>
+        <div style="margin-top:10px;">
+          <button type="submit" class="btn btn-primary btn-sm">Add Rate</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('rateForm').style.display='none'">Cancel</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    <table class="ea-table">
+      <thead><tr><th>Start</th><th>End</th><th>Rate / Night</th></tr></thead>
+      <tbody>
+        {% for rate in seasonal_rates %}
+        <tr>
+          <td>{{ rate.start_date }}</td>
+          <td>{{ rate.end_date }}</td>
+          <td>{% if fin == 'A' %}₹{{ rate.price|floatformat:0 }}{% else %}<span class="badge badge-grey">Hidden</span>{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:14px;">No seasonal rates.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function addBlock(e) {
+  e.preventDefault();
+  const form = e.target;
+  fetch('/admin-portal/availability/block/create/', {method:'POST', body: new FormData(form)})
+    .then(r=>r.json()).then(d=>{
+      if (d.error) { alert(d.error); return; }
+      location.reload();
+    });
+}
+
+function deleteBlock(blockId) {
+  if (!confirm('Remove this block?')) return;
+  fetch(`/admin-portal/availability/block/${blockId}/delete/`, {
+    method:'POST',
+    headers:{'X-CSRFToken': CSRF, 'Content-Type':'application/json'},
+    body: '{}'
+  }).then(r=>r.json()).then(d=>{
+    if (d.error) { alert(d.error); return; }
+    const row = document.getElementById('b' + blockId);
+    if (row) row.remove();
+  });
+}
+
+function addRate(e) {
+  e.preventDefault();
+  fetch('/admin-portal/availability/rate/create/', {method:'POST', body: new FormData(e.target)})
+    .then(r=>r.json()).then(d=>{
+      if (d.error) { alert(d.error); return; }
+      location.reload();
+    });
+}
+</script>
+{% else %}
+<div class="card" style="text-align:center;padding:40px;color:var(--muted);">
+  Select a room above to manage its availability and rates.
+</div>
+{% endif %}
+{% endblock %}

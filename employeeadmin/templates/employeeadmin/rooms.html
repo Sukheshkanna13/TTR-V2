@@ -1,0 +1,76 @@
+{% extends "employeeadmin/base.html" %}
+{% block title %}Rooms{% endblock %}
+{% block page_title %}Rooms{% endblock %}
+{% block content %}
+<div class="card">
+  <table class="ea-table">
+    <thead>
+      <tr>
+        <th>Room</th>
+        <th>Property</th>
+        <th>Type</th>
+        {% if fin == 'A' %}<th>Rate / Night</th>{% endif %}
+        <th>Capacity</th>
+        <th>Operational Status</th>
+        <th>Update Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for room in rooms %}
+      <tr id="row-{{ room.pk }}">
+        <td style="font-weight:500;">{{ room.name }}</td>
+        <td>{{ room.property.name|default:"—" }}</td>
+        <td>{{ room.get_room_type_display }}</td>
+        {% if fin == 'A' %}<td>₹{{ room.price_per_night|floatformat:0 }}</td>{% endif %}
+        <td>{{ room.capacity }}</td>
+        <td id="status-{{ room.pk }}">
+          {% if room.operational_status == 'available' %}<span class="badge badge-green">Available</span>
+          {% elif room.operational_status == 'maintenance' %}<span class="badge badge-red">Maintenance</span>
+          {% elif room.operational_status == 'cleaning' %}<span class="badge badge-yellow">Cleaning</span>
+          {% elif room.operational_status == 'out_of_order' %}<span class="badge badge-red">Out of Order</span>
+          {% else %}<span class="badge badge-grey">{{ room.operational_status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <form onsubmit="updateStatus(event, '{{ room.pk }}')">
+            {% csrf_token %}
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select name="operational_status" class="form-control" style="width:140px;padding:5px 8px;">
+                <option value="available" {% if room.operational_status == 'available' %}selected{% endif %}>Available</option>
+                <option value="maintenance" {% if room.operational_status == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                <option value="cleaning" {% if room.operational_status == 'cleaning' %}selected{% endif %}>Cleaning</option>
+                <option value="out_of_order" {% if room.operational_status == 'out_of_order' %}selected{% endif %}>Out of Order</option>
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">No rooms assigned.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+function updateStatus(e, roomId) {
+  e.preventDefault();
+  const form = e.target;
+  const status = form.querySelector('select').value;
+  const body = new FormData();
+  body.append('csrfmiddlewaretoken', CSRF);
+  body.append('operational_status', status);
+  fetch(`/admin-portal/rooms/${roomId}/status/`, {method:'POST', body})
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { alert(d.error); return; }
+      const badge = document.getElementById('status-' + roomId);
+      const labels = {available:'Available',maintenance:'Maintenance',cleaning:'Cleaning',out_of_order:'Out of Order'};
+      const classes = {available:'badge-green',maintenance:'badge-red',cleaning:'badge-yellow',out_of_order:'badge-red'};
+      badge.innerHTML = `<span class="badge ${classes[status]}">${labels[status]}</span>`;
+    });
+}
+</script>
+{% endblock %}
