@@ -1,0 +1,56 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+{% block content %}
+<div class="grid-2" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="section-head"><h2>Revenue by Property (This Month)</h2></div>
+    <table class="sa-table">
+      <thead>
+        <tr><th>Property</th><th>Bookings</th><th>Revenue</th></tr>
+      </thead>
+      <tbody>
+        {% for row in revenue_by_property %}
+        <tr>
+          <td>{{ row.room__property__name|default:"—" }}</td>
+          <td>{{ row.count }}</td>
+          <td>₹{{ row.revenue|floatformat:0 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;">No data</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">Period</div>
+    <div style="font-size:1rem;color:var(--muted);">Month to date (from 1 {{ today|date:"F Y" }})</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-head"><h2>Recent Confirmed Bookings</h2></div>
+  <table class="sa-table">
+    <thead>
+      <tr><th>Ref</th><th>Guest</th><th>Room / Property</th><th>Check-in</th><th>Check-out</th><th>Total</th></tr>
+    </thead>
+    <tbody>
+      {% for b in recent_bookings %}
+      <tr>
+        <td style="font-size:.8rem;">{{ b.booking_reference }}</td>
+        <td>{{ b.user.email }}</td>
+        <td>
+          {{ b.room.name }}<br>
+          <small style="color:var(--muted);">{{ b.room.property.name|default:"—" }}</small>
+        </td>
+        <td>{{ b.check_in }}</td>
+        <td>{{ b.check_out }}</td>
+        <td>₹{{ b.total_price|floatformat:0 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No bookings</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

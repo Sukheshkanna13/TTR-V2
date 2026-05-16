@@ -1,0 +1,41 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Audit Log{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+{% block content %}
+<div class="section-head">
+  <h2>Recent Actions (last 100)</h2>
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <select name="action" class="form-control" style="width:220px;" onchange="this.form.submit()">
+      <option value="">All Actions</option>
+      {% for val, label in action_choices %}
+        <option value="{{ val }}" {% if selected_action == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    {% if selected_action %}
+      <a href="{% url 'superadmin:audit-log' %}" class="btn btn-ghost btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  <table class="sa-table">
+    <thead>
+      <tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th><th>Detail</th><th>IP</th></tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td style="font-size:.8rem;white-space:nowrap;">{{ log.created_at|date:"d M Y H:i" }}</td>
+        <td>{{ log.actor.email }}</td>
+        <td><span class="badge badge-accent">{{ log.action }}</span></td>
+        <td>{{ log.target_user.email|default:"—" }}</td>
+        <td style="font-size:.8rem;color:var(--muted);">{{ log.detail|default:"—" }}</td>
+        <td style="font-size:.8rem;color:var(--muted);">{{ log.ip_address|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No logs found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

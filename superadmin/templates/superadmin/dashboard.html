@@ -1,0 +1,37 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div class="grid-4" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-title">Active Bookings</div>
+    <div class="card-value">{{ active_bookings }}</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Today's Revenue</div>
+    <div class="card-value">₹{{ today_revenue|floatformat:0 }}</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Month Revenue</div>
+    <div class="card-value">₹{{ month_revenue|floatformat:0 }}</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Total Rooms</div>
+    <div class="card-value">{{ total_rooms }}</div>
+  </div>
+</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Total Guests</div>
+    <div style="font-size:1.5rem;font-weight:700;">{{ total_guests }}</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Quick Actions</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+      <a href="{% url 'superadmin:employees' %}" class="btn btn-primary btn-sm">Manage Employees</a>
+      <a href="{% url 'superadmin:analytics' %}" class="btn btn-ghost btn-sm">View Analytics</a>
+      <a href="{% url 'superadmin:audit-log' %}" class="btn btn-ghost btn-sm">Audit Log</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

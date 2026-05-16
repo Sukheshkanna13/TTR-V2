@@ -1,0 +1,120 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Loyalty Config{% endblock %}
+{% block page_title %}Loyalty Configuration{% endblock %}
+{% block content %}
+<div class="grid-2" style="margin-bottom:24px;">
+  <!-- Per-Property Point Rules -->
+  <div class="card">
+    <div class="section-head"><h2>Property Point Rules</h2></div>
+    {% for prop in properties %}
+    <form method="post" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_config">
+      <input type="hidden" name="property_id" value="{{ prop.pk }}">
+      <div style="font-weight:600;margin-bottom:10px;">{{ prop.name }}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;">
+          <label>First Booking Pts</label>
+          <input type="number" name="first_booking_pts" class="form-control"
+                 value="{{ prop.loyalty_config.first_booking_pts|default:'200' }}" placeholder="200" min="0">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Pts / Night</label>
+          <input type="number" name="pts_per_night" class="form-control"
+                 value="{{ prop.loyalty_config.pts_per_night|default:'100' }}" placeholder="100" min="0">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Monthly Multiplier</label>
+          <input type="number" name="monthly_repeat_multiplier" class="form-control"
+                 value="{{ prop.loyalty_config.monthly_repeat_multiplier|default:'1.5' }}" placeholder="1.5" step="0.1" min="1">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    </form>
+    {% endfor %}
+  </div>
+
+  <!-- Tiers -->
+  <div class="card">
+    <div class="section-head"><h2>Loyalty Tiers</h2></div>
+    {% for tier in tiers %}
+    <form method="post" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_tier">
+      <input type="hidden" name="tier_id" value="{{ tier.pk }}">
+      <div class="form-group" style="margin:0;">
+        <label>Name</label>
+        <input type="text" name="name" class="form-control" value="{{ tier.name }}">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Min Pts</label>
+        <input type="number" name="min_pts" class="form-control" value="{{ tier.min_pts }}" min="0">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Discount %</label>
+        <input type="number" name="discount_pct" class="form-control" value="{{ tier.discount_pct }}" step="0.5" min="0">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Order</label>
+        <input type="number" name="sort_order" class="form-control" value="{{ tier.sort_order }}" min="0">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        <button type="submit" name="action" value="delete_tier" class="btn btn-danger btn-sm"
+                onclick="return confirm('Delete tier?')">Del</button>
+      </div>
+    </form>
+    {% endfor %}
+    <!-- Add new tier -->
+    <form method="post" style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_tier">
+      <div class="form-group" style="margin:0;"><input type="text" name="name" class="form-control" placeholder="New tier"></div>
+      <div class="form-group" style="margin:0;"><input type="number" name="min_pts" class="form-control" placeholder="0" min="0"></div>
+      <div class="form-group" style="margin:0;"><input type="number" name="discount_pct" class="form-control" placeholder="0" step="0.5" min="0"></div>
+      <div class="form-group" style="margin:0;"><input type="number" name="sort_order" class="form-control" placeholder="0" min="0"></div>
+      <button type="submit" class="btn btn-primary btn-sm">Add</button>
+    </form>
+  </div>
+</div>
+
+<!-- Campaigns -->
+<div class="card">
+  <div class="section-head"><h2>Campaign Rules (Date-Range Multipliers)</h2></div>
+  <table class="sa-table" style="margin-bottom:16px;">
+    <thead>
+      <tr><th>Name</th><th>Start</th><th>End</th><th>Multiplier</th><th>Active</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in campaigns %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td>{{ c.start_date }}</td>
+        <td>{{ c.end_date }}</td>
+        <td>×{{ c.multiplier }}</td>
+        <td>{% if c.is_active %}<span class="badge badge-success">Yes</span>{% else %}<span class="badge badge-muted">No</span>{% endif %}</td>
+        <td>
+          <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_campaign">
+            <input type="hidden" name="campaign_id" value="{{ c.pk }}">
+            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete?')">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">No campaigns</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_campaign">
+    <div class="form-group" style="margin:0;"><label>Campaign Name</label><input type="text" name="name" class="form-control" placeholder="Diwali Bonus"></div>
+    <div class="form-group" style="margin:0;"><label>Start Date</label><input type="date" name="start_date" class="form-control"></div>
+    <div class="form-group" style="margin:0;"><label>End Date</label><input type="date" name="end_date" class="form-control"></div>
+    <div class="form-group" style="margin:0;"><label>Multiplier</label><input type="number" name="multiplier" class="form-control" value="1.5" step="0.1" min="1"></div>
+    <button type="submit" class="btn btn-primary">Add</button>
+  </form>
+</div>
+{% endblock %}

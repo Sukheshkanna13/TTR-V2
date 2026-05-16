@@ -1,0 +1,40 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Bookings{% endblock %}
+{% block page_title %}All Bookings{% endblock %}
+{% block content %}
+<div class="card">
+  <table class="sa-table">
+    <thead>
+      <tr><th>Reference</th><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Total</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+      <tr>
+        <td style="font-size:.8rem;font-family:monospace;">{{ b.booking_reference }}</td>
+        <td>{{ b.user.email }}</td>
+        <td>
+          {{ b.room.name }}
+          {% if b.room.property %}
+          <br><small style="color:var(--muted);">{{ b.room.property.name }}</small>
+          {% endif %}
+        </td>
+        <td>{{ b.check_in }}</td>
+        <td>{{ b.check_out }}</td>
+        <td>₹{{ b.total_price|floatformat:0 }}</td>
+        <td>
+          {% if b.status == 'confirmed' %}<span class="badge badge-success">Confirmed</span>
+          {% elif b.status == 'completed' %}<span class="badge badge-accent">Completed</span>
+          {% elif b.status == 'cancelled' %}<span class="badge badge-danger">Cancelled</span>
+          {% elif b.status == 'pending' %}<span class="badge badge-muted">Pending</span>
+          {% elif b.status == 'expired' %}<span class="badge badge-danger">Expired</span>
+          {% else %}<span class="badge badge-muted">{{ b.status }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">No bookings found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
