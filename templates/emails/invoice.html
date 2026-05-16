@@ -1,14 +1,55 @@
 <!DOCTYPE html>
-<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a;">
-<h2>Booking Confirmed</h2>
-<p>Hi {{ guest.full_name }},</p>
-<p>Your stay at <strong>{{ room.name }}</strong> is confirmed.</p>
-<table style="border-collapse:collapse;width:100%;margin:16px 0;">
-  <tr><td style="padding:8px 0;color:#666;">Booking ref</td><td style="padding:8px 0;font-weight:600;">{{ booking.booking_reference }}</td></tr>
-  <tr><td style="padding:8px 0;color:#666;">Check-in</td><td style="padding:8px 0;">{{ booking.check_in }}</td></tr>
-  <tr><td style="padding:8px 0;color:#666;">Check-out</td><td style="padding:8px 0;">{{ booking.check_out }}</td></tr>
-  <tr><td style="padding:8px 0;color:#666;">Nights</td><td style="padding:8px 0;">{{ num_nights }}</td></tr>
-  <tr><td style="padding:8px 0;color:#666;">Total paid</td><td style="padding:8px 0;font-weight:600;">&#8377;{{ booking.total_price }}</td></tr>
-</table>
-<p>Thank you for choosing Temples &amp; Towns.</p>
-</body></html>
+<html>
+<body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a;background:#f9f7f4;">
+<div style="background:#fff;border-radius:10px;padding:28px;box-shadow:0 1px 6px rgba(0,0,0,.08);">
+  <div style="text-align:center;margin-bottom:20px;">
+    <img src="https://i.imgur.com/placeholder.png" alt="Temples & Towns" style="height:40px;" onerror="this.style.display='none'">
+    <h2 style="margin:8px 0 2px;color:#1a1a1a;">Booking Confirmed</h2>
+    <p style="color:#888;font-size:.9em;margin:0;">Invoice / Tax Receipt</p>
+  </div>
+
+  <p>Hi <strong>{{ guest.full_name }}</strong>,</p>
+  <p>Your booking at <strong>{{ room.name }}</strong>{% if room.property %}, {{ room.property.name }}{% endif %} is confirmed. Here are your details:</p>
+
+  <table style="border-collapse:collapse;width:100%;margin:20px 0;font-size:.95em;">
+    <tr style="background:#f5f3ef;">
+      <td style="padding:10px 12px;color:#555;border-radius:6px 0 0 6px;">Booking Reference</td>
+      <td style="padding:10px 12px;font-weight:700;font-family:monospace;border-radius:0 6px 6px 0;">{{ booking.booking_reference }}</td>
+    </tr>
+    <tr><td style="padding:10px 12px;color:#555;">Check-in</td><td style="padding:10px 12px;">{{ booking.check_in }}</td></tr>
+    <tr style="background:#f5f3ef;">
+      <td style="padding:10px 12px;color:#555;border-radius:6px 0 0 6px;">Check-out</td>
+      <td style="padding:10px 12px;border-radius:0 6px 6px 0;">{{ booking.check_out }}</td>
+    </tr>
+    <tr><td style="padding:10px 12px;color:#555;">Nights</td><td style="padding:10px 12px;">{{ num_nights }}</td></tr>
+    <tr style="background:#f5f3ef;">
+      <td style="padding:10px 12px;color:#555;border-radius:6px 0 0 6px;">Room / Property</td>
+      <td style="padding:10px 12px;border-radius:0 6px 6px 0;">{{ room.name }}</td>
+    </tr>
+  </table>
+
+  <table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:.95em;border-top:2px solid #e8e4de;">
+    <tr>
+      <td style="padding:10px 0;color:#555;">Base amount</td>
+      <td style="padding:10px 0;text-align:right;">&#8377;{{ booking.total_price }}</td>
+    </tr>
+    {% if booking.tax_amount %}
+    <tr>
+      <td style="padding:6px 0;color:#888;font-size:.9em;">GST (incl.)</td>
+      <td style="padding:6px 0;text-align:right;color:#888;font-size:.9em;">&#8377;{{ booking.tax_amount }}</td>
+    </tr>
+    {% endif %}
+    <tr style="border-top:1px solid #e8e4de;">
+      <td style="padding:12px 0;font-weight:700;font-size:1.05em;">Total paid</td>
+      <td style="padding:12px 0;font-weight:700;font-size:1.05em;text-align:right;">&#8377;{{ booking.total_price }}</td>
+    </tr>
+  </table>
+
+  <p style="color:#888;font-size:.85em;margin-top:20px;border-top:1px solid #eee;padding-top:16px;">
+    This is your official tax receipt. GST is included in the total shown above.<br>
+    Questions? Reply to this email or contact us at the property.
+  </p>
+  <p style="text-align:center;margin-top:20px;font-weight:600;color:#2c4a2e;">Thank you for choosing Temples &amp; Towns</p>
+</div>
+</body>
+</html>

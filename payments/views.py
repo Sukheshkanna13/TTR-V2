@@ -231,8 +231,9 @@ class VerifyPaymentView(APIView):
         booking.hold_expires_at = None
         booking.save(update_fields=["status", "hold_expires_at"])
 
-        # Generate booking reference
+        # Generate booking reference and compute GST
         booking.generate_booking_reference()
+        booking.compute_tax()
 
         # Update payment record
         Payment.objects.filter(
@@ -365,8 +366,9 @@ class WebhookView(APIView):
             booking.hold_expires_at = None
             booking.save(update_fields=["status", "hold_expires_at"])
 
-            # Generate booking reference
+            # Generate booking reference and compute GST
             booking.generate_booking_reference()
+            booking.compute_tax()
 
             # Update payment record
             Payment.objects.filter(

@@ -262,6 +262,12 @@ class Booking(models.Model):
         max_digits=10,
         decimal_places=2,
     )
+    tax_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default='0.00',
+        help_text="GST amount computed from PropertyTaxConfig at confirmation time.",
+    )
     hold_expires_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -278,7 +284,7 @@ class Booking(models.Model):
         null=True,
         blank=True,
         unique=True,
-        help_text="Human-readable booking reference (e.g., BK-20260424-A3F7).",
+        help_text="Human-readable booking reference (e.g., TT-2026-00001).",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -321,17 +327,26 @@ class Booking(models.Model):
         return False
 
     def generate_booking_reference(self):
-        """
-        Generate a human-readable booking reference like BK-20260424-A3F7.
-        Called when booking is confirmed.
-        """
+        """Generate TT-{year}-{pk:05d} reference. Called on booking confirmation."""
         if self.booking_reference:
             return self.booking_reference
-        date_part = timezone.now().strftime("%Y%m%d")
-        random_part = secrets.token_hex(2).upper()  # 4 hex chars
-        self.booking_reference = f"BK-{date_part}-{random_part}"
+        year = timezone.now().year
+        self.booking_reference = f"TT-{year}-{self.pk:05d}"
         self.save(update_fields=["booking_reference"])
         return self.booking_reference
+
+    def compute_tax(self):
+        """Compute GST from PropertyTaxConfig and store in tax_amount. Returns amount."""
+        from decimal import Decimal
+        try:
+            cfg = self.room.property.tax_config
+            nightly_rate = self.total_price / self.num_nights if self.num_nights else self.total_price
+            rate = cfg.gst_rate_for(nightly_rate)
+            self.tax_amount = (self.total_price * rate / Decimal('100')).quantize(Decimal('0.01'))
+        except Exception:
+            self.tax_amount = Decimal('0.00')
+        self.save(update_fields=["tax_amount"])
+        return self.tax_amount
 
 
 class OTABlock(models.Model):
