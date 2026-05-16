@@ -215,37 +215,13 @@ def send_invoice_email(booking):
 # =========================================================================
 
 def award_loyalty_points(booking):
-    """
-    Credit loyalty points to the guest's UserProfile after a confirmed booking.
-
-    Formula: 100 points per night stayed.
-    Tier is recalculated immediately after the points are saved.
-    Failures are logged but never re-raised — they must not break the
-    payment confirmation response.
-    """
+    """Delegate to loyalty.services.award_booking_points (config-driven, ledger-tracked)."""
     try:
-        from accounts.models import UserProfile
-
-        num_nights = (booking.check_out - booking.check_in).days
-        points = num_nights * 100
-
-        profile, _ = UserProfile.objects.get_or_create(user=booking.user)
-        profile.loyalty_points += points
-        profile.save(update_fields=["loyalty_points"])
-        profile.recalculate_tier()
-
-        logger.info(
-            "Awarded %d loyalty points to %s (booking %s). Total: %d, Tier: %s",
-            points,
-            booking.user.email,
-            booking.booking_reference,
-            profile.loyalty_points,
-            profile.loyalty_tier,
-        )
+        from loyalty.services import award_booking_points
+        award_booking_points(booking.pk)
     except Exception as e:
         logger.error(
-            "Failed to award loyalty points for booking %s (user %s): %s",
+            "award_loyalty_points failed for booking %s: %s",
             getattr(booking, "booking_reference", "unknown"),
-            getattr(booking.user, "email", "unknown"),
             str(e),
         )
