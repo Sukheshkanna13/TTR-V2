@@ -32,6 +32,10 @@ urlpatterns = [
     path("employee-login/", views.employee_login_page, name="employee-login-page"),
     path("super-admin-login/", views.super_admin_login_page, name="super-admin-login-page"),
 
+    path("forgot-password/", views.forgot_password, name="forgot-password"),
+    path("forgot-password/verify/", views.forgot_password_verify, name="forgot-password-verify"),
+    path("forgot-password/set/", views.forgot_password_set, name="forgot-password-set"),
+
     # API endpoints
     path("register/", views.RegisterView.as_view(), name="register"),
     path("verify-otp/", views.VerifyOTPView.as_view(), name="verify-otp"),

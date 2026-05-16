@@ -622,3 +622,71 @@ class CreateEmployeeView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+# ── Forgot Password (3-step OTP reset) ────────────────────────────────────────
+
+def forgot_password(request):
+    """Step 1 — enter email, send OTP."""
+    error = None
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        if not email or '@' not in email:
+            error = 'Please enter a valid email address.'
+        else:
+            user_exists = User.objects.filter(email=email, is_active=True).exists()
+            if user_exists:
+                otp_code = create_and_store_otp(email)
+                send_otp_email(email, otp_code)
+            # Always show success to avoid user enumeration
+            request.session['pw_reset_email'] = email
+            return redirect('accounts:forgot-password-verify')
+    return render(request, 'accounts/forgot_password.html', {'error': error})
+
+
+def forgot_password_verify(request):
+    """Step 2 — enter OTP to verify identity."""
+    email = request.session.get('pw_reset_email')
+    if not email:
+        return redirect('accounts:forgot-password')
+
+    error = None
+    if request.method == 'POST':
+        code = request.POST.get('otp', '').strip()
+        result = verify_otp(email, code)
+        if result['success']:
+            request.session['pw_reset_verified'] = True
+            return redirect('accounts:forgot-password-set')
+        error = result['error']
+
+    return render(request, 'accounts/forgot_password_verify.html', {'email': email, 'error': error})
+
+
+def forgot_password_set(request):
+    """Step 3 — set new password."""
+    email = request.session.get('pw_reset_email')
+    verified = request.session.get('pw_reset_verified')
+    if not email or not verified:
+        return redirect('accounts:forgot-password')
+
+    error = None
+    if request.method == 'POST':
+        pw1 = request.POST.get('password1', '')
+        pw2 = request.POST.get('password2', '')
+        if len(pw1) < 8:
+            error = 'Password must be at least 8 characters.'
+        elif pw1 != pw2:
+            error = 'Passwords do not match.'
+        else:
+            try:
+                user = User.objects.get(email=email, is_active=True)
+                user.set_password(pw1)
+                user.save()
+                # Clear session keys
+                request.session.pop('pw_reset_email', None)
+                request.session.pop('pw_reset_verified', None)
+                return redirect('accounts:login-page')
+            except User.DoesNotExist:
+                error = 'Account not found.'
+
+    return render(request, 'accounts/forgot_password_set.html', {'error': error})
