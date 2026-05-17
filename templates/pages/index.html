@@ -6,8 +6,8 @@
 <div class="tt-page">
 
   <!-- Hero -->
-  <section class="tt-section-sm">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;">
+  <section class="tt-section-hero">
+    <div class="tt-hero-grid">
       <!-- Left -->
       <div>
         <div class="tt-eyebrow" style="margin-bottom:20px;">FEATURED STAYS</div>
@@ -43,7 +43,7 @@
   <!-- Search / date bar -->
   <section style="background:var(--bg-soft);border-radius:var(--r-md);padding:28px 32px;margin-bottom:0;">
     <form id="searchForm" onsubmit="handleSearch(event)">
-      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="tt-search-form-row">
         <div style="flex:1;min-width:140px;">
           <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">CHECK-IN</div>
           <input type="date" id="check_in" required
@@ -180,7 +180,7 @@
   <div class="tt-hr"></div>
   <section class="tt-section-sm">
     <div class="tt-eyebrow" style="margin-bottom:16px;">HOW BOOKING WORKS</div>
-    <div style="display:grid;grid-template-columns:1fr 3fr;gap:48px;align-items:start;">
+    <div class="tt-booking-steps">
       <div>
         <h2 class="tt-h2" style="margin:0 0 20px;">Your stay,<br>from first look to check-in.</h2>
         <p class="tt-sub" style="margin:0;max-width:300px;">
@@ -230,24 +230,24 @@
 
   <!-- Wayfarer Rewards -->
   <section class="tt-section-sm">
-    <div style="background:var(--ink);border-radius:var(--r-md);padding:56px 64px;color:#fff;">
+    <div class="tt-wayfarer-box" style="background:var(--ink);border-radius:var(--r-md);padding:56px 64px;color:#fff;">
       <div class="tt-eyebrow" style="color:rgba(255,255,255,.5);margin-bottom:16px;">WAYFARER REWARDS</div>
       <h2 class="tt-h2" style="color:#fff;margin:0 0 48px;">Stay more.</h2>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;">
+      <div class="tt-wayfarer-tiers">
 
-        <div style="padding:0 40px 0 0;border-right:1px solid rgba(255,255,255,.15);">
+        <div class="tt-wayfarer-tier-col" style="padding:0 40px 0 0;border-right:1px solid rgba(255,255,255,.15);">
           <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.5);margin-bottom:12px;">BRONZE</div>
           <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">0 – 499 pts</div>
           <div style="font-size:14px;color:rgba(255,255,255,.55);">Base rate</div>
         </div>
 
-        <div style="padding:0 40px;border-right:1px solid rgba(255,255,255,.15);">
+        <div class="tt-wayfarer-tier-col" style="padding:0 40px;border-right:1px solid rgba(255,255,255,.15);">
           <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.5);margin-bottom:12px;">SILVER</div>
           <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">500 – 1,999 pts</div>
           <div style="font-size:14px;color:rgba(255,255,255,.55);">5% off</div>
         </div>
 
-        <div style="padding:0 0 0 40px;">
+        <div class="tt-wayfarer-tier-col" style="padding:0 0 0 40px;">
           <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.5);margin-bottom:12px;">GOLD</div>
           <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">2,000 + pts</div>
           <div style="font-size:14px;color:rgba(255,255,255,.55);">12% off</div>

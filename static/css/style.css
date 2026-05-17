@@ -131,6 +131,7 @@ img { display: block; max-width: 100%; }
 .tt-page { max-width: 1440px; margin: 0 auto; padding: 0 56px; }
 .tt-section    { padding: 96px 0; }
 .tt-section-sm { padding: 56px 0; }
+.tt-section-hero { padding: 32px 0 56px; }
 
 /* ── Tags ── */
 .tt-tag { display: inline-flex; align-items: center; background: rgba(255,255,255,.92); color: var(--ink); font-size: 13px; padding: 8px 14px; border-radius: var(--pill); letter-spacing: -.005em; backdrop-filter: blur(6px); }
@@ -496,6 +497,31 @@ img { display: block; max-width: 100%; }
   display: none;
 }
 
+/* ── Home page layout helpers ── */
+.tt-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+.tt-search-form-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.tt-booking-steps {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: 48px;
+  align-items: start;
+}
+.tt-wayfarer-tiers {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .tt-nav-links   { display: none; }
@@ -512,6 +538,7 @@ img { display: block; max-width: 100%; }
   .tt-room-card-price { border-left: none; border-top: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
   .tt-stats-grid  { grid-template-columns: repeat(2,1fr); }
   .tt-grid-2      { grid-template-columns: 1fr; }
+  .tt-grid-3      { grid-template-columns: 1fr; }
   .tt-grid-4      { grid-template-columns: 1fr; }
   .tt-footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
   /* folio two-col layout → single col */
@@ -535,6 +562,16 @@ img { display: block; max-width: 100%; }
   /* Ensure tap targets are 44px minimum */
   .tt-btn { min-height: 44px; }
   .tt-input, .tt-select { min-height: 44px; }
+  /* Home page responsive overrides */
+  .tt-section-sm    { padding: 40px 0; }
+  .tt-section-hero  { padding: 24px 0 40px; }
+  .tt-hero-grid     { grid-template-columns: 1fr; gap: 32px; }
+  .tt-search-form-row { flex-direction: column; }
+  .tt-booking-steps { grid-template-columns: 1fr; gap: 24px; }
+  .tt-wayfarer-tiers { grid-template-columns: 1fr; gap: 0; }
+  .tt-wayfarer-tier-col { padding: 20px 0 !important; border-right: none !important; border-left: none !important; border-bottom: 1px solid rgba(255,255,255,.15); }
+  .tt-wayfarer-tiers > div:last-child { border-bottom: none; }
+  .tt-wayfarer-box  { padding: 32px 24px !important; }
 }
 @media (max-width: 480px) {
   .tt-search     { grid-template-columns: 1fr; }
