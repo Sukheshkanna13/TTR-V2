@@ -76,7 +76,13 @@
 
       if (res.ok) {
         const data = await res.json();
-        window.location.href = data.user && data.user.is_staff ? '/admin/' : "{% url 'core:home' %}";
+        if (data.user && data.user.is_staff) {
+          window.location.href = '/admin/';
+        } else {
+          const urlParams = new URLSearchParams(window.location.search);
+          const next = urlParams.get('next');
+          window.location.href = next && next.startsWith('/') ? next : "{% url 'core:home' %}";
+        }
       } else {
         const data = await res.json();
         errorBox.textContent = data.detail || data.error || 'Login failed. Please try again.';

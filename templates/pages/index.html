@@ -255,7 +255,11 @@
 
       </div>
       <div style="margin-top:40px;padding-top:40px;border-top:1px solid rgba(255,255,255,.15);">
-        <a href="{% url 'accounts:register-page' %}" class="tt-btn tt-btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;">Join Wayfarer</a>
+        {% if user.is_authenticated %}
+        <a href="/accounts/folio/" class="tt-btn tt-btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;">Join Wayfarer</a>
+        {% else %}
+        <a href="/accounts/login/page/?next=/accounts/folio/" class="tt-btn tt-btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;">Join Wayfarer</a>
+        {% endif %}
       </div>
     </div>
   </section>
