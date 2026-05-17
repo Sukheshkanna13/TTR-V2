@@ -116,18 +116,21 @@ def verify_otp(email: str, submitted_code: str) -> dict:
 # LOGIN ATTEMPT TRACKING (Database)
 # =============================================================================
 
-def check_login_lock(email: str) -> bool:
+def check_login_lock(email: str) -> dict:
     """
-    Check if the account is locked due to too many failed login attempts.
-    Returns True if locked, False if not.
+    Returns {'locked': bool, 'remaining_minutes': int}.
+    remaining_minutes is 0 when not locked.
     """
     from .models import LoginAttempt
 
     try:
         attempt = LoginAttempt.objects.get(email=email)
-        return attempt.is_locked
+        if attempt.is_locked:
+            remaining = max(0, int((attempt.locked_until - timezone.now()).total_seconds() / 60)) + 1
+            return {'locked': True, 'remaining_minutes': remaining}
+        return {'locked': False, 'remaining_minutes': 0}
     except LoginAttempt.DoesNotExist:
-        return False
+        return {'locked': False, 'remaining_minutes': 0}
 
 
 def record_failed_login(email: str) -> int:

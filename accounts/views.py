@@ -357,9 +357,10 @@ class LoginView(APIView):
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
 
-        if check_login_lock(email):
+        lock = check_login_lock(email)
+        if lock['locked']:
             return Response(
-                {"error": "Account temporarily locked due to too many failed attempts. Please try again later."},
+                {"error": f"Account temporarily locked. Try again in {lock['remaining_minutes']} minute(s)."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
