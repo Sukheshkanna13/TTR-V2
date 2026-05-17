@@ -13,12 +13,14 @@
       <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:20px;">Filter stays</div>
       <form id="filterForm">
 
-        <!-- City -->
+        <!-- Property / Destination -->
         <div class="tt-field" style="margin-bottom:16px;">
           <label class="tt-field-label">Destination</label>
-          <select class="tt-select" id="city_filter" name="city">
-            <option value="">All locations</option>
-            {% for c in cities %}<option value="{{ c }}" {% if c == selected_city %}selected{% endif %}>{{ c }}</option>{% endfor %}
+          <select class="tt-select" id="city_filter" name="property_id">
+            <option value="">All Properties</option>
+            {% for prop in properties %}
+            <option value="{{ prop.id }}">{{ prop.name }}{% if prop.city %} — {{ prop.city }}{% endif %}</option>
+            {% endfor %}
           </select>
         </div>
 
@@ -77,6 +79,18 @@
       <!-- Error box: shows human-readable validation errors -->
       <div id="errorBox" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-sm);padding:14px 18px;margin-bottom:20px;font-size:14px;color:#b91c1c;"></div>
       <div id="results" style="display:flex;flex-direction:column;gap:16px;"></div>
+
+      <!-- Suggested Stays — shown when no dates are provided -->
+      <div id="suggested-section" class="hidden" style="margin-top:32px;">
+        <div style="margin-bottom:20px;">
+          <div class="tt-eyebrow" style="margin-bottom:6px;">EXPLORE</div>
+          <h2 class="tt-h3" style="margin:0 0 4px;">Suggested Stays</h2>
+          <p style="font-size:14px;color:var(--text-muted);margin:0;">Enter dates above to check availability and live pricing</p>
+        </div>
+        <div id="suggested-rooms-grid" style="display:flex;flex-direction:column;gap:16px;">
+          <div class="tt-loading"><div class="tt-spinner"></div><p>Loading suggestions…</p></div>
+        </div>
+      </div>
     </main>
 
   </div>
@@ -95,11 +109,11 @@
 
   // Read initial search params from URL — apply safe defaults so we never send nulls
   let searchParams = {
-    city:      urlParams.get('city') || '',
-    check_in:  urlParams.get('check_in') || '',
-    check_out: urlParams.get('check_out') || '',
+    property_id: urlParams.get('property_id') || urlParams.get('city') || '',
+    check_in:    urlParams.get('check_in') || '',
+    check_out:   urlParams.get('check_out') || '',
     // guests: parse as int, fall back to 2 if missing/zero/NaN
-    guests:    Math.max(1, parseInt(urlParams.get('guests')) || 2),
+    guests:      Math.max(1, parseInt(urlParams.get('guests')) || 2),
   };
 
   function stepGuests(delta) {
@@ -112,9 +126,9 @@
   // Pre-fill sidebar controls from URL params
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('guests').value = searchParams.guests;
-    const citySelect = document.getElementById('city_filter');
-    if (citySelect && searchParams.city) {
-      citySelect.value = searchParams.city;
+    const propertySelect = document.getElementById('city_filter');
+    if (propertySelect && searchParams.property_id) {
+      propertySelect.value = searchParams.property_id;
     }
   });
 
@@ -123,9 +137,9 @@
     e.preventDefault();
     const fd = new FormData(e.target);
 
-    // city from select
-    const cityVal = fd.get('city');
-    searchParams.city = cityVal || '';
+    // property from select — sends UUID (or '' for all properties)
+    const cityVal = fd.get('property_id');
+    searchParams.property_id = cityVal || '';
 
     // guests from stepper — must be ≥ 1
     const gVal = parseInt(fd.get('guests'));
@@ -299,10 +313,77 @@
   if (searchParams.check_in && searchParams.check_out) {
     loadRooms();
   } else {
-    // No dates supplied — show idle state instead of triggering a 400 error
+    // No dates supplied — show idle state + suggested rooms
     document.getElementById('searchTitle').textContent = 'Find your stay';
     const suggested = document.getElementById('suggested-section');
-    if (suggested) suggested.classList.remove('hidden');
+    if (suggested) {
+      suggested.classList.remove('hidden');
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfter  = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
+      const toISO = d => d.toISOString().split('T')[0];
+      const fd = new FormData();
+      fd.append('check_in', toISO(tomorrow));
+      fd.append('check_out', toISO(dayAfter));
+      fd.append('guests', '1');
+      fetch(SEARCH_API_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        credentials: 'include',
+        body: fd,
+      })
+      .then(r => r.json())
+      .then(data => {
+        const grid = document.getElementById('suggested-rooms-grid');
+        if (!grid) return;
+        if (!data.rooms || data.rooms.length === 0) {
+          grid.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">No rooms available right now.</p>';
+          return;
+        }
+        grid.innerHTML = '';
+        data.rooms.forEach(room => {
+          const typeLabel = room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1);
+          const amenityChips = (room.amenities_list || []).slice(0, 4)
+            .map(a => `<span class="tt-chip tt-chip-tonal" style="font-size:12px;padding:5px 10px;">${a}</span>`)
+            .join('');
+          const card = document.createElement('div');
+          card.className = 'tt-card tt-room-card';
+          card.style.cursor = 'pointer';
+          card.onclick = () => { window.location.href = `${ROOM_DETAIL_URL}?id=${room.id}&guests=1`; };
+          card.innerHTML = `
+            <div class="tt-room-card-img" style="position:relative;overflow:hidden;">
+              <img src="${getRoomImage(room)}" alt="${room.name}"
+                   style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-md) 0 0 var(--r-md);"
+                   onerror="this.style.background='var(--bg-soft)'">
+              <div style="position:absolute;top:10px;left:10px;">
+                <span class="tt-tag" style="font-size:11px;padding:4px 10px;">${typeLabel}</span>
+              </div>
+            </div>
+            <div class="tt-room-card-info">
+              <div>
+                <div class="tt-card-name">${room.name}</div>
+                <div class="tt-card-area" style="margin-top:4px;">${typeLabel} &middot; Max ${room.capacity} guests &middot; ${room.city}</div>
+              </div>
+              <p class="tt-card-blurb" style="margin:0;">
+                ${room.description ? room.description.substring(0, 130) + (room.description.length > 130 ? '…' : '') : 'Comfortable room with premium amenities.'}
+              </p>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${amenityChips}</div>
+            </div>
+            <div class="tt-room-card-price">
+              <div>
+                <div class="tt-eyebrow" style="margin-bottom:4px;">From</div>
+                <div class="tt-card-price">₹${Number(room.price_per_night).toLocaleString('en-IN')}</div>
+                <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">per night</div>
+              </div>
+              <a href="${ROOM_DETAIL_URL}?id=${room.id}&guests=1" class="tt-btn tt-btn-primary tt-btn-sm">View details</a>
+            </div>`;
+          grid.appendChild(card);
+        });
+      })
+      .catch(() => {
+        const grid = document.getElementById('suggested-rooms-grid');
+        if (grid) grid.innerHTML = '';
+      });
+    }
   }
 </script>
 {% endblock %}
