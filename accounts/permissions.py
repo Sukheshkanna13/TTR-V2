@@ -2,14 +2,14 @@ from rest_framework import permissions
 
 class IsEmployee(permissions.BasePermission):
     """
-    Allows access only to employee and super_admin roles.
+    Allows access only to employee admin role.
     """
     def has_permission(self, request, view):
         return bool(
             request.user and 
             request.user.is_authenticated and 
             hasattr(request.user, 'userprofile') and 
-            request.user.userprofile.role in ['employee', 'super_admin']
+            request.user.userprofile.role == 'employee_admin'
         )
 
 class IsSuperAdmin(permissions.BasePermission):

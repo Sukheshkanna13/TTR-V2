@@ -69,20 +69,15 @@
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
         body: JSON.stringify({
           email:    document.getElementById('email').value,
-          password: document.getElementById('password').value
+          password: document.getElementById('password').value,
+          next: new URLSearchParams(window.location.search).get('next')
         }),
         credentials: 'include'
       });
 
       if (res.ok) {
         const data = await res.json();
-        if (data.user && data.user.is_staff) {
-          window.location.href = '/admin/';
-        } else {
-          const urlParams = new URLSearchParams(window.location.search);
-          const next = urlParams.get('next');
-          window.location.href = next && next.startsWith('/') ? next : "{% url 'core:home' %}";
-        }
+        window.location.href = data.redirect_url || "{% url 'core:home' %}";
       } else {
         const data = await res.json();
         errorBox.textContent = data.detail || data.error || 'Login failed. Please try again.';

@@ -17,6 +17,7 @@ Routes:
 """
 
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 
@@ -29,8 +30,9 @@ urlpatterns = [
     path("folio/", views.folio_page, name="folio"),
     path("profile/edit/", views.edit_profile_page, name="edit-profile"),
     path("profile/update/", views.update_profile, name="update-profile"),
-    path("employee-login/", views.employee_login_page, name="employee-login-page"),
-    path("super-admin-login/", views.super_admin_login_page, name="super-admin-login-page"),
+    path("employee-login/", RedirectView.as_view(url="/accounts/login/page/", permanent=False), name="employee-login-page"),
+    path("super-admin-login/", RedirectView.as_view(url="/accounts/login/page/", permanent=False), name="super-admin-login-page"),
+    path("change-password/", views.change_password, name="change-password"),
 
     path("forgot-password/", views.forgot_password, name="forgot-password"),
     path("forgot-password/verify/", views.forgot_password_verify, name="forgot-password-verify"),

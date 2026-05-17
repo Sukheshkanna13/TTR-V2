@@ -63,7 +63,7 @@ def dashboard(request):
 @require_super_admin
 def employees_list(request):
     employees = User.objects.filter(
-        userprofile__role='employee'
+        userprofile__role='employee_admin'
     ).select_related('userprofile').prefetch_related('userprofile__assigned_properties')
     properties = Property.objects.filter(is_active=True)
     return render(request, 'superadmin/employees.html', {
@@ -100,7 +100,7 @@ def employee_create(request):
     )
     from accounts.models import UserProfile
     profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.role = 'employee'
+    profile.role = 'employee_admin'
     profile.fin_level = fin_level
     profile.must_change_password = True
     profile.save()
