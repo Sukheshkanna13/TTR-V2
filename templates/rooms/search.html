@@ -295,7 +295,14 @@
     }
   }
 
-  // Kick off search on page load
-  loadRooms();
+  // Kick off search on page load — only when both dates are present in the URL
+  if (searchParams.check_in && searchParams.check_out) {
+    loadRooms();
+  } else {
+    // No dates supplied — show idle state instead of triggering a 400 error
+    document.getElementById('searchTitle').textContent = 'Find your stay';
+    const suggested = document.getElementById('suggested-section');
+    if (suggested) suggested.classList.remove('hidden');
+  }
 </script>
 {% endblock %}
