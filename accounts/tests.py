@@ -1,10 +1,15 @@
 import json
+from io import StringIO
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from accounts.models import UserProfile
+from accounts.models import LoginAttempt, UserProfile
 
 
 User = get_user_model()
@@ -100,6 +105,29 @@ class UnifiedLoginRedirectTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["redirect_url"], "/")
 
+    def test_locked_account_returns_structured_response(self):
+        make_user("locked@example.com", role="guest")
+        LoginAttempt.objects.create(
+            email="locked@example.com",
+            attempts=5,
+            locked_until=timezone.now() + timezone.timedelta(minutes=4),
+        )
+
+        response = self.post_login("locked@example.com")
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.json()["code"], "ACCOUNT_LOCKED")
+        self.assertGreaterEqual(response.json()["remaining_minutes"], 1)
+
+    def test_successful_login_clears_failed_attempts_for_normalized_email(self):
+        make_user("normalize@example.com", role="guest")
+        LoginAttempt.objects.create(email="normalize@example.com", attempts=2)
+
+        response = self.post_login(" NORMALIZE@example.com ")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(LoginAttempt.objects.filter(email="normalize@example.com").exists())
+
 
 class PortalAccessTests(TestCase):
     def test_anonymous_super_admin_page_redirects_to_central_login(self):
@@ -145,3 +173,49 @@ class PortalAccessTests(TestCase):
         response = self.client.get("/super-admin/login/")
 
         self.assertRedirects(response, "/accounts/login/page/", fetch_redirect_response=False)
+
+
+class LoginRecoveryCommandTests(TestCase):
+    def test_clear_login_locks_removes_specific_email_only(self):
+        LoginAttempt.objects.create(email="one@example.com", attempts=5)
+        LoginAttempt.objects.create(email="two@example.com", attempts=5)
+
+        out = StringIO()
+        call_command("clear_login_locks", email="one@example.com", stdout=out)
+
+        self.assertIn("Cleared 1 login lock", out.getvalue())
+        self.assertFalse(LoginAttempt.objects.filter(email="one@example.com").exists())
+        self.assertTrue(LoginAttempt.objects.filter(email="two@example.com").exists())
+
+    def test_clear_login_locks_can_clear_cache(self):
+        cache.set("login-test-key", "present", timeout=60)
+
+        call_command("clear_login_locks", clear_cache=True, stdout=StringIO())
+
+        self.assertIsNone(cache.get("login-test-key"))
+
+    def test_bootstrap_superadmin_repairs_user_profile_and_clears_lock(self):
+        make_user("boss@example.com", role="guest")
+        LoginAttempt.objects.create(email="boss@example.com", attempts=5)
+
+        out = StringIO()
+        call_command(
+            "bootstrap_superadmin",
+            email="boss@example.com",
+            password="BossPass123!",
+            stdout=out,
+        )
+
+        user = User.objects.get(email="boss@example.com")
+        self.assertTrue(user.is_active)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.check_password("BossPass123!"))
+        self.assertEqual(user.userprofile.role, "super_admin")
+        self.assertFalse(user.userprofile.must_change_password)
+        self.assertFalse(LoginAttempt.objects.filter(email="boss@example.com").exists())
+        self.assertIn("Super admin ready", out.getvalue())
+
+    def test_dev_settings_use_testing_friendly_lock_policy(self):
+        self.assertEqual(settings.LOGIN_MAX_ATTEMPTS, 20)
+        self.assertEqual(settings.LOGIN_LOCK_DURATION_MINUTES, 1)

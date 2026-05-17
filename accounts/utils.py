@@ -16,6 +16,10 @@ from django.utils.html import strip_tags
 logger = logging.getLogger(__name__)
 
 
+def normalize_email(email: str) -> str:
+    return (email or "").strip().lower()
+
+
 # =============================================================================
 # OTP GENERATION
 # =============================================================================
@@ -40,6 +44,7 @@ def create_and_store_otp(email: str) -> str:
     Deletes any existing OTPs for this email first.
     """
     from .models import OTP
+    email = normalize_email(email)
 
     # Remove any old OTPs for this email
     OTP.objects.filter(email=email).delete()
@@ -68,6 +73,7 @@ def verify_otp(email: str, submitted_code: str) -> dict:
         - code (str or None) — error code for frontend handling
     """
     from .models import OTP
+    email = normalize_email(email)
 
     try:
         otp = OTP.objects.get(email=email)
@@ -122,6 +128,7 @@ def check_login_lock(email: str) -> dict:
     remaining_minutes is 0 when not locked.
     """
     from .models import LoginAttempt
+    email = normalize_email(email)
 
     try:
         attempt = LoginAttempt.objects.get(email=email)
@@ -139,6 +146,7 @@ def record_failed_login(email: str) -> int:
     Returns the new attempt count.
     """
     from .models import LoginAttempt
+    email = normalize_email(email)
 
     attempt, created = LoginAttempt.objects.get_or_create(email=email)
 
@@ -161,6 +169,7 @@ def record_failed_login(email: str) -> int:
 def reset_login_attempts(email: str) -> None:
     """Clear login attempt counters after a successful login."""
     from .models import LoginAttempt
+    email = normalize_email(email)
 
     LoginAttempt.objects.filter(email=email).delete()
 

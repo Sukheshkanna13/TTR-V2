@@ -368,7 +368,11 @@ class LoginView(APIView):
         lock = check_login_lock(email)
         if lock['locked']:
             return Response(
-                {"error": f"Account temporarily locked. Try again in {lock['remaining_minutes']} minute(s)."},
+                {
+                    "error": f"Account temporarily locked. Try again in {lock['remaining_minutes']} minute(s).",
+                    "code": "ACCOUNT_LOCKED",
+                    "remaining_minutes": lock["remaining_minutes"],
+                },
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
