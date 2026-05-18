@@ -1,0 +1,78 @@
+{% extends "employeeadmin/base.html" %}
+{% block title %}Room Status Board{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+  <h1 class="ea-page-title" style="margin:0;">Room Status Board</h1>
+  <span id="board-refresh-ts" style="font-size:11px;color:#5eead4;opacity:.6;"></span>
+</div>
+
+<div id="status-board"
+     style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1rem;">
+  {% for room in rooms %}
+  <div class="ea-card room-card" id="rc-{{ room.id }}"
+       data-status="{{ room.operational_status }}"
+       style="padding:1rem;position:relative;">
+    <div style="font-weight:600;font-size:13px;margin-bottom:3px;color:#f0fdfa;">{{ room.name }}</div>
+    <div style="font-size:11px;color:#5eead4;margin-bottom:10px;">{{ room.property.name }}</div>
+    <div class="status-badge" style="margin-bottom:10px;">
+      <span class="ea-badge ea-badge-{{ room.operational_status }}">{{ room.get_operational_status_display }}</span>
+    </div>
+    <select class="status-select"
+            onchange="updateRoomStatus('{{ room.id }}', this.value, this)"
+            style="width:100%;padding:4px 6px;font-size:12px;border-radius:4px;border:1px solid #0d9488;background:#134e4a;color:#f0fdfa;cursor:pointer;">
+      {% for val, label in status_choices %}
+      <option value="{{ val }}" {% if room.operational_status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    {% if not room.is_active %}
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.5);border-radius:inherit;display:flex;align-items:center;justify-content:center;font-size:11px;color:#5eead4;">Inactive</div>
+    {% endif %}
+  </div>
+  {% empty %}
+  <p style="color:#5eead4;opacity:.7;grid-column:1/-1;">No rooms assigned to your properties.</p>
+  {% endfor %}
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+async function updateRoomStatus(roomId, newStatus, selectEl) {
+  const fd = new FormData();
+  fd.append('operational_status', newStatus);
+  const res = await fetch(`/admin-portal/rooms/${roomId}/status/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+    body: fd,
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Update failed');
+    selectEl.value = document.getElementById('rc-' + roomId).dataset.status;
+    return;
+  }
+  const card = document.getElementById('rc-' + roomId);
+  if (card) card.dataset.status = newStatus;
+}
+
+async function refreshBoard() {
+  try {
+    const res = await fetch('/admin-portal/rooms/status-board/data/', {
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+    });
+    if (!res.ok) return;
+    const { rooms } = await res.json();
+    rooms.forEach(r => {
+      const card = document.getElementById('rc-' + r.id);
+      if (!card || card.dataset.status === r.status) return;
+      card.dataset.status = r.status;
+      const sel = card.querySelector('.status-select');
+      if (sel) sel.value = r.status;
+    });
+    const ts = document.getElementById('board-refresh-ts');
+    if (ts) ts.textContent = 'Synced ' + new Date().toLocaleTimeString();
+  } catch (_) {}
+}
+
+setInterval(refreshBoard, 60_000);
+</script>
+{% endblock %}

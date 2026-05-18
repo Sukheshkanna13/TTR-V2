@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from django.test import TestCase, Client, RequestFactory
 from django.contrib.auth import get_user_model
@@ -108,3 +109,70 @@ class EmployeeDashboardLiveDataTest(TestCase):
         self.assertEqual(data['active_bookings'], 0)
         self.assertEqual(data['todays_checkins'], 0)
         self.assertEqual(data['todays_checkouts'], 0)
+
+
+class EmployeeRoomStatusBoardTest(TestCase):
+    def setUp(self):
+        self.emp = make_user('emp2@test.com', '3333333333', role='employee')
+        self.client = Client()
+        self.client.force_login(self.emp)
+
+    def test_status_board_renders(self):
+        res = self.client.get(reverse('employeeadmin:room-status-board'))
+        self.assertEqual(res.status_code, 200)
+
+    def test_employee_sees_only_assigned_rooms_in_board_data(self):
+        """Employee with no assigned properties gets empty room list."""
+        res = self.client.get(reverse('employeeadmin:room-status-board-data'))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data['rooms'], [])
+
+
+class EmployeeRoomCrudTest(TestCase):
+    def setUp(self):
+        self.emp = make_user('emp3@test.com', '4444444444', role='employee')
+        self.client = Client()
+        self.client.force_login(self.emp)
+
+        self.prop_a = Property.objects.create(name='Prop A', city='Pondy', is_active=True)
+        self.prop_b = Property.objects.create(name='Prop B', city='Bengaluru', is_active=True)
+        self.emp.userprofile.assigned_properties.add(self.prop_a)
+
+        self.room_a = Room.objects.create(property=self.prop_a, name='A1', city='Pondy',
+                                          room_type='single', price_per_night=1000, capacity=2)
+
+    def test_room_create_assigned_property(self):
+        res = self.client.post(reverse('employeeadmin:room-create'), {
+            'property_id': str(self.prop_a.id),
+            'name': 'New Room',
+            'room_type': 'double',
+            'price_per_night': '1200',
+            'capacity': '2',
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn('message', data)
+        self.assertTrue(Room.objects.filter(name='New Room').exists())
+
+    def test_room_create_unassigned_property(self):
+        res = self.client.post(reverse('employeeadmin:room-create'), {
+            'property_id': str(self.prop_b.id),
+            'name': 'Intruder Room',
+            'room_type': 'double',
+            'price_per_night': '1200',
+            'capacity': '2',
+        })
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(Room.objects.filter(name='Intruder Room').exists())
+
+    def test_room_edit_toggle_active(self):
+        url = reverse('employeeadmin:room-edit', args=[self.room_a.id])
+        res = self.client.post(url, data=json.dumps({
+            'action': 'toggle_active',
+        }), content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.room_a.refresh_from_db()
+        self.assertFalse(self.room_a.is_active)
+
+

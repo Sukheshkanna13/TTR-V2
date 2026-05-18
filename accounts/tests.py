@@ -49,13 +49,13 @@ class UnifiedLoginRedirectTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["redirect_url"], "/")
 
-    def test_employee_login_returns_home_redirect(self):
+    def test_employee_login_returns_dashboard_redirect(self):
         make_user("employee@example.com", role="employee")
 
         response = self.post_login("employee@example.com")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["redirect_url"], "/")
+        self.assertEqual(response.json()["redirect_url"], "/admin-portal/dashboard/")
 
     def test_employee_admin_login_returns_employee_dashboard_redirect(self):
         make_user("employee-admin@example.com", role="employee_admin")
@@ -73,13 +73,13 @@ class UnifiedLoginRedirectTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["redirect_url"], "/super-admin/dashboard/")
 
-    def test_must_change_password_redirects_before_dashboard(self):
+    def test_admin_must_change_password_goes_straight_to_dashboard(self):
         make_user("admin-reset@example.com", role="employee_admin", must_change_password=True)
 
         response = self.post_login("admin-reset@example.com")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["redirect_url"], "/accounts/change-password/")
+        self.assertEqual(response.json()["redirect_url"], "/admin-portal/dashboard/")
 
     def test_guest_cannot_use_next_to_enter_super_admin_area(self):
         make_user("guest-next@example.com", role="guest")
@@ -156,23 +156,23 @@ class PortalAccessTests(TestCase):
 
         self.assertRedirects(response, "/accounts/login/page/", fetch_redirect_response=False)
 
-    def test_employee_cannot_access_employee_admin_dashboard(self):
+    def test_employee_can_access_employee_admin_dashboard(self):
         user = make_user("plain-employee@example.com", role="employee")
         self.client.force_login(user)
 
         response = self.client.get("/admin-portal/dashboard/")
 
-        self.assertRedirects(response, "/accounts/login/page/", fetch_redirect_response=False)
+        self.assertEqual(response.status_code, 200)
 
     def test_old_admin_portal_login_redirects_to_central_login(self):
         response = self.client.get("/admin-portal/login/")
 
-        self.assertRedirects(response, "/accounts/login/page/", fetch_redirect_response=False)
+        self.assertRedirects(response, "/accounts/login/page/?next=%2Fadmin-portal%2Flogin%2F", fetch_redirect_response=False)
 
     def test_old_super_admin_login_redirects_to_central_login(self):
         response = self.client.get("/super-admin/login/")
 
-        self.assertRedirects(response, "/accounts/login/page/", fetch_redirect_response=False)
+        self.assertRedirects(response, "/accounts/login/page/?next=%2Fsuper-admin%2Flogin%2F", fetch_redirect_response=False)
 
 
 class LoginRecoveryCommandTests(TestCase):

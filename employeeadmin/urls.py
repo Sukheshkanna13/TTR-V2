@@ -10,6 +10,8 @@ urlpatterns = [
     path('bookings/<uuid:booking_id>/complete/', views.booking_complete, name='booking-complete'),
     # Rooms
     path('rooms/', views.rooms_list, name='rooms'),
+    path('rooms/status-board/', views.room_status_board, name='room-status-board'),
+    path('rooms/status-board/data/', views.room_status_board_data, name='room-status-board-data'),
     path('rooms/create/', views.room_create, name='room-create'),
     path('rooms/<uuid:room_id>/status/', views.room_status_update, name='room-status-update'),
     path('rooms/<uuid:room_id>/edit/', views.room_edit, name='room-edit'),

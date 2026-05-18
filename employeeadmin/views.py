@@ -82,8 +82,18 @@ def bookings_list(request):
 
 @require_employee
 def rooms_list(request):
-    rooms = _assigned_rooms(request).select_related('property').order_by('city', 'name')
-    return render(request, 'employeeadmin/rooms.html', {'rooms': rooms, 'fin': _fin_level(request)})
+    property_filter = request.GET.get('property', '')
+    rooms = _assigned_rooms(request).select_related('property').order_by('property__name', 'name')
+    if property_filter:
+        rooms = rooms.filter(property_id=property_filter)
+    properties = _assigned_properties(request).filter(is_active=True).order_by('name')
+    return render(request, 'employeeadmin/rooms.html', {
+        'rooms': rooms,
+        'properties': properties,
+        'property_filter': property_filter,
+        'operational_choices': Room.OPERATIONAL_STATUS_CHOICES,
+        'fin': _fin_level(request),
+    })
 
 
 @require_employee
@@ -340,3 +350,31 @@ def room_image_set_primary(request, image_id):
     img.save(update_fields=['is_primary'])
     return JsonResponse({'message': 'Set as primary.'})
 
+
+
+# ── Room Status Board (scoped) ─────────────────────────────────────────────────
+
+@require_employee
+def room_status_board(request):
+    rooms = _assigned_rooms(request).select_related('property').order_by('property__name', 'name')
+    return render(request, 'employeeadmin/room_status_board.html', {
+        'rooms': rooms,
+        'status_choices': Room.OPERATIONAL_STATUS_CHOICES,
+    })
+
+
+@require_employee
+def room_status_board_data(request):
+    rooms = _assigned_rooms(request).select_related('property').order_by('property__name', 'name')
+    return JsonResponse({
+        'rooms': [
+            {
+                'id': str(r.id),
+                'name': r.name,
+                'property': r.property.name,
+                'status': r.operational_status,
+                'is_active': r.is_active,
+            }
+            for r in rooms
+        ]
+    })
