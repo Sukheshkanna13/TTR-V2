@@ -47,12 +47,12 @@
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             {% if emp.is_active %}
-              <button class="btn btn-danger btn-sm" onclick="empAction({{ emp.pk }}, 'lock')">Lock</button>
+              <button class="btn btn-danger btn-sm" onclick="empAction('{{ emp.pk }}', 'lock')">Lock</button>
             {% else %}
-              <button class="btn btn-ghost btn-sm" onclick="empAction({{ emp.pk }}, 'unlock')">Unlock</button>
+              <button class="btn btn-ghost btn-sm" onclick="empAction('{{ emp.pk }}', 'unlock')">Unlock</button>
             {% endif %}
-            <button class="btn btn-ghost btn-sm" onclick="empAction({{ emp.pk }}, 'reset_password')">Reset PW</button>
-            <button class="btn btn-ghost btn-sm" onclick="openFinModal({{ emp.pk }}, '{{ emp.userprofile.fin_level }}')">Fin Level</button>
+            <button class="btn btn-ghost btn-sm" onclick="empAction('{{ emp.pk }}', 'reset_password')">Reset PW</button>
+            <button class="btn btn-ghost btn-sm" onclick="openFinModal('{{ emp.pk }}', '{{ emp.userprofile.fin_level }}')">Fin Level</button>
           </div>
         </td>
       </tr>
