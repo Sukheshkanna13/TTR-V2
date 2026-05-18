@@ -1,0 +1,100 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Guests{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Guest Management</h1>
+
+<!-- Search -->
+<div class="sa-card" style="margin-bottom:1rem;">
+  <form method="get" style="display:flex;gap:.75rem;align-items:flex-end;">
+    <div>
+      <label class="sa-label">Search</label>
+      <input class="sa-input" type="text" name="q" value="{{ q }}" placeholder="Name or email" style="width:280px;">
+    </div>
+    <button class="sa-btn sa-btn-primary" type="submit">Search</button>
+    <a class="sa-btn" href="{% url 'superadmin:guests' %}">Clear</a>
+  </form>
+</div>
+
+<!-- Guest List -->
+<div class="sa-card">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Joined</th>
+        <th>Bookings</th>
+        <th>Points</th>
+        <th>Tier</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for g in guests %}
+    <tr id="guest-{{ g.user.pk }}">
+      <td style="font-weight:600;">{{ g.user.full_name|default:"—" }}</td>
+      <td>{{ g.user.email }}</td>
+      <td style="font-size:12px;">{{ g.user.date_joined|date:"d M Y" }}</td>
+      <td style="text-align:center;">{{ g.booking_count }}</td>
+      <td id="pts-{{ g.user.pk }}">{{ g.profile.loyalty_points }}</td>
+      <td id="tier-{{ g.user.pk }}">
+        <span class="badge {% if g.profile.loyalty_tier == 'Gold' %}badge-gold{% elif g.profile.loyalty_tier == 'Silver' %}badge-silver{% else %}badge-slate{% endif %}">
+          {{ g.profile.loyalty_tier|default:"Bronze" }}
+        </span>
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="sa-btn sa-btn-sm sa-btn-success" onclick="adjustPts({{ g.user.pk }}, 1)">+ Points</button>
+        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="adjustPts({{ g.user.pk }}, -1)">− Points</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" style="color:#64748b;padding:24px 12px;">No guests found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+async function adjustPts(userId, direction) {
+  const raw = prompt(direction > 0 ? 'Points to ADD:' : 'Points to DEDUCT:');
+  if (!raw) return;
+  const amount = parseInt(raw, 10);
+  if (isNaN(amount) || amount <= 0) return alert('Enter a positive number.');
+
+  const reason = prompt('Reason (optional):') || 'Manual adjustment';
+  const finalAmount = direction > 0 ? amount : -amount;
+
+  const res = await fetch(`/super-admin/guests/${userId}/loyalty/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({amount: finalAmount, reason}),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById('pts-' + userId).textContent = data.loyalty_points;
+    alert(data.message);
+  } else {
+    alert(data.error);
+  }
+}
+</script>
+
+<style>
+.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
+.sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
+.sa-btn:hover{background:#334155;}
+.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+.sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-success{background:#064e3b;border-color:#064e3b;color:#6ee7b7;}
+.sa-btn-success:hover{background:#065f46;}
+.sa-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
+.sa-btn-danger:hover{background:#991b1b;}
+.sa-btn-sm{padding:4px 10px;font-size:12px;}
+.badge-gold{background:#78350f;color:#fbbf24;}
+.badge-silver{background:#374151;color:#d1d5db;}
+</style>
+{% endblock %}

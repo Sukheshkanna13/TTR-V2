@@ -8,7 +8,7 @@ from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from rooms.models import Booking, Room, RoomImage, Property
 from .decorators import require_super_admin
@@ -79,6 +79,7 @@ def dashboard(request):
 
 
 @require_super_admin
+@require_GET
 def dashboard_live_data(request):
     today = timezone.now().date()
 
@@ -95,7 +96,7 @@ def dashboard_live_data(request):
     ).count()
 
     today_revenue = Booking.objects.filter(
-        status='confirmed', check_in__gte=today,
+        status='confirmed', check_in=today,
     ).aggregate(t=Sum('total_price'))['t'] or 0
 
     pending_qs = Booking.objects.filter(
@@ -104,8 +105,11 @@ def dashboard_live_data(request):
 
     pending_holds = []
     for b in pending_qs:
-        reference = b.booking_reference if b.booking_reference else str(b.id)[:8]
-        guest = b.user.full_name if b.user.full_name else b.user.email
+        reference = b.booking_reference or str(b.id)
+        if b.user:
+            guest = b.user.full_name or b.user.email
+        else:
+            guest = '(deleted)'
         room_name = b.room.name if b.room else ''
         property_name = b.room.property.name if b.room and b.room.property else ''
         pending_holds.append({

@@ -12,7 +12,7 @@ ROLE_EMPLOYEE = "employee"
 ROLE_EMPLOYEE_ADMIN = "employee_admin"
 ROLE_SUPER_ADMIN = "super_admin"
 
-EMPLOYEE_ADMIN_ROLES = {ROLE_EMPLOYEE_ADMIN}
+EMPLOYEE_ADMIN_ROLES = {ROLE_EMPLOYEE, ROLE_EMPLOYEE_ADMIN}
 SUPER_ADMIN_ROLES = {ROLE_SUPER_ADMIN}
 
 
@@ -63,7 +63,7 @@ def is_role_allowed_for_path(role, path):
 def get_default_redirect_for_role(role):
     if role == ROLE_SUPER_ADMIN:
         return SUPER_ADMIN_DASHBOARD_URL
-    if role == ROLE_EMPLOYEE_ADMIN:
+    if role in EMPLOYEE_ADMIN_ROLES:
         return EMPLOYEE_ADMIN_DASHBOARD_URL
     return HOME_URL
 

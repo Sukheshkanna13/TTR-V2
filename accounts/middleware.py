@@ -91,17 +91,17 @@ class RoleRoutingMiddleware:
                 return redirect('/super-admin/dashboard/' if role == ROLE_SUPER_ADMIN else '/')
 
         # Super admin portal → super_admin role only
-        if path.startswith('/super-admin/') and not path == '/super-admin/login/':
+        if path.startswith('/super-admin/'):
             if not user.is_authenticated:
                 return redirect(get_login_url_with_next(path))
             if role != ROLE_SUPER_ADMIN:
                 return redirect(CENTRAL_LOGIN_URL)
 
-        # Employee portal → employee admin role only
-        if path.startswith('/admin-portal/') and not path == '/admin-portal/login/':
+        # Employee portal → employee or employee_admin role
+        if path.startswith('/admin-portal/'):
             if not user.is_authenticated:
                 return redirect(get_login_url_with_next(path))
-            if role != ROLE_EMPLOYEE_ADMIN:
+            if role not in (ROLE_EMPLOYEE, ROLE_EMPLOYEE_ADMIN, ROLE_SUPER_ADMIN):
                 return redirect(CENTRAL_LOGIN_URL)
 
         response = self.get_response(request)

@@ -9,39 +9,93 @@
       <div class="ea-stat-label">Active stays</div>
     </div>
     <div class="ea-stat">
-      <div class="ea-stat-val">{{ upcoming_checkouts|length }}</div>
-      <div class="ea-stat-label">Check-outs today</div>
-    </div>
-    <div class="ea-stat">
       <div class="ea-stat-val">{{ upcoming_checkins|length }}</div>
       <div class="ea-stat-label">Check-ins today</div>
     </div>
+    <div class="ea-stat">
+      <div class="ea-stat-val">{{ upcoming_checkouts|length }}</div>
+      <div class="ea-stat-label">Check-outs today</div>
+    </div>
   </div>
 </div>
-{% if upcoming_checkins %}
+
+<!-- Arriving today -->
 <div class="ea-card">
-  <div style="font-size:13px;font-weight:600;color:#5eead4;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em;">Arriving today</div>
+  <div class="ea-section-title">Arriving Today</div>
   <table>
-    <thead><tr><th>Guest</th><th>Room</th><th>Ref</th></tr></thead>
+    <thead>
+      <tr><th>Guest</th><th>Room</th><th>Reference</th><th>Check-out</th><th>Action</th></tr>
+    </thead>
     <tbody>
     {% for b in upcoming_checkins %}
-    <tr><td>{{ b.user.full_name|default:b.user.email }}</td><td>{{ b.room.name }}</td><td style="font-family:monospace;font-size:11px;">{{ b.booking_reference }}</td></tr>
+    <tr id="ci-{{ b.id }}">
+      <td>{{ b.user.full_name|default:b.user.email }}</td>
+      <td>{{ b.room.name }}</td>
+      <td style="font-family:monospace;font-size:11px;">{{ b.booking_reference }}</td>
+      <td>{{ b.check_out }}</td>
+      <td>
+        <button class="ea-btn ea-btn-sm ea-btn-success"
+                onclick="completeBooking('{{ b.id }}', 'ci')">Check in ✓</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" style="color:#5eead4;padding:16px 12px;">No arrivals today.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
-{% endif %}
-{% if upcoming_checkouts %}
+
+<!-- Departing today -->
 <div class="ea-card">
-  <div style="font-size:13px;font-weight:600;color:#5eead4;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em;">Departing today</div>
+  <div class="ea-section-title">Departing Today</div>
   <table>
-    <thead><tr><th>Guest</th><th>Room</th><th>Ref</th></tr></thead>
+    <thead>
+      <tr><th>Guest</th><th>Room</th><th>Reference</th><th>Check-in</th><th>Action</th></tr>
+    </thead>
     <tbody>
     {% for b in upcoming_checkouts %}
-    <tr><td>{{ b.user.full_name|default:b.user.email }}</td><td>{{ b.room.name }}</td><td style="font-family:monospace;font-size:11px;">{{ b.booking_reference }}</td></tr>
+    <tr id="co-{{ b.id }}">
+      <td>{{ b.user.full_name|default:b.user.email }}</td>
+      <td>{{ b.room.name }}</td>
+      <td style="font-family:monospace;font-size:11px;">{{ b.booking_reference }}</td>
+      <td>{{ b.check_in }}</td>
+      <td>
+        <button class="ea-btn ea-btn-sm ea-btn-success"
+                onclick="completeBooking('{{ b.id }}', 'co')">Check out ✓</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" style="color:#5eead4;padding:16px 12px;">No departures today.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
-{% endif %}
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+async function completeBooking(id, prefix) {
+  if (!confirm('Mark this booking as completed?')) return;
+  const res = await fetch(`/admin-portal/bookings/${id}/complete/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById(prefix + '-' + id)?.remove();
+    alert(data.message);
+  } else {
+    alert(data.error);
+  }
+}
+</script>
+
+<style>
+.ea-section-title{font-size:13px;font-weight:600;color:#5eead4;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em;}
+.ea-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #0d9488;background:#134e4a;color:#ccfbf1;text-decoration:none;}
+.ea-btn:hover{background:#0d9488;}
+.ea-btn-success{background:#064e3b;border-color:#064e3b;color:#6ee7b7;}
+.ea-btn-success:hover{background:#065f46;}
+.ea-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
 {% endblock %}

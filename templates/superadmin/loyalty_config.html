@@ -1,0 +1,180 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Loyalty Configuration{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Loyalty Configuration</h1>
+
+<!-- Per-property config -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Points Configuration</h2>
+  <p style="color:#94a3b8;font-size:13px;margin-bottom:16px;">Set earning rates per property.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>First Booking Pts</th>
+        <th>Pts / Night</th>
+        <th>Monthly Repeat Multiplier</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in properties %}
+    <tr>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_config">
+        <input type="hidden" name="property_id" value="{{ p.id }}">
+        <td style="font-weight:600;">{{ p.name }}</td>
+        <td>
+          <input class="sa-input" type="number" name="first_booking_pts"
+                 value="{% if p.id in configs %}{{ configs|dictsort:'property_id' }}{% endif %}200"
+                 style="width:100px;">
+        </td>
+        <td>
+          <input class="sa-input" type="number" name="pts_per_night" value="100" style="width:100px;">
+        </td>
+        <td>
+          <input class="sa-input" type="number" name="monthly_repeat_multiplier" step="0.1" value="1.5" style="width:100px;">
+        </td>
+        <td>
+          <button class="sa-btn sa-btn-sm sa-btn-primary" type="submit">Save</button>
+        </td>
+      </form>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" style="color:#64748b;padding:24px 12px;">No properties found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Tiers -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Loyalty Tiers</h2>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Min Points</th><th>Discount %</th><th>Order</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for t in tiers %}
+    <tr>
+      <td>{{ t.name }}</td>
+      <td>{{ t.min_pts }}</td>
+      <td>{{ t.discount_pct }}%</td>
+      <td>{{ t.sort_order }}</td>
+      <td>
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_tier">
+          <input type="hidden" name="tier_id" value="{{ t.id }}">
+          <button class="sa-btn sa-btn-sm sa-btn-danger" type="submit"
+                  onclick="return confirm('Delete this tier?')">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" style="color:#64748b;padding:16px 12px;">No tiers configured.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #334155;">
+    <h3 style="font-size:13px;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Add Tier</h3>
+    <form method="post" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_tier">
+      <div>
+        <label class="sa-label">Name</label>
+        <input class="sa-input" type="text" name="name" placeholder="e.g. Gold" required>
+      </div>
+      <div>
+        <label class="sa-label">Min Points</label>
+        <input class="sa-input" type="number" name="min_pts" value="0" style="width:100px;">
+      </div>
+      <div>
+        <label class="sa-label">Discount %</label>
+        <input class="sa-input" type="number" name="discount_pct" step="0.1" value="0" style="width:90px;">
+      </div>
+      <div>
+        <label class="sa-label">Sort Order</label>
+        <input class="sa-input" type="number" name="sort_order" value="0" style="width:80px;">
+      </div>
+      <button class="sa-btn sa-btn-primary" type="submit">Add Tier</button>
+    </form>
+  </div>
+</div>
+
+<!-- Campaigns -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Campaign Rules</h2>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Start</th><th>End</th><th>Multiplier</th><th>Active</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for c in campaigns %}
+    <tr>
+      <td>{{ c.name }}</td>
+      <td>{{ c.start_date }}</td>
+      <td>{{ c.end_date }}</td>
+      <td>{{ c.multiplier }}×</td>
+      <td>
+        {% if c.is_active %}<span class="badge badge-green">Active</span>
+        {% else %}<span class="badge badge-slate">Inactive</span>{% endif %}
+      </td>
+      <td>
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_campaign">
+          <input type="hidden" name="campaign_id" value="{{ c.id }}">
+          <button class="sa-btn sa-btn-sm sa-btn-danger" type="submit"
+                  onclick="return confirm('Delete this campaign?')">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6" style="color:#64748b;padding:16px 12px;">No active campaigns.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #334155;">
+    <h3 style="font-size:13px;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Add Campaign</h3>
+    <form method="post" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_campaign">
+      <div>
+        <label class="sa-label">Name</label>
+        <input class="sa-input" type="text" name="name" placeholder="e.g. Diwali Bonus" required>
+      </div>
+      <div>
+        <label class="sa-label">Start</label>
+        <input class="sa-input" type="date" name="start_date" required>
+      </div>
+      <div>
+        <label class="sa-label">End</label>
+        <input class="sa-input" type="date" name="end_date" required>
+      </div>
+      <div>
+        <label class="sa-label">Multiplier</label>
+        <input class="sa-input" type="number" name="multiplier" step="0.1" value="1.5" style="width:90px;">
+      </div>
+      <button class="sa-btn sa-btn-primary" type="submit">Add Campaign</button>
+    </form>
+  </div>
+</div>
+
+<style>
+.sa-section-title{font-size:16px;font-weight:600;color:#f8fafc;margin-bottom:16px;}
+.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
+.sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
+.sa-btn:hover{background:#334155;}
+.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+.sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
+.sa-btn-danger:hover{background:#991b1b;}
+.sa-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
+{% endblock %}

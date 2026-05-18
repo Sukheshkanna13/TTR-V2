@@ -1,0 +1,65 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Tax Configuration{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Tax Configuration</h1>
+
+<div class="sa-card">
+  <p style="color:#94a3b8;font-size:13px;margin-bottom:20px;">
+    Set GST thresholds and rates per property. Rooms priced below the threshold use the lower rate; above it use the higher rate.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>Threshold (₹)</th>
+        <th>Low Rate (%)</th>
+        <th>High Rate (%)</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in properties %}
+    <tr>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="property_id" value="{{ p.id }}">
+        <td style="font-weight:600;">{{ p.name }}</td>
+        <td>
+          <input class="sa-input" type="number" name="threshold" step="0.01"
+                 value="{{ p.tax_config.threshold|default:'7500' }}"
+                 style="width:120px;">
+        </td>
+        <td>
+          <input class="sa-input" type="number" name="low_rate_pct" step="0.01"
+                 value="{{ p.tax_config.low_rate_pct|default:'12' }}"
+                 style="width:90px;">
+        </td>
+        <td>
+          <input class="sa-input" type="number" name="high_rate_pct" step="0.01"
+                 value="{{ p.tax_config.high_rate_pct|default:'18' }}"
+                 style="width:90px;">
+        </td>
+        <td>
+          <button class="sa-btn sa-btn-sm sa-btn-primary" type="submit">Save</button>
+        </td>
+      </form>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" style="color:#64748b;padding:24px 12px;">No properties found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<style>
+.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
+.sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
+.sa-btn:hover{background:#334155;}
+.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+.sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
+{% endblock %}

@@ -13,11 +13,17 @@ class AuditLog(models.Model):
         ('PASSWORD_RESET', 'Password Reset'),
         ('BOOKING_CANCELLED', 'Booking Cancelled'),
         ('BOOKING_COMPLETED', 'Booking Completed'),
+        ('PROPERTY_CREATED', 'Property Created'),
+        ('PROPERTY_UPDATED', 'Property Updated'),
+        ('ROOM_CREATED', 'Room Created'),
         ('ROOM_UPDATED', 'Room Updated'),
         ('ROOM_STATUS_UPDATED', 'Room Status Updated'),
+        ('ROOM_IMAGE_UPLOADED', 'Room Image Uploaded'),
+        ('ROOM_IMAGE_DELETED', 'Room Image Deleted'),
         ('TAX_CONFIG_UPDATED', 'Tax Config Updated'),
         ('LOYALTY_CONFIG_UPDATED', 'Loyalty Config Updated'),
-        ('LOYALTY_POINTS_ADJUSTED', 'Loyalty Points Adjusted'),
+        ('LOYALTY_CREDIT', 'Loyalty Credit'),
+        ('LOYALTY_DEBIT', 'Loyalty Debit'),
         ('PROPERTY_ASSIGNMENT_CHANGED', 'Property Assignment Changed'),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

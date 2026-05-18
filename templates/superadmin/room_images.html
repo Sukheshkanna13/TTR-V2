@@ -1,0 +1,110 @@
+{% extends "superadmin/base.html" %}
+{% block title %}{{ room.name }} — Images{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+  <a class="sa-btn" href="{% url 'superadmin:rooms' %}">← Back to Rooms</a>
+  <h1 class="sa-page-title" style="margin:0;">{{ room.name }} — {{ room.property.name }}</h1>
+</div>
+
+<!-- Upload Form -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Upload Image</h2>
+  <form id="uploadForm" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+    <div>
+      <label class="sa-label">Image File</label>
+      <input class="sa-input" type="file" name="image" accept="image/*" required style="padding:4px;">
+    </div>
+    <div>
+      <label class="sa-label">Caption</label>
+      <input class="sa-input" type="text" name="caption" placeholder="Optional caption" style="width:200px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <input type="checkbox" name="is_primary" id="isPrimary">
+      <label for="isPrimary" style="font-size:13px;color:#94a3b8;cursor:pointer;">Set as primary</label>
+    </div>
+    <button class="sa-btn sa-btn-primary" type="submit">Upload</button>
+  </form>
+</div>
+
+<!-- Image Gallery -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Gallery ({{ images|length }} images)</h2>
+  {% if images %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:16px;">
+    {% for img in images %}
+    <div id="img-{{ img.id }}" style="border:1px solid #334155;border-radius:8px;overflow:hidden;background:#0f172a;">
+      <div style="height:160px;overflow:hidden;background:#1e293b;">
+        <img src="{{ img.image.url }}" alt="{{ img.caption }}"
+             style="width:100%;height:100%;object-fit:cover;">
+      </div>
+      <div style="padding:10px;">
+        {% if img.is_primary %}
+        <span class="badge badge-green" style="margin-bottom:6px;">★ Primary</span>
+        {% endif %}
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">{{ img.caption|default:"No caption" }}</div>
+        <div style="display:flex;gap:6px;">
+          {% if not img.is_primary %}
+          <button class="sa-btn sa-btn-sm sa-btn-success" onclick="setPrimary('{{ img.id }}')">Set Primary</button>
+          {% endif %}
+          <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteImage('{{ img.id }}')">Delete</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color:#64748b;font-size:13px;">No images uploaded yet. Use the form above to add room photos.</p>
+  {% endif %}
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+const roomId = '{{ room.id }}';
+
+document.getElementById('uploadForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch(`/super-admin/rooms/${roomId}/images/upload/`, {
+    method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) location.reload();
+  else alert(data.error);
+});
+
+async function deleteImage(imageId) {
+  if (!confirm('Delete this image?')) return;
+  const res = await fetch(`/super-admin/rooms/images/${imageId}/delete/`, {
+    method: 'POST', headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) document.getElementById('img-' + imageId)?.remove();
+  else alert(data.error);
+}
+
+async function setPrimary(imageId) {
+  const res = await fetch(`/super-admin/rooms/images/${imageId}/set-primary/`, {
+    method: 'POST', headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) location.reload();
+  else alert(data.error);
+}
+</script>
+
+<style>
+.sa-section-title{font-size:16px;font-weight:600;color:#f8fafc;margin-bottom:16px;}
+.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
+.sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
+.sa-btn:hover{background:#334155;}
+.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+.sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-success{background:#064e3b;border-color:#064e3b;color:#6ee7b7;}
+.sa-btn-success:hover{background:#065f46;}
+.sa-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
+.sa-btn-danger:hover{background:#991b1b;}
+.sa-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
+{% endblock %}

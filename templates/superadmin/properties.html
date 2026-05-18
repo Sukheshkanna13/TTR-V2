@@ -1,0 +1,149 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Properties{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Property Management</h1>
+
+<!-- Create Property -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Add Property</h2>
+  <form id="createPropForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+    <div>
+      <label class="sa-label">Name</label>
+      <input class="sa-input" type="text" name="name" required placeholder="e.g. Temple View Pondicherry">
+    </div>
+    <div>
+      <label class="sa-label">City</label>
+      <input class="sa-input" type="text" name="city" required placeholder="e.g. Pondicherry">
+    </div>
+    <div>
+      <label class="sa-label">Address</label>
+      <input class="sa-input" type="text" name="address" placeholder="Full address" style="min-width:250px;">
+    </div>
+    <div>
+      <label class="sa-label">WhatsApp</label>
+      <input class="sa-input" type="text" name="whatsapp_number" placeholder="+91 90000 00000">
+    </div>
+    <button class="sa-btn sa-btn-primary" type="submit">Create</button>
+  </form>
+  <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
+</div>
+
+<!-- Property List -->
+<div class="sa-card">
+  <h2 class="sa-section-title">All Properties</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>City</th>
+        <th>Address</th>
+        <th>WhatsApp</th>
+        <th>Rooms</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in properties %}
+    <tr id="prop-{{ p.id }}">
+      <td>
+        <input class="sa-input sa-input-inline" id="name-{{ p.id }}" value="{{ p.name }}" style="width:180px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="city-{{ p.id }}" value="{{ p.city }}" style="width:120px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="addr-{{ p.id }}" value="{{ p.address }}" style="width:220px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="wa-{{ p.id }}" value="{{ p.whatsapp_number }}" style="width:140px;">
+      </td>
+      <td style="text-align:center;font-weight:600;">{{ p.room_count }}</td>
+      <td>
+        <span id="status-{{ p.id }}" class="badge {% if p.is_active %}badge-green{% else %}badge-red{% endif %}">
+          {% if p.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="saveProp('{{ p.id }}')">Save</button>
+        <button class="sa-btn sa-btn-sm" onclick="toggleProp('{{ p.id }}')">
+          {% if p.is_active %}Deactivate{% else %}Activate{% endif %}
+        </button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" style="color:#64748b;padding:24px 12px;">No properties found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+// Create property
+document.getElementById('createPropForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('{% url "superadmin:property-create" %}', {
+    method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
+  });
+  const data = await res.json();
+  const box = document.getElementById('createResult');
+  box.style.display = 'block';
+  if (res.ok) {
+    box.style.background = '#064e3b'; box.style.color = '#6ee7b7';
+    box.textContent = data.message;
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    box.style.background = '#450a0a'; box.style.color = '#fca5a5';
+    box.textContent = data.error;
+  }
+});
+
+// Save property details
+async function saveProp(id) {
+  const res = await fetch(`/super-admin/properties/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      action: 'update_details',
+      name: document.getElementById('name-' + id).value,
+      city: document.getElementById('city-' + id).value,
+      address: document.getElementById('addr-' + id).value,
+      whatsapp_number: document.getElementById('wa-' + id).value,
+    }),
+  });
+  const data = await res.json();
+  if (res.ok) alert(data.message);
+  else alert(data.error);
+}
+
+// Toggle property active/inactive
+async function toggleProp(id) {
+  if (!confirm('Toggle property active state?')) return;
+  const res = await fetch(`/super-admin/properties/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'toggle_active'}),
+  });
+  const data = await res.json();
+  if (res.ok) location.reload();
+  else alert(data.error);
+}
+</script>
+
+<style>
+.sa-section-title{font-size:16px;font-weight:600;color:#f8fafc;margin-bottom:16px;}
+.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
+.sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-input-inline{background:transparent;border-color:transparent;padding:4px 6px;}
+.sa-input-inline:hover,.sa-input-inline:focus{background:#0f172a;border-color:#334155;}
+.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
+.sa-btn:hover{background:#334155;}
+.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+.sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
+{% endblock %}

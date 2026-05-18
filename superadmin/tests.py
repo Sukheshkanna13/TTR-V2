@@ -3,6 +3,7 @@ import json
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from accounts.models import UserProfile
 
@@ -46,3 +47,60 @@ class DashboardLiveDataTest(TestCase):
         # Each hold entry must carry an 'expires_at' field (may be None)
         for hold in data['pending_holds']:
             self.assertIn('expires_at', hold, msg="Hold entry missing 'expires_at' field")
+
+    def test_today_revenue_only_includes_todays_checkins(self):
+        from rooms.models import Property, Room, Booking
+        from decimal import Decimal
+
+        prop = Property.objects.create(
+            name='Test Prop', city='Chennai', address='1 Main St', is_active=True,
+        )
+        room = Room.objects.create(
+            property=prop, name='R1', city='Chennai', room_type='single',
+            price_per_night=Decimal('1500'), capacity=2,
+        )
+        today = timezone.now().date()
+        tomorrow = today + timezone.timedelta(days=1)
+        day_after = today + timezone.timedelta(days=2)
+
+        # Booking checking in today
+        Booking.objects.create(
+            user=self.user, room=room,
+            check_in=today, check_out=tomorrow,
+            status='confirmed', total_price=Decimal('1500'), guests=1,
+        )
+        # Booking checking in tomorrow (must NOT be in today_revenue)
+        Booking.objects.create(
+            user=self.user, room=room,
+            check_in=tomorrow, check_out=day_after,
+            status='confirmed', total_price=Decimal('2000'), guests=1,
+        )
+
+        res = self.client.get(reverse('superadmin:dashboard-live'))
+        data = res.json()
+        self.assertAlmostEqual(data['today_revenue'], 1500.0, places=0)
+
+    def test_active_bookings_excludes_checkouts_today(self):
+        from rooms.models import Property, Room, Booking
+        from decimal import Decimal
+
+        prop = Property.objects.create(
+            name='Test Prop2', city='Bangalore', address='2 Main St', is_active=True,
+        )
+        room = Room.objects.create(
+            property=prop, name='R2', city='Bangalore', room_type='double',
+            price_per_night=Decimal('2000'), capacity=3,
+        )
+        today = timezone.now().date()
+        yesterday = today - timezone.timedelta(days=1)
+
+        # Booking checking out today — must NOT be counted as active
+        Booking.objects.create(
+            user=self.user, room=room,
+            check_in=yesterday, check_out=today,
+            status='confirmed', total_price=Decimal('2000'), guests=1,
+        )
+
+        res = self.client.get(reverse('superadmin:dashboard-live'))
+        data = res.json()
+        self.assertEqual(data['active_bookings'], 0)
