@@ -4,6 +4,7 @@ from django.shortcuts import redirect
 
 from .role_routing import (
     CENTRAL_LOGIN_URL,
+    ROLE_EMPLOYEE,
     ROLE_EMPLOYEE_ADMIN,
     ROLE_SUPER_ADMIN,
     get_login_url_with_next,

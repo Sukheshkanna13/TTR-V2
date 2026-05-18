@@ -55,6 +55,21 @@ def dashboard(request):
 
 
 @require_employee
+def dashboard_live_data(request):
+    today = timezone.now().date()
+    rooms = _assigned_rooms(request)
+    bookings_qs = Booking.objects.filter(room__in=rooms, status='confirmed')
+    active_bookings = bookings_qs.filter(check_in__lte=today, check_out__gt=today).count()
+    todays_checkins = bookings_qs.filter(check_in=today).count()
+    todays_checkouts = bookings_qs.filter(check_out=today).count()
+    return JsonResponse({
+        'active_bookings': active_bookings,
+        'todays_checkins': todays_checkins,
+        'todays_checkouts': todays_checkouts,
+    })
+
+
+@require_employee
 def bookings_list(request):
     fin = _fin_level(request)
     rooms = _assigned_rooms(request)

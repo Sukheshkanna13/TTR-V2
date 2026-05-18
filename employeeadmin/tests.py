@@ -1,6 +1,6 @@
 import datetime
 
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, Client, RequestFactory
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
@@ -86,3 +86,25 @@ class EmployeeScopeTest(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(res.context['bookings']), 1)
         self.assertEqual(res.context['bookings'][0].room.property_id, self.prop_a.id)
+
+
+class EmployeeDashboardLiveDataTest(TestCase):
+    def setUp(self):
+        self.emp = make_user('emp@live.test', '8888888888', role='employee_admin')
+        self.client = Client()
+        self.client.force_login(self.emp)
+
+    def test_live_data_returns_json(self):
+        res = self.client.get(reverse('employeeadmin:dashboard-live'))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn('active_bookings', data)
+        self.assertIn('todays_checkins', data)
+        self.assertIn('todays_checkouts', data)
+
+    def test_employee_with_no_properties_sees_zero_counts(self):
+        res = self.client.get(reverse('employeeadmin:dashboard-live'))
+        data = res.json()
+        self.assertEqual(data['active_bookings'], 0)
+        self.assertEqual(data['todays_checkins'], 0)
+        self.assertEqual(data['todays_checkouts'], 0)

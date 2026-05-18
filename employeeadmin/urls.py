@@ -5,6 +5,7 @@ app_name = 'employeeadmin'
 
 urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('dashboard/live/', views.dashboard_live_data, name='dashboard-live'),
     path('bookings/', views.bookings_list, name='bookings'),
     path('bookings/<uuid:booking_id>/complete/', views.booking_complete, name='booking-complete'),
     # Rooms
