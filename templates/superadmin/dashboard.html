@@ -3,6 +3,7 @@
 {% block content %}
 <h1 class="sa-page-title">Dashboard</h1>
 
+<!-- KPI strip -->
 <div class="sa-card">
   <div class="sa-stats">
     <div class="sa-stat">
@@ -18,7 +19,7 @@
       <div class="sa-stat-label">Check-outs today</div>
     </div>
     <div class="sa-stat">
-      <div class="sa-stat-val">{{ pending_holds }}</div>
+      <div class="sa-stat-val">{{ pending_holds|length }}</div>
       <div class="sa-stat-label">Pending holds</div>
     </div>
     <div class="sa-stat">
@@ -40,37 +41,151 @@
   </div>
 </div>
 
+<!-- Today's arrivals -->
+<div class="sa-card" style="margin-top:1.5rem">
+  <h2 class="sa-section-title">Today's Arrivals</h2>
+  <table class="sa-table">
+    <thead>
+      <tr><th>Reference</th><th>Guest</th><th>Room</th><th>Property</th><th>Check-out</th><th>Amount</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+    {% for b in todays_arrivals %}
+    <tr id="arr-{{ b.id }}">
+      <td><code>{{ b.booking_reference }}</code></td>
+      <td>{{ b.user.full_name }}</td>
+      <td>{{ b.room.name }}</td>
+      <td>{{ b.room.property.name }}</td>
+      <td>{{ b.check_out }}</td>
+      <td>₹{{ b.total_price|floatformat:0 }}</td>
+      <td>
+        <button class="sa-btn sa-btn-sm sa-btn-success"
+                onclick="completeBooking('{{ b.id }}', 'arr')">Check in ✓</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" style="color:#64748b;padding:16px 12px;">No arrivals today.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Today's departures -->
+<div class="sa-card" style="margin-top:1.5rem">
+  <h2 class="sa-section-title">Today's Departures</h2>
+  <table class="sa-table">
+    <thead>
+      <tr><th>Reference</th><th>Guest</th><th>Room</th><th>Property</th><th>Check-in</th><th>Amount</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+    {% for b in todays_departures %}
+    <tr id="dep-{{ b.id }}">
+      <td><code>{{ b.booking_reference }}</code></td>
+      <td>{{ b.user.full_name }}</td>
+      <td>{{ b.room.name }}</td>
+      <td>{{ b.room.property.name }}</td>
+      <td>{{ b.check_in }}</td>
+      <td>₹{{ b.total_price|floatformat:0 }}</td>
+      <td>
+        <button class="sa-btn sa-btn-sm sa-btn-success"
+                onclick="completeBooking('{{ b.id }}', 'dep')">Check out ✓</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" style="color:#64748b;padding:16px 12px;">No departures today.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pending holds -->
+<div class="sa-card" style="margin-top:1.5rem">
+  <h2 class="sa-section-title">Pending Holds</h2>
+  <table class="sa-table">
+    <thead>
+      <tr><th>Reference</th><th>Guest</th><th>Room</th><th>Property</th><th>Check-in</th><th>Expires</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+    {% for b in pending_holds %}
+    <tr id="hold-{{ b.id }}">
+      <td><code>{{ b.booking_reference }}</code></td>
+      <td>{{ b.user.full_name }}</td>
+      <td>{{ b.room.name }}</td>
+      <td>{{ b.room.property.name }}</td>
+      <td>{{ b.check_in }}</td>
+      <td>{{ b.hold_expires_at|default:"—" }}</td>
+      <td>
+        <button class="sa-btn sa-btn-sm sa-btn-danger"
+                onclick="cancelBooking('{{ b.id }}', 'hold')">Cancel hold</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" style="color:#64748b;padding:16px 12px;">No pending holds.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Recent bookings -->
 {% if recent_bookings %}
 <div class="sa-card" style="margin-top:1.5rem">
   <h2 class="sa-section-title">Recent Bookings</h2>
   <table class="sa-table">
     <thead>
-      <tr>
-        <th>Reference</th>
-        <th>Guest</th>
-        <th>Room</th>
-        <th>Property</th>
-        <th>Check-in</th>
-        <th>Check-out</th>
-        <th>Status</th>
-        <th>Amount</th>
-      </tr>
+      <tr><th>Reference</th><th>Guest</th><th>Room</th><th>Property</th><th>Check-in</th><th>Check-out</th><th>Status</th><th>Amount</th></tr>
     </thead>
     <tbody>
-      {% for b in recent_bookings %}
-      <tr>
-        <td><code>{{ b.booking_reference|default:b.id }}</code></td>
-        <td>{{ b.user.full_name }}</td>
-        <td>{{ b.room.name }}</td>
-        <td>{{ b.room.property.name }}</td>
-        <td>{{ b.check_in }}</td>
-        <td>{{ b.check_out }}</td>
-        <td><span class="sa-badge sa-badge-{{ b.status }}">{{ b.status }}</span></td>
-        <td>₹{{ b.total_price|floatformat:0 }}</td>
-      </tr>
-      {% endfor %}
+    {% for b in recent_bookings %}
+    <tr>
+      <td><code>{{ b.booking_reference|default:b.id }}</code></td>
+      <td>{{ b.user.full_name }}</td>
+      <td>{{ b.room.name }}</td>
+      <td>{{ b.room.property.name }}</td>
+      <td>{{ b.check_in }}</td>
+      <td>{{ b.check_out }}</td>
+      <td><span class="sa-badge sa-badge-{{ b.status }}">{{ b.status }}</span></td>
+      <td>₹{{ b.total_price|floatformat:0 }}</td>
+    </tr>
+    {% endfor %}
     </tbody>
   </table>
 </div>
 {% endif %}
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+async function completeBooking(id, prefix) {
+  if (!confirm('Mark this booking as completed?')) return;
+  const res = await fetch(`/superadmin/bookings/${id}/complete/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById(prefix + '-' + id)?.remove();
+    alert(data.message);
+  } else {
+    alert(data.error);
+  }
+}
+
+async function cancelBooking(id, prefix) {
+  const reason = prompt('Cancellation reason (optional):');
+  if (reason === null) return;
+  const fd = new FormData();
+  fd.append('reason', reason);
+  const res = await fetch(`/superadmin/bookings/${id}/cancel/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+    body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById(prefix + '-' + id)?.remove();
+    alert(data.message);
+  } else {
+    alert(data.error);
+  }
+}
+</script>
 {% endblock %}

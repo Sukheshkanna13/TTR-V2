@@ -38,19 +38,19 @@ def dashboard(request):
         status='confirmed', check_in__lte=today, check_out__gt=today,
     ).count()
 
-    todays_checkins = Booking.objects.filter(
+    todays_arrivals = list(Booking.objects.filter(
         status='confirmed', check_in=today,
-    ).select_related('user', 'room__property').count()
+    ).select_related('user', 'room__property'))
 
-    todays_checkouts = Booking.objects.filter(
+    todays_departures = list(Booking.objects.filter(
         status='confirmed', check_out=today,
-    ).select_related('user', 'room__property').count()
+    ).select_related('user', 'room__property'))
 
-    pending_holds = Booking.objects.filter(status='pending').count()
+    pending_holds = list(Booking.objects.filter(
+        status='pending',
+    ).select_related('user', 'room__property').order_by('created_at')[:20])
 
-    today_revenue = Booking.objects.filter(
-        status='confirmed', check_in=today,
-    ).aggregate(t=Sum('total_price'))['t'] or 0
+    today_revenue = sum(b.total_price for b in todays_arrivals)
 
     month_revenue = Booking.objects.filter(
         status='confirmed', check_in__gte=month_start,
@@ -65,9 +65,11 @@ def dashboard(request):
 
     return render(request, 'superadmin/dashboard.html', {
         'active_bookings': active_bookings,
-        'todays_checkins': todays_checkins,
-        'todays_checkouts': todays_checkouts,
+        'todays_arrivals': todays_arrivals,
+        'todays_departures': todays_departures,
         'pending_holds': pending_holds,
+        'todays_checkins': len(todays_arrivals),
+        'todays_checkouts': len(todays_departures),
         'today_revenue': today_revenue,
         'month_revenue': month_revenue,
         'total_rooms': total_rooms,

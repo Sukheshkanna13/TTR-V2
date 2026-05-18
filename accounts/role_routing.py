@@ -69,10 +69,14 @@ def get_default_redirect_for_role(role):
 
 
 def get_post_login_redirect(user, next_url=None):
-    if must_change_password(user):
+    role = get_user_role(user)
+
+    # Only guest accounts can be forced to change password.
+    # Admin roles (employee_admin, super_admin) go straight to their dashboard —
+    # only the super admin can reset employee passwords.
+    if role == ROLE_GUEST and must_change_password(user):
         return CHANGE_PASSWORD_URL
 
-    role = get_user_role(user)
     if next_url and is_role_allowed_for_path(role, next_url):
         return next_url
 
