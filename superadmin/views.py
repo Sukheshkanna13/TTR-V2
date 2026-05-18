@@ -46,7 +46,7 @@ def dashboard(request):
         status='confirmed', check_out=today,
     ).select_related('user', 'room__property').count()
 
-    pending_holds = Booking.objects.filter(status='held').count()
+    pending_holds = Booking.objects.filter(status='pending').count()
 
     today_revenue = Booking.objects.filter(
         status='confirmed', check_in=today,
@@ -296,5 +296,64 @@ def audit_log(request):
 
 @require_super_admin
 def bookings_list(request):
-    bookings = Booking.objects.select_related('user', 'room').order_by('-check_in')[:100]
-    return render(request, 'superadmin/bookings.html', {'bookings': bookings})
+    qs = Booking.objects.select_related('user', 'room__property').order_by('-check_in')
+
+    status_filter = request.GET.get('status', '')
+    property_filter = request.GET.get('property', '')
+    date_from = request.GET.get('from', '')
+    date_to = request.GET.get('to', '')
+    q = request.GET.get('q', '').strip()
+
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if property_filter:
+        qs = qs.filter(room__property_id=property_filter)
+    if date_from:
+        qs = qs.filter(check_in__gte=date_from)
+    if date_to:
+        qs = qs.filter(check_in__lte=date_to)
+    if q:
+        qs = qs.filter(
+            Q(user__full_name__icontains=q) |
+            Q(user__email__icontains=q) |
+            Q(booking_reference__icontains=q)
+        )
+
+    properties = Property.objects.filter(is_active=True).order_by('name')
+    return render(request, 'superadmin/bookings.html', {
+        'bookings': qs[:200],
+        'properties': properties,
+        'status_choices': Booking.STATUS_CHOICES,
+        'status_filter': status_filter,
+        'property_filter': property_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'q': q,
+    })
+
+
+@require_super_admin
+@require_POST
+def booking_cancel(request, booking_id):
+    booking = get_object_or_404(Booking, pk=booking_id)
+    if booking.status not in ('confirmed', 'pending'):
+        return JsonResponse({'error': 'Only confirmed or pending bookings can be cancelled.'}, status=400)
+    reason = request.POST.get('reason', '').strip() or 'Cancelled by super admin'
+    booking.status = 'cancelled'
+    booking.save(update_fields=['status'])
+    _log(request, 'BOOKING_CANCELLED', target_user=booking.user,
+         detail=f"booking={booking.booking_reference}, reason={reason}")
+    return JsonResponse({'message': 'Booking cancelled.'})
+
+
+@require_super_admin
+@require_POST
+def booking_complete(request, booking_id):
+    booking = get_object_or_404(Booking, pk=booking_id)
+    if booking.status != 'confirmed':
+        return JsonResponse({'error': 'Only confirmed bookings can be marked completed.'}, status=400)
+    booking.status = 'completed'
+    booking.save(update_fields=['status'])
+    _log(request, 'BOOKING_COMPLETED', target_user=booking.user,
+         detail=f"booking={booking.booking_reference}")
+    return JsonResponse({'message': 'Booking marked as completed.'})

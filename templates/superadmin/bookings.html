@@ -2,28 +2,116 @@
 {% block title %}Bookings{% endblock %}
 {% block content %}
 <h1 class="sa-page-title">All Bookings</h1>
+
+<div class="sa-card" style="margin-bottom:1rem">
+  <form method="get" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end">
+    <div>
+      <label class="sa-label">Search</label>
+      <input class="sa-input" type="text" name="q" value="{{ q }}" placeholder="Name / email / ref">
+    </div>
+    <div>
+      <label class="sa-label">Status</label>
+      <select class="sa-input" name="status">
+        <option value="">All</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="sa-label">Property</label>
+      <select class="sa-input" name="property">
+        <option value="">All</option>
+        {% for p in properties %}
+        <option value="{{ p.id }}" {% if property_filter == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="sa-label">From</label>
+      <input class="sa-input" type="date" name="from" value="{{ date_from }}">
+    </div>
+    <div>
+      <label class="sa-label">To</label>
+      <input class="sa-input" type="date" name="to" value="{{ date_to }}">
+    </div>
+    <button class="sa-btn sa-btn-primary" type="submit">Filter</button>
+    <a class="sa-btn" href="{% url 'superadmin:bookings' %}">Clear</a>
+  </form>
+</div>
+
 <div class="sa-card">
-  <table>
-    <thead><tr><th>Ref</th><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Amount</th><th>Status</th></tr></thead>
+  <table class="sa-table">
+    <thead>
+      <tr>
+        <th>Reference</th>
+        <th>Guest</th>
+        <th>Room</th>
+        <th>Property</th>
+        <th>Check-in</th>
+        <th>Check-out</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
     <tbody>
     {% for b in bookings %}
     <tr>
       <td style="font-family:monospace;font-size:12px;">{{ b.booking_reference }}</td>
       <td>{{ b.user.full_name|default:b.user.email }}</td>
       <td>{{ b.room.name }}</td>
+      <td>{{ b.room.property.name }}</td>
       <td>{{ b.check_in }}</td>
       <td>{{ b.check_out }}</td>
       <td>₹{{ b.total_price|floatformat:0 }}</td>
+      <td><span class="sa-badge sa-badge-{{ b.status }}">{{ b.status }}</span></td>
       <td>
-        {% if b.status == 'CONFIRMED' %}<span class="badge badge-green">{{ b.status }}</span>
-        {% elif b.status == 'CANCELLED' %}<span class="badge badge-red">{{ b.status }}</span>
-        {% else %}<span class="badge badge-slate">{{ b.status }}</span>{% endif %}
+        {% if b.status == 'confirmed' %}
+        <button class="sa-btn sa-btn-sm sa-btn-success"
+                onclick="completeBooking('{{ b.id }}')">Complete</button>
+        <button class="sa-btn sa-btn-sm sa-btn-danger"
+                onclick="cancelBooking('{{ b.id }}')">Cancel</button>
+        {% elif b.status == 'pending' %}
+        <button class="sa-btn sa-btn-sm sa-btn-danger"
+                onclick="cancelBooking('{{ b.id }}')">Cancel hold</button>
+        {% endif %}
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="7" style="color:#64748b;padding:24px 12px;">No bookings found.</td></tr>
+    <tr><td colspan="9" style="color:#64748b;padding:24px 12px;">No bookings found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+async function completeBooking(id) {
+  if (!confirm('Mark this booking as completed?')) return;
+  const res = await fetch(`/superadmin/bookings/${id}/complete/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) { alert(data.message); location.reload(); }
+  else alert(data.error);
+}
+
+async function cancelBooking(id) {
+  const reason = prompt('Cancellation reason (optional):');
+  if (reason === null) return;
+  const fd = new FormData();
+  fd.append('reason', reason);
+  const res = await fetch(`/superadmin/bookings/${id}/cancel/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+    body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) { alert(data.message); location.reload(); }
+  else alert(data.error);
+}
+</script>
 {% endblock %}
