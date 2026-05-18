@@ -12,9 +12,13 @@ class AuditLog(models.Model):
         ('EMPLOYEE_UNLOCKED', 'Employee Unlocked'),
         ('PASSWORD_RESET', 'Password Reset'),
         ('BOOKING_CANCELLED', 'Booking Cancelled'),
+        ('BOOKING_COMPLETED', 'Booking Completed'),
         ('ROOM_UPDATED', 'Room Updated'),
+        ('ROOM_STATUS_UPDATED', 'Room Status Updated'),
         ('TAX_CONFIG_UPDATED', 'Tax Config Updated'),
         ('LOYALTY_CONFIG_UPDATED', 'Loyalty Config Updated'),
+        ('LOYALTY_POINTS_ADJUSTED', 'Loyalty Points Adjusted'),
+        ('PROPERTY_ASSIGNMENT_CHANGED', 'Property Assignment Changed'),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     actor = models.ForeignKey(
@@ -23,7 +27,7 @@ class AuditLog(models.Model):
         null=True,
         related_name='audit_actions',
     )
-    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    action = models.CharField(max_length=32, choices=ACTION_CHOICES)
     target_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
