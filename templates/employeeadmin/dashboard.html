@@ -5,15 +5,15 @@
 <div class="ea-card">
   <div class="ea-stats">
     <div class="ea-stat">
-      <div class="ea-stat-val">{{ active_bookings }}</div>
+      <div class="ea-stat-val" data-kpi="active_bookings">{{ active_bookings }}</div>
       <div class="ea-stat-label">Active stays</div>
     </div>
     <div class="ea-stat">
-      <div class="ea-stat-val">{{ upcoming_checkins|length }}</div>
+      <div class="ea-stat-val" data-kpi="todays_checkins">{{ upcoming_checkins|length }}</div>
       <div class="ea-stat-label">Check-ins today</div>
     </div>
     <div class="ea-stat">
-      <div class="ea-stat-val">{{ upcoming_checkouts|length }}</div>
+      <div class="ea-stat-val" data-kpi="todays_checkouts">{{ upcoming_checkouts|length }}</div>
       <div class="ea-stat-label">Check-outs today</div>
     </div>
   </div>
@@ -74,6 +74,24 @@
 <script>
 const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 
+// ── KPI auto-refresh (every 30 s) ───────────────────────────────────
+async function pollDashboard() {
+  try {
+    const res = await fetch('/admin-portal/dashboard/live/', {
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    ['active_bookings', 'todays_checkins', 'todays_checkouts'].forEach(key => {
+      const el = document.querySelector(`[data-kpi="${key}"]`);
+      if (el) el.textContent = data[key];
+    });
+  } catch (_) {}
+}
+
+setInterval(pollDashboard, 30_000);
+
+// ── Booking action ───────────────────────────────────────────────────
 async function completeBooking(id, prefix) {
   if (!confirm('Mark this booking as completed?')) return;
   const res = await fetch(`/admin-portal/bookings/${id}/complete/`, {

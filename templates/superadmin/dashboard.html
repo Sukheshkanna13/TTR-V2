@@ -7,15 +7,15 @@
 <div class="sa-card">
   <div class="sa-stats">
     <div class="sa-stat">
-      <div class="sa-stat-val">{{ active_bookings }}</div>
+      <div class="sa-stat-val" data-kpi="active_bookings">{{ active_bookings }}</div>
       <div class="sa-stat-label">Active stays</div>
     </div>
     <div class="sa-stat">
-      <div class="sa-stat-val">{{ todays_checkins }}</div>
+      <div class="sa-stat-val" data-kpi="todays_checkins">{{ todays_checkins }}</div>
       <div class="sa-stat-label">Check-ins today</div>
     </div>
     <div class="sa-stat">
-      <div class="sa-stat-val">{{ todays_checkouts }}</div>
+      <div class="sa-stat-val" data-kpi="todays_checkouts">{{ todays_checkouts }}</div>
       <div class="sa-stat-label">Check-outs today</div>
     </div>
     <div class="sa-stat">
@@ -23,7 +23,7 @@
       <div class="sa-stat-label">Pending holds</div>
     </div>
     <div class="sa-stat">
-      <div class="sa-stat-val">₹{{ today_revenue|floatformat:0 }}</div>
+      <div class="sa-stat-val" data-kpi="today_revenue">₹{{ today_revenue|floatformat:0 }}</div>
       <div class="sa-stat-label">Today revenue</div>
     </div>
     <div class="sa-stat">
@@ -99,27 +99,30 @@
 
 <!-- Pending holds -->
 <div class="sa-card" style="margin-top:1.5rem">
-  <h2 class="sa-section-title">Pending Holds</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+    <h2 class="sa-section-title" style="margin:0">Pending Holds</h2>
+    <span id="last-refresh" style="font-size:11px;color:#94a3b8;"></span>
+  </div>
   <table class="sa-table">
     <thead>
       <tr><th>Reference</th><th>Guest</th><th>Room</th><th>Property</th><th>Check-in</th><th>Expires</th><th>Action</th></tr>
     </thead>
-    <tbody>
+    <tbody id="holds-tbody">
     {% for b in pending_holds %}
-    <tr id="hold-{{ b.id }}">
+    <tr id="hold-{{ b.id }}" data-expires="{{ b.hold_expires_at.isoformat|default:'' }}">
       <td><code>{{ b.booking_reference }}</code></td>
       <td>{{ b.user.full_name }}</td>
       <td>{{ b.room.name }}</td>
       <td>{{ b.room.property.name }}</td>
       <td>{{ b.check_in }}</td>
-      <td>{{ b.hold_expires_at|default:"—" }}</td>
+      <td class="hold-timer" style="font-variant-numeric:tabular-nums;font-weight:600;">{{ b.hold_expires_at|default:"—" }}</td>
       <td>
         <button class="sa-btn sa-btn-sm sa-btn-danger"
                 onclick="cancelBooking('{{ b.id }}', 'hold')">Cancel hold</button>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="7" style="color:#64748b;padding:16px 12px;">No pending holds.</td></tr>
+    <tr id="holds-empty-row"><td colspan="7" style="color:#64748b;padding:16px 12px;">No pending holds.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -154,9 +157,101 @@
 <script>
 const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 
+// ── Hold countdown timers ────────────────────────────────────────────
+function formatCountdown(ms) {
+  if (ms <= 0) return 'Expired';
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function tickCountdowns() {
+  document.querySelectorAll('tr[data-expires]').forEach(row => {
+    const raw = row.dataset.expires;
+    if (!raw) return;
+    const cell = row.querySelector('.hold-timer');
+    if (!cell) return;
+    const ms = new Date(raw) - Date.now();
+    cell.textContent = formatCountdown(ms);
+    if (ms <= 120_000) cell.style.color = '#ef4444';
+    else if (ms <= 300_000) cell.style.color = '#f59e0b';
+    else cell.style.color = '';
+    if (ms <= 0) row.style.opacity = '0.4';
+  });
+}
+
+setInterval(tickCountdowns, 1000);
+tickCountdowns();
+
+// ── KPI auto-refresh (every 30 s) ───────────────────────────────────
+function updateKpis(data) {
+  const map = {
+    active_bookings:  '[data-kpi="active_bookings"]',
+    todays_checkins:  '[data-kpi="todays_checkins"]',
+    todays_checkouts: '[data-kpi="todays_checkouts"]',
+    today_revenue:    '[data-kpi="today_revenue"]',
+  };
+  for (const [key, sel] of Object.entries(map)) {
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    el.textContent = key === 'today_revenue'
+      ? '₹' + Math.round(data[key]).toLocaleString('en-IN')
+      : data[key];
+  }
+  const ts = document.getElementById('last-refresh');
+  if (ts) ts.textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+function refreshHoldsTable(holds) {
+  const tbody = document.getElementById('holds-tbody');
+  if (!tbody) return;
+  if (!holds.length) {
+    tbody.innerHTML = '<tr id="holds-empty-row"><td colspan="7" style="color:#64748b;padding:16px 12px;">No pending holds.</td></tr>';
+    return;
+  }
+  const existing = new Set([...tbody.querySelectorAll('tr[id^="hold-"]')].map(r => r.id));
+  holds.forEach(h => {
+    if (existing.has('hold-' + h.id)) {
+      const row = document.getElementById('hold-' + h.id);
+      if (row && h.expires_at) row.dataset.expires = h.expires_at;
+      return;
+    }
+    const emptyRow = tbody.querySelector('#holds-empty-row');
+    if (emptyRow) emptyRow.remove();
+    const tr = document.createElement('tr');
+    tr.id = 'hold-' + h.id;
+    tr.dataset.expires = h.expires_at || '';
+    tr.innerHTML = `
+      <td><code>${h.reference}</code></td>
+      <td>${h.guest}</td>
+      <td>${h.room}</td>
+      <td>${h.property}</td>
+      <td>${h.check_in}</td>
+      <td class="hold-timer" style="font-variant-numeric:tabular-nums;font-weight:600;"></td>
+      <td><button class="sa-btn sa-btn-sm sa-btn-danger"
+                  onclick="cancelBooking('${h.id}','hold')">Cancel hold</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function pollDashboard() {
+  try {
+    const res = await fetch('/super-admin/dashboard/live/', {
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    updateKpis(data);
+    refreshHoldsTable(data.pending_holds);
+  } catch (_) {}
+}
+
+setInterval(pollDashboard, 30_000);
+
+// ── Booking actions ──────────────────────────────────────────────────
 async function completeBooking(id, prefix) {
   if (!confirm('Mark this booking as completed?')) return;
-  const res = await fetch(`/superadmin/bookings/${id}/complete/`, {
+  const res = await fetch(`/super-admin/bookings/${id}/complete/`, {
     method: 'POST',
     headers: {'X-CSRFToken': csrf},
   });
@@ -174,7 +269,7 @@ async function cancelBooking(id, prefix) {
   if (reason === null) return;
   const fd = new FormData();
   fd.append('reason', reason);
-  const res = await fetch(`/superadmin/bookings/${id}/cancel/`, {
+  const res = await fetch(`/super-admin/bookings/${id}/cancel/`, {
     method: 'POST',
     headers: {'X-CSRFToken': csrf},
     body: fd,
