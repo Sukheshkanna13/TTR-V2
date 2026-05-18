@@ -1,0 +1,113 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Images — {{ room.name }}{% endblock %}
+{% block page_title %}Room Images{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2>{{ room.name }} — Images</h2>
+  <a href="{% url 'superadmin:rooms' %}" class="btn btn-ghost">← Back to Rooms</a>
+</div>
+
+<!-- Upload form -->
+<div class="card" style="margin-bottom:20px;">
+  <div style="font-size:.85rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Upload New Image</div>
+  <form id="uploadForm" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+        <label>Image File</label>
+        <input type="file" id="imgFile" name="image" accept="image/*" class="form-control" required>
+      </div>
+      <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0;">
+        <label>Caption (optional)</label>
+        <input type="text" id="imgCaption" name="caption" class="form-control" placeholder="e.g. Pool view">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="imgPrimary" name="is_primary">
+          <span>Set as Primary</span>
+        </label>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="submitUpload()">Upload</button>
+    </div>
+    <div id="uploadResult" style="font-size:.85rem;margin-top:10px;"></div>
+  </form>
+</div>
+
+<!-- Image grid -->
+{% if images %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+  {% for img in images %}
+  <div class="card" style="padding:12px;">
+    <div style="position:relative;margin-bottom:10px;">
+      <img src="{{ img.image.url }}" alt="{{ img.caption|default:room.name }}"
+           style="width:100%;height:150px;object-fit:cover;border-radius:6px;display:block;">
+      {% if img.is_primary %}
+      <span class="badge badge-accent" style="position:absolute;top:6px;left:6px;">Primary</span>
+      {% endif %}
+    </div>
+    {% if img.caption %}
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px;">{{ img.caption }}</div>
+    {% endif %}
+    <div style="display:flex;gap:6px;">
+      {% if not img.is_primary %}
+      <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="setPrimary('{{ img.pk }}')">Set Primary</button>
+      {% endif %}
+      <button class="btn btn-danger btn-sm" {% if img.is_primary %}style="flex:1;"{% else %}style="flex:0;"{% endif %}
+              onclick="deleteImage('{{ img.pk }}')">Delete</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:40px;color:var(--muted);">
+  No images uploaded yet. Use the form above to add the first image.
+</div>
+{% endif %}
+
+<script>
+const CSRF = '{{ csrf_token }}';
+const ROOM_ID = '{{ room.pk }}';
+
+function submitUpload() {
+  const form = document.getElementById('uploadForm');
+  const body = new FormData(form);
+  body.set('csrfmiddlewaretoken', CSRF);
+
+  fetch(`/super-admin/rooms/${ROOM_ID}/images/upload/`, {method: 'POST', body})
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('uploadResult');
+      if (d.error) {
+        el.style.color = 'var(--danger)';
+        el.textContent = d.error;
+      } else {
+        el.style.color = 'var(--success)';
+        el.textContent = d.message;
+        setTimeout(() => location.reload(), 1200);
+      }
+    });
+}
+
+function setPrimary(imageId) {
+  fetch(`/super-admin/rooms/images/${imageId}/set-primary/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF},
+  }).then(r => r.json()).then(d => {
+    if (d.error) { alert(d.error); return; }
+    location.reload();
+  });
+}
+
+function deleteImage(imageId) {
+  if (!confirm('Delete this image? This cannot be undone.')) return;
+  fetch(`/super-admin/rooms/images/${imageId}/delete/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF},
+  }).then(r => r.json()).then(d => {
+    if (d.error) { alert(d.error); return; }
+    location.reload();
+  });
+}
+</script>
+{% endblock %}

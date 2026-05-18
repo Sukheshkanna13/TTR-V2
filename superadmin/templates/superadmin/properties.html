@@ -1,0 +1,195 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Properties{% endblock %}
+{% block page_title %}Properties{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2>Properties</h2>
+  <button class="btn btn-primary" onclick="document.getElementById('createPropModal').classList.add('open')">+ Add Property</button>
+</div>
+
+<div class="card">
+  <table class="sa-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>City</th>
+        <th>Address</th>
+        <th>WhatsApp</th>
+        <th>Rooms</th>
+        <th>Active</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for prop in properties %}
+      <tr>
+        <td style="font-weight:500;">{{ prop.name }}</td>
+        <td>{{ prop.city }}</td>
+        <td style="color:var(--muted);font-size:.82rem;">{{ prop.address|default:"—" }}</td>
+        <td style="color:var(--muted);">{{ prop.whatsapp_number|default:"—" }}</td>
+        <td>
+          <span class="badge badge-muted">{{ prop.room_count }} room{{ prop.room_count|pluralize }}</span>
+        </td>
+        <td>
+          {% if prop.is_active %}
+            <span class="badge badge-success">Active</span>
+          {% else %}
+            <span class="badge badge-danger">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm"
+                    onclick="openEditProp('{{ prop.pk }}','{{ prop.name|escapejs }}','{{ prop.city|escapejs }}','{{ prop.address|escapejs }}','{{ prop.whatsapp_number|escapejs }}')">
+              Edit
+            </button>
+            <button class="btn {% if prop.is_active %}btn-danger{% else %}btn-ghost{% endif %} btn-sm"
+                    onclick="toggleProp('{{ prop.pk }}')">
+              {% if prop.is_active %}Deactivate{% else %}Activate{% endif %}
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;">No properties yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Property Modal -->
+<div class="modal-overlay" id="createPropModal">
+  <div class="modal">
+    <div class="modal-title">Add Property</div>
+    <div class="form-group">
+      <label>Property Name</label>
+      <input type="text" id="p_name" class="form-control" placeholder="e.g. Pondicherry Retreat">
+    </div>
+    <div class="form-group">
+      <label>City</label>
+      <input type="text" id="p_city" class="form-control" placeholder="e.g. Pondicherry">
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="p_address" class="form-control" placeholder="Full street address">
+    </div>
+    <div class="form-group">
+      <label>WhatsApp Number</label>
+      <input type="text" id="p_whatsapp" class="form-control" placeholder="+919876543210">
+    </div>
+    <div id="createPropResult" style="font-size:.85rem;margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('createPropModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCreateProp()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Property Modal -->
+<div class="modal-overlay" id="editPropModal">
+  <div class="modal">
+    <div class="modal-title">Edit Property</div>
+    <input type="hidden" id="ep_id">
+    <div class="form-group">
+      <label>Property Name</label>
+      <input type="text" id="ep_name" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>City</label>
+      <input type="text" id="ep_city" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="ep_address" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>WhatsApp Number</label>
+      <input type="text" id="ep_whatsapp" class="form-control">
+    </div>
+    <div id="editPropResult" style="font-size:.85rem;margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('editPropModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitEditProp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function toggleProp(propId) {
+  if (!confirm('Toggle this property active/inactive?')) return;
+  fetch(`/super-admin/properties/${propId}/update/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({action: 'toggle_active'})
+  }).then(r => r.json()).then(d => {
+    if (d.error) { alert(d.error); return; }
+    location.reload();
+  });
+}
+
+function openEditProp(id, name, city, address, whatsapp) {
+  document.getElementById('ep_id').value = id;
+  document.getElementById('ep_name').value = name;
+  document.getElementById('ep_city').value = city;
+  document.getElementById('ep_address').value = address;
+  document.getElementById('ep_whatsapp').value = whatsapp;
+  document.getElementById('editPropResult').textContent = '';
+  document.getElementById('editPropModal').classList.add('open');
+}
+
+function submitEditProp() {
+  const id = document.getElementById('ep_id').value;
+  fetch(`/super-admin/properties/${id}/update/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({
+      action: 'update_details',
+      name: document.getElementById('ep_name').value,
+      city: document.getElementById('ep_city').value,
+      address: document.getElementById('ep_address').value,
+      whatsapp_number: document.getElementById('ep_whatsapp').value,
+    })
+  }).then(r => r.json()).then(d => {
+    const el = document.getElementById('editPropResult');
+    if (d.error) {
+      el.style.color = 'var(--danger)';
+      el.textContent = d.error;
+    } else {
+      el.style.color = 'var(--success)';
+      el.textContent = d.message;
+      setTimeout(() => location.reload(), 1500);
+    }
+  });
+}
+
+function submitCreateProp() {
+  const body = new FormData();
+  body.append('csrfmiddlewaretoken', CSRF);
+  body.append('name', document.getElementById('p_name').value);
+  body.append('city', document.getElementById('p_city').value);
+  body.append('address', document.getElementById('p_address').value);
+  body.append('whatsapp_number', document.getElementById('p_whatsapp').value);
+
+  fetch('/super-admin/properties/create/', {method: 'POST', body})
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('createPropResult');
+      if (d.error) {
+        el.style.color = 'var(--danger)';
+        el.textContent = d.error;
+      } else {
+        el.style.color = 'var(--success)';
+        el.textContent = d.message;
+        setTimeout(() => location.reload(), 1800);
+      }
+    });
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+</script>
+{% endblock %}

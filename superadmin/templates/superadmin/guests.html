@@ -1,0 +1,134 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Guests{% endblock %}
+{% block page_title %}Guests{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2>Guest Accounts</h2>
+</div>
+
+<!-- Search bar -->
+<form method="get" style="margin-bottom:16px;display:flex;gap:10px;align-items:center;">
+  <input type="text" name="q" value="{{ q }}" class="form-control" style="max-width:320px;" placeholder="Search by name or email…">
+  <button type="submit" class="btn btn-primary btn-sm">Search</button>
+  {% if q %}
+  <a href="{% url 'superadmin:guests' %}" class="btn btn-ghost btn-sm">Clear</a>
+  {% endif %}
+</form>
+
+<div class="card">
+  <table class="sa-table">
+    <thead>
+      <tr>
+        <th>Name / Email</th>
+        <th>Tier</th>
+        <th>Loyalty Points</th>
+        <th>Bookings</th>
+        <th>Joined</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in guests %}
+      <tr>
+        <td>
+          <div style="font-weight:500;">{{ g.user.full_name|default:"—" }}</div>
+          <div style="font-size:.8rem;color:var(--muted);">{{ g.user.email }}</div>
+        </td>
+        <td>
+          {% with tier=g.profile.loyalty_tier %}
+            {% if tier == 'gold' %}
+              <span class="badge badge-accent">Gold</span>
+            {% elif tier == 'silver' %}
+              <span class="badge" style="background:rgba(148,163,184,.15);color:#94a3b8;">Silver</span>
+            {% else %}
+              <span class="badge badge-muted">Bronze</span>
+            {% endif %}
+          {% endwith %}
+        </td>
+        <td>{{ g.profile.loyalty_points|default:"0" }}</td>
+        <td>{{ g.booking_count }}</td>
+        <td style="color:var(--muted);font-size:.82rem;">{{ g.user.date_joined|date:"d M Y" }}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm"
+                  onclick="openAdjustModal('{{ g.user.pk }}', '{{ g.user.full_name|default:g.user.email|escapejs }}', {{ g.profile.loyalty_points|default:0 }})">
+            Adjust Points
+          </button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px;">
+        {% if q %}No guests match "{{ q }}".{% else %}No guests registered yet.{% endif %}
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Adjust Points Modal -->
+<div class="modal-overlay" id="adjustModal">
+  <div class="modal">
+    <div class="modal-title">Adjust Loyalty Points</div>
+    <input type="hidden" id="adj_uid">
+    <p id="adj_guestname" style="font-size:.85rem;color:var(--muted);margin-bottom:14px;"></p>
+    <div class="form-group">
+      <label>Amount <span style="color:var(--muted);font-size:.75rem;">(positive to add, negative to deduct)</span></label>
+      <input type="number" id="adj_amount" class="form-control" placeholder="e.g. 500 or -100">
+    </div>
+    <div class="form-group">
+      <label>Reason</label>
+      <input type="text" id="adj_reason" class="form-control" placeholder="e.g. Goodwill gesture">
+    </div>
+    <div id="adjResult" style="font-size:.85rem;margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('adjustModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAdjust()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function openAdjustModal(uid, name, currentPoints) {
+  document.getElementById('adj_uid').value = uid;
+  document.getElementById('adj_guestname').textContent = `${name} — current balance: ${currentPoints} pts`;
+  document.getElementById('adj_amount').value = '';
+  document.getElementById('adj_reason').value = '';
+  document.getElementById('adjResult').textContent = '';
+  document.getElementById('adjustModal').classList.add('open');
+}
+
+function submitAdjust() {
+  const uid = document.getElementById('adj_uid').value;
+  const amount = parseInt(document.getElementById('adj_amount').value, 10);
+  const reason = document.getElementById('adj_reason').value.trim();
+  const el = document.getElementById('adjResult');
+
+  if (!amount || isNaN(amount)) {
+    el.style.color = 'var(--danger)';
+    el.textContent = 'Please enter a non-zero amount.';
+    return;
+  }
+
+  fetch(`/super-admin/guests/${uid}/loyalty/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({amount, reason})
+  }).then(r => r.json()).then(d => {
+    if (d.error) {
+      el.style.color = 'var(--danger)';
+      el.textContent = d.error;
+    } else {
+      el.style.color = 'var(--success)';
+      el.textContent = d.message;
+      setTimeout(() => location.reload(), 1800);
+    }
+  });
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+</script>
+{% endblock %}

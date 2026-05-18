@@ -1,0 +1,182 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Rooms{% endblock %}
+{% block page_title %}Rooms{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2>Room Inventory</h2>
+  <button class="btn btn-primary" onclick="document.getElementById('createRoomModal').classList.add('open')">+ Add Room</button>
+</div>
+
+<!-- Property filter -->
+<form method="get" style="margin-bottom:16px;display:flex;gap:10px;align-items:center;">
+  <select name="property" class="form-control" style="max-width:260px;" onchange="this.form.submit()">
+    <option value="">All Properties</option>
+    {% for prop in properties %}
+    <option value="{{ prop.pk }}" {% if property_filter == prop.pk|stringformat:"s" %}selected{% endif %}>{{ prop.name }}</option>
+    {% endfor %}
+  </select>
+  {% if property_filter %}
+  <a href="{% url 'superadmin:rooms' %}" class="btn btn-ghost btn-sm">Clear</a>
+  {% endif %}
+</form>
+
+<div class="card">
+  <table class="sa-table">
+    <thead>
+      <tr>
+        <th>Room Name</th>
+        <th>Property</th>
+        <th>Type</th>
+        <th>Price / Night</th>
+        <th>Capacity</th>
+        <th>Operational Status</th>
+        <th>Active</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for room in rooms %}
+      <tr>
+        <td style="font-weight:500;">{{ room.name }}</td>
+        <td style="color:var(--muted);">{{ room.property.name }}</td>
+        <td>{{ room.get_room_type_display }}</td>
+        <td>₹{{ room.price_per_night }}</td>
+        <td>{{ room.capacity }}</td>
+        <td>
+          <select class="form-control" style="padding:4px 8px;font-size:.75rem;width:auto;"
+                  onchange="setRoomStatus('{{ room.pk }}', this.value)">
+            {% for val, label in operational_choices %}
+            <option value="{{ val }}" {% if room.operational_status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td>
+          {% if room.is_active %}
+            <span class="badge badge-success">Active</span>
+          {% else %}
+            <span class="badge badge-danger">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="toggleRoom('{{ room.pk }}')">
+              {% if room.is_active %}Deactivate{% else %}Activate{% endif %}
+            </button>
+            <a href="{% url 'superadmin:room-images' room.pk %}" class="btn btn-ghost btn-sm">Images</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px;">No rooms found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Room Modal -->
+<div class="modal-overlay" id="createRoomModal">
+  <div class="modal">
+    <div class="modal-title">Add Room</div>
+    <div class="form-group">
+      <label>Property</label>
+      <select id="r_property" class="form-control">
+        {% for prop in properties %}
+        <option value="{{ prop.pk }}">{{ prop.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Room Name</label>
+      <input type="text" id="r_name" class="form-control" placeholder="e.g. Deluxe Sea View 101">
+    </div>
+    <div class="form-group">
+      <label>Room Type</label>
+      <select id="r_type" class="form-control">
+        <option value="single">Single</option>
+        <option value="double">Double</option>
+        <option value="suite">Suite</option>
+        <option value="villa">Villa</option>
+        <option value="cottage">Cottage</option>
+        <option value="dormitory">Dormitory</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Price per Night (₹)</label>
+      <input type="number" id="r_price" class="form-control" placeholder="3500" min="0" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Capacity (guests)</label>
+      <input type="number" id="r_capacity" class="form-control" value="2" min="1">
+    </div>
+    <div class="form-group">
+      <label>Amenities</label>
+      <input type="text" id="r_amenities" class="form-control" placeholder="AC, WiFi, Pool Access">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="r_description" class="form-control" rows="3" placeholder="Short room description…"></textarea>
+    </div>
+    <div id="createRoomResult" style="font-size:.85rem;margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('createRoomModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCreateRoom()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function setRoomStatus(roomId, status) {
+  fetch(`/super-admin/rooms/${roomId}/update/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({action: 'set_status', operational_status: status})
+  }).then(r => r.json()).then(d => {
+    if (d.error) alert(d.error);
+  });
+}
+
+function toggleRoom(roomId) {
+  fetch(`/super-admin/rooms/${roomId}/update/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({action: 'toggle_active'})
+  }).then(r => r.json()).then(d => {
+    if (d.error) { alert(d.error); return; }
+    location.reload();
+  });
+}
+
+function submitCreateRoom() {
+  const body = new FormData();
+  body.append('csrfmiddlewaretoken', CSRF);
+  body.append('property_id', document.getElementById('r_property').value);
+  body.append('name', document.getElementById('r_name').value);
+  body.append('room_type', document.getElementById('r_type').value);
+  body.append('price_per_night', document.getElementById('r_price').value);
+  body.append('capacity', document.getElementById('r_capacity').value);
+  body.append('amenities', document.getElementById('r_amenities').value);
+  body.append('description', document.getElementById('r_description').value);
+
+  fetch('/super-admin/rooms/create/', {method: 'POST', body})
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('createRoomResult');
+      if (d.error) {
+        el.style.color = 'var(--danger)';
+        el.textContent = d.error;
+      } else {
+        el.style.color = 'var(--success)';
+        el.textContent = d.message;
+        setTimeout(() => location.reload(), 1800);
+      }
+    });
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+</script>
+{% endblock %}

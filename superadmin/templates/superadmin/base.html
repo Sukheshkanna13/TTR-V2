@@ -111,6 +111,18 @@
     <a href="{% url 'superadmin:loyalty-config' %}" class="{% if request.resolver_match.url_name == 'loyalty-config' %}active{% endif %}">
       <span class="icon">⭐</span> Loyalty
     </a>
+    <a href="{% url 'superadmin:rooms' %}" class="{% if 'room' in request.resolver_match.url_name %}active{% endif %}">
+      <span class="icon">🏠</span> Rooms
+    </a>
+    <a href="{% url 'superadmin:properties' %}" class="{% if request.resolver_match.url_name == 'properties' %}active{% endif %}">
+      <span class="icon">🏢</span> Properties
+    </a>
+    <a href="{% url 'superadmin:room-status-board' %}" class="{% if request.resolver_match.url_name == 'room-status-board' %}active{% endif %}">
+      <span class="icon">📋</span> Status Board
+    </a>
+    <a href="{% url 'superadmin:guests' %}" class="{% if request.resolver_match.url_name == 'guests' %}active{% endif %}">
+      <span class="icon">👤</span> Guests
+    </a>
     <a href="{% url 'superadmin:audit-log' %}" class="{% if request.resolver_match.url_name == 'audit-log' %}active{% endif %}">
       <span class="icon">🔍</span> Audit Log
     </a>

@@ -1,0 +1,105 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Room Status Board{% endblock %}
+{% block page_title %}Room Status Board{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2>Live Status Board</h2>
+  <span style="font-size:.8rem;color:var(--muted);">Auto-refreshes every 60 seconds &nbsp;·&nbsp; Last updated: <span id="lastUpdated">—</span></span>
+</div>
+
+<div id="boardContainer">
+  <!-- Populated by JS -->
+  <div style="color:var(--muted);text-align:center;padding:40px;">Loading room data…</div>
+</div>
+
+<style>
+  .status-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-bottom:24px; }
+  .room-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:14px; }
+  .room-card-name { font-weight:600; font-size:.9rem; margin-bottom:6px; }
+  .room-card-meta { font-size:.75rem; color:var(--muted); margin-bottom:10px; }
+  .room-card select { width:100%; padding:5px 8px; background:var(--surface); border:1px solid var(--border); border-radius:5px; color:var(--text); font-size:.75rem; cursor:pointer; }
+  .prop-heading { font-size:.8rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:20px 0 10px; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  .prop-heading:first-child { margin-top:0; }
+</style>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+const STATUS_CHOICES = [
+  {% for val, label in status_choices %}['{{ val }}', '{{ label }}'],{% endfor %}
+];
+
+function statusBadge(status) {
+  const map = {
+    available:    {cls: 'badge-success',  label: 'Available'},
+    cleaning:     {cls: 'badge-accent',   label: 'Cleaning'},
+    maintenance:  {cls: '',               label: 'Maintenance',  extra: 'background:rgba(249,115,22,.15);color:#f97316;'},
+    out_of_order: {cls: 'badge-danger',   label: 'Out of Order'},
+  };
+  const s = map[status] || {cls: 'badge-muted', label: status};
+  return `<span class="badge ${s.cls}" style="${s.extra||''}">${s.label}</span>`;
+}
+
+function buildSelectOptions(current) {
+  return STATUS_CHOICES.map(([val, label]) =>
+    `<option value="${val}" ${val === current ? 'selected' : ''}>${label}</option>`
+  ).join('');
+}
+
+function renderBoard(rooms) {
+  // Group by property name
+  const grouped = {};
+  rooms.forEach(r => {
+    if (!grouped[r.property]) grouped[r.property] = [];
+    grouped[r.property].push(r);
+  });
+
+  let html = '';
+  Object.keys(grouped).sort().forEach(propName => {
+    html += `<div class="prop-heading">${propName}</div><div class="status-grid">`;
+    grouped[propName].forEach(r => {
+      html += `
+        <div class="room-card">
+          <div class="room-card-name">${r.name}</div>
+          <div class="room-card-meta">
+            ${statusBadge(r.status)}
+            ${r.is_active
+              ? '<span class="badge badge-success" style="margin-left:4px;">Active</span>'
+              : '<span class="badge badge-muted" style="margin-left:4px;">Inactive</span>'}
+          </div>
+          <select onchange="updateStatus('${r.id}', this.value)">
+            ${buildSelectOptions(r.status)}
+          </select>
+        </div>`;
+    });
+    html += '</div>';
+  });
+
+  document.getElementById('boardContainer').innerHTML = html || '<p style="color:var(--muted);text-align:center;padding:40px;">No rooms found.</p>';
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+}
+
+function fetchBoard() {
+  fetch('/super-admin/rooms/status-board/data/')
+    .then(r => r.json())
+    .then(d => renderBoard(d.rooms || []))
+    .catch(() => {
+      document.getElementById('lastUpdated').textContent = 'Error refreshing';
+    });
+}
+
+function updateStatus(roomId, status) {
+  fetch(`/super-admin/rooms/${roomId}/update/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({action: 'set_status', operational_status: status})
+  }).then(r => r.json()).then(d => {
+    if (d.error) alert(d.error);
+  });
+}
+
+// Initial load + 60s polling
+fetchBoard();
+setInterval(fetchBoard, 60000);
+</script>
+{% endblock %}
