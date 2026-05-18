@@ -10,7 +10,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from rooms.models import Booking, Room, Property
+from rooms.models import Booking, Room, RoomImage, Property
 from .decorators import require_super_admin
 from .models import AuditLog, PropertyTaxConfig
 
@@ -78,12 +78,61 @@ def dashboard(request):
     })
 
 
+@require_super_admin
+def dashboard_live_data(request):
+    today = timezone.now().date()
+
+    active_bookings = Booking.objects.filter(
+        status='confirmed', check_in__lte=today, check_out__gte=today,
+    ).count()
+
+    todays_checkins = Booking.objects.filter(
+        status='confirmed', check_in=today,
+    ).count()
+
+    todays_checkouts = Booking.objects.filter(
+        status='confirmed', check_out=today,
+    ).count()
+
+    today_revenue = Booking.objects.filter(
+        status='confirmed', check_in__gte=today,
+    ).aggregate(t=Sum('total_price'))['t'] or 0
+
+    pending_qs = Booking.objects.filter(
+        status='pending',
+    ).select_related('user', 'room__property').order_by('created_at')[:20]
+
+    pending_holds = []
+    for b in pending_qs:
+        reference = b.booking_reference if b.booking_reference else str(b.id)[:8]
+        guest = b.user.full_name if b.user.full_name else b.user.email
+        room_name = b.room.name if b.room else ''
+        property_name = b.room.property.name if b.room and b.room.property else ''
+        pending_holds.append({
+            'id': str(b.id),
+            'reference': reference,
+            'guest': guest,
+            'room': room_name,
+            'property': property_name,
+            'check_in': str(b.check_in),
+            'expires_at': b.hold_expires_at.isoformat() if b.hold_expires_at else None,
+        })
+
+    return JsonResponse({
+        'active_bookings': active_bookings,
+        'todays_checkins': todays_checkins,
+        'todays_checkouts': todays_checkouts,
+        'today_revenue': float(today_revenue),
+        'pending_holds': pending_holds,
+    })
+
+
 # ── Employee CRUD ──────────────────────────────────────────────────────────────
 
 @require_super_admin
 def employees_list(request):
     employees = User.objects.filter(
-        userprofile__role='employee_admin'
+        userprofile__role='employee'
     ).select_related('userprofile').prefetch_related('userprofile__assigned_properties')
     properties = Property.objects.filter(is_active=True)
     return render(request, 'superadmin/employees.html', {
@@ -120,7 +169,7 @@ def employee_create(request):
     )
     from accounts.models import UserProfile
     profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.role = 'employee_admin'
+    profile.role = 'employee'
     profile.fin_level = fin_level
     profile.must_change_password = True
     profile.save()
@@ -170,6 +219,15 @@ def employee_update(request, user_id):
         employee.userprofile.save(update_fields=['fin_level'])
         _log(request, 'EMPLOYEE_UPDATED', target_user=employee, detail=f"fin_level→{fin}")
         return JsonResponse({'message': 'Financial level updated.'})
+
+    if action == 'update_properties':
+        prop_ids = data.get('property_ids', [])
+        employee.userprofile.assigned_properties.set(
+            Property.objects.filter(id__in=prop_ids)
+        )
+        _log(request, 'EMPLOYEE_UPDATED', target_user=employee,
+             detail=f"properties={prop_ids}")
+        return JsonResponse({'message': 'Properties updated.'})
 
     return JsonResponse({'error': 'Unknown action.'}, status=400)
 
@@ -370,6 +428,26 @@ def room_update(request, room_id):
         _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
         return JsonResponse({'message': f'Room {state}.', 'is_active': room.is_active})
 
+    if action == 'update_details':
+        fields_changed = []
+        for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description'):
+            val = data.get(field)
+            if val is not None:
+                if field == 'price_per_night':
+                    val = Decimal(str(val))
+                elif field == 'capacity':
+                    val = int(val)
+                setattr(room, field, val)
+                fields_changed.append(field)
+        prop_id = data.get('property_id')
+        if prop_id:
+            room.property = get_object_or_404(Property, pk=prop_id)
+            fields_changed.append('property')
+        if fields_changed:
+            room.save()
+            _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, fields={fields_changed}")
+        return JsonResponse({'message': 'Room updated.'})
+
     return JsonResponse({'error': 'Unknown action.'}, status=400)
 
 
@@ -453,3 +531,205 @@ def booking_complete(request, booking_id):
     _log(request, 'BOOKING_COMPLETED', target_user=booking.user,
          detail=f"booking={booking.booking_reference}")
     return JsonResponse({'message': 'Booking marked as completed.'})
+
+
+# ── Guests & Loyalty ──────────────────────────────────────────────────────────
+
+@require_super_admin
+def guests_list(request):
+    from accounts.models import UserProfile
+    q = request.GET.get('q', '').strip()
+
+    guests = User.objects.filter(
+        userprofile__role='guest'
+    ).select_related('userprofile').order_by('-date_joined')
+
+    if q:
+        guests = guests.filter(
+            Q(full_name__icontains=q) | Q(email__icontains=q)
+        )
+
+    guest_data = []
+    for u in guests[:100]:
+        profile = u.userprofile
+        booking_count = Booking.objects.filter(user=u, status__in=('confirmed', 'completed')).count()
+        guest_data.append({
+            'user': u,
+            'profile': profile,
+            'booking_count': booking_count,
+        })
+
+    return render(request, 'superadmin/guests.html', {
+        'guests': guest_data,
+        'q': q,
+    })
+
+
+@require_super_admin
+@require_POST
+def loyalty_adjust(request, user_id):
+    target = get_object_or_404(User, pk=user_id)
+    data = json.loads(request.body)
+    amount = int(data.get('amount', 0))
+    reason = data.get('reason', '').strip() or 'Manual adjustment'
+
+    if amount == 0:
+        return JsonResponse({'error': 'Amount cannot be zero.'}, status=400)
+
+    profile = target.userprofile
+    profile.loyalty_points = max(0, profile.loyalty_points + amount)
+    profile.save(update_fields=['loyalty_points'])
+    profile.recalculate_tier()
+
+    action = 'LOYALTY_CREDIT' if amount > 0 else 'LOYALTY_DEBIT'
+    _log(request, action, target_user=target,
+         detail=f"amount={amount}, reason={reason}, new_balance={profile.loyalty_points}")
+
+    return JsonResponse({
+        'message': f'Points adjusted by {amount:+d}. New balance: {profile.loyalty_points}.',
+        'loyalty_points': profile.loyalty_points,
+        'loyalty_tier': profile.loyalty_tier,
+    })
+
+
+# ── Property CRUD ──────────────────────────────────────────────────────────────
+
+@require_super_admin
+def properties_list(request):
+    properties = Property.objects.annotate(
+        room_count=Count('rooms'),
+    ).order_by('name')
+    return render(request, 'superadmin/properties.html', {
+        'properties': properties,
+    })
+
+
+@require_super_admin
+@require_POST
+def property_create(request):
+    name = request.POST.get('name', '').strip()
+    city = request.POST.get('city', '').strip()
+    address = request.POST.get('address', '').strip()
+    whatsapp = request.POST.get('whatsapp_number', '').strip()
+
+    if not name or not city:
+        return JsonResponse({'error': 'Name and city are required.'}, status=400)
+
+    prop = Property.objects.create(
+        name=name, city=city, address=address, whatsapp_number=whatsapp,
+    )
+    _log(request, 'PROPERTY_CREATED', detail=f"property={prop.name}, city={city}")
+    return JsonResponse({'message': f'Property "{prop.name}" created.', 'id': str(prop.id)})
+
+
+@require_super_admin
+@require_POST
+def property_update(request, property_id):
+    prop = get_object_or_404(Property, pk=property_id)
+    data = json.loads(request.body)
+    action = data.get('action')
+
+    if action == 'toggle_active':
+        prop.is_active = not prop.is_active
+        prop.save(update_fields=['is_active'])
+        state = 'activated' if prop.is_active else 'deactivated'
+        _log(request, 'PROPERTY_UPDATED', detail=f"property={prop.name}, {state}")
+        return JsonResponse({'message': f'Property {state}.', 'is_active': prop.is_active})
+
+    if action == 'update_details':
+        for field in ('name', 'city', 'address', 'whatsapp_number'):
+            val = data.get(field)
+            if val is not None:
+                setattr(prop, field, val.strip() if isinstance(val, str) else val)
+        prop.save()
+        _log(request, 'PROPERTY_UPDATED', detail=f"property={prop.name}")
+        return JsonResponse({'message': 'Property updated.'})
+
+    return JsonResponse({'error': 'Unknown action.'}, status=400)
+
+
+# ── Room Create ────────────────────────────────────────────────────────────────
+
+@require_super_admin
+@require_POST
+def room_create(request):
+    property_id = request.POST.get('property_id')
+    name = request.POST.get('name', '').strip()
+    room_type = request.POST.get('room_type', 'single')
+    price = request.POST.get('price_per_night', '0')
+    capacity = request.POST.get('capacity', '2')
+    amenities = request.POST.get('amenities', '').strip()
+    description = request.POST.get('description', '').strip()
+
+    if not property_id or not name:
+        return JsonResponse({'error': 'Property and room name are required.'}, status=400)
+
+    prop = get_object_or_404(Property, pk=property_id)
+    try:
+        price = Decimal(price)
+        capacity = int(capacity)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid price or capacity.'}, status=400)
+
+    room = Room.objects.create(
+        property=prop, name=name, city=prop.city, room_type=room_type,
+        price_per_night=price, capacity=capacity, amenities=amenities,
+        description=description,
+    )
+    _log(request, 'ROOM_CREATED', detail=f"room={room.name}, property={prop.name}")
+    return JsonResponse({'message': f'Room "{room.name}" created.', 'id': str(room.id)})
+
+
+# ── Room Image Management ─────────────────────────────────────────────────────
+
+@require_super_admin
+def room_images(request, room_id):
+    room = get_object_or_404(Room, pk=room_id)
+    images = room.images.all().order_by('order', '-is_primary')
+    return render(request, 'superadmin/room_images.html', {
+        'room': room,
+        'images': images,
+    })
+
+
+@require_super_admin
+@require_POST
+def room_image_upload(request, room_id):
+    room = get_object_or_404(Room, pk=room_id)
+    image_file = request.FILES.get('image')
+    if not image_file:
+        return JsonResponse({'error': 'No image file provided.'}, status=400)
+
+    caption = request.POST.get('caption', '').strip()
+    is_primary = request.POST.get('is_primary') == 'on'
+
+    if is_primary:
+        room.images.filter(is_primary=True).update(is_primary=False)
+
+    img = RoomImage.objects.create(
+        room=room, image=image_file, caption=caption, is_primary=is_primary,
+        order=room.images.count(),
+    )
+    _log(request, 'ROOM_IMAGE_UPLOADED', detail=f"room={room.name}, image={img.id}")
+    return JsonResponse({'message': 'Image uploaded.', 'id': str(img.id)})
+
+
+@require_super_admin
+@require_POST
+def room_image_delete(request, image_id):
+    img = get_object_or_404(RoomImage, pk=image_id)
+    room_name = img.room.name
+    img.image.delete(save=False)
+    img.delete()
+    _log(request, 'ROOM_IMAGE_DELETED', detail=f"room={room_name}")
+    return JsonResponse({'message': 'Image deleted.'})
+
+
+@require_super_admin
+@require_POST
+def room_image_set_primary(request, image_id):
+    img = get_object_or_404(RoomImage, pk=image_id)
+    img.room.images.filter(is_primary=True).update(is_primary=False)
+    img.is_primary = True
+    img.save(update_fields=['is_primary'])
+    return JsonResponse({'message': 'Set as primary image.'})
