@@ -1,9 +1,11 @@
+from decimal import Decimal
+
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from rooms.models import Booking, Room, OTABlock, RoomRate
+from rooms.models import Booking, Room, RoomImage, OTABlock, RoomRate, Property
 from .decorators import require_employee
 
 
@@ -16,36 +18,32 @@ def _fin_level(request):
 
 
 def _assigned_rooms(request):
-    """Rooms belonging to properties assigned to this employee."""
+    """Rooms belonging to properties assigned to this employee.
+
+    Security: an employee with no assigned properties sees NO rooms,
+    not all rooms. Prevents privilege escalation when properties are
+    not yet assigned on employee creation.
+    """
     try:
-        props = request.user.userprofile.assigned_properties.values_list('id', flat=True)
-        if props:
-            return Room.objects.filter(property_id__in=props)
+        props = list(request.user.userprofile.assigned_properties.values_list('id', flat=True))
     except Exception:
-        pass
-    return Room.objects.all()
+        return Room.objects.none()
+    if not props:
+        return Room.objects.none()
+    return Room.objects.filter(property_id__in=props)
 
 
 @require_employee
 def dashboard(request):
     today = timezone.now().date()
     fin = _fin_level(request)
+    rooms = _assigned_rooms(request)
 
-    active_bookings = Booking.objects.filter(
-        status='confirmed',
-        check_in__lte=today,
-        check_out__gt=today,
-    ).count()
+    bookings_qs = Booking.objects.filter(room__in=rooms, status='confirmed')
 
-    upcoming_checkouts = Booking.objects.filter(
-        status='confirmed',
-        check_out=today,
-    ).select_related('user', 'room')
-
-    upcoming_checkins = Booking.objects.filter(
-        status='confirmed',
-        check_in=today,
-    ).select_related('user', 'room')
+    active_bookings = bookings_qs.filter(check_in__lte=today, check_out__gt=today).count()
+    upcoming_checkouts = bookings_qs.filter(check_out=today).select_related('user', 'room')
+    upcoming_checkins = bookings_qs.filter(check_in=today).select_related('user', 'room')
 
     return render(request, 'employeeadmin/dashboard.html', {
         'active_bookings': active_bookings,
@@ -57,18 +55,45 @@ def dashboard(request):
 
 
 @require_employee
+def dashboard_live_data(request):
+    today = timezone.now().date()
+    rooms = _assigned_rooms(request)
+    bookings_qs = Booking.objects.filter(room__in=rooms, status='confirmed')
+    active_bookings = bookings_qs.filter(check_in__lte=today, check_out__gt=today).count()
+    todays_checkins = bookings_qs.filter(check_in=today).count()
+    todays_checkouts = bookings_qs.filter(check_out=today).count()
+    return JsonResponse({
+        'active_bookings': active_bookings,
+        'todays_checkins': todays_checkins,
+        'todays_checkouts': todays_checkouts,
+    })
+
+
+@require_employee
 def bookings_list(request):
     fin = _fin_level(request)
+    rooms = _assigned_rooms(request)
     bookings = Booking.objects.filter(
+        room__in=rooms,
         status__in=('confirmed', 'completed', 'cancelled'),
-    ).select_related('user', 'room').order_by('-check_in')[:50]
+    ).select_related('user', 'room', 'room__property').order_by('-check_in')[:50]
     return render(request, 'employeeadmin/bookings.html', {'bookings': bookings, 'fin': fin})
 
 
 @require_employee
 def rooms_list(request):
-    rooms = _assigned_rooms(request).select_related('property').order_by('city', 'name')
-    return render(request, 'employeeadmin/rooms.html', {'rooms': rooms, 'fin': _fin_level(request)})
+    property_filter = request.GET.get('property', '')
+    rooms = _assigned_rooms(request).select_related('property').order_by('property__name', 'name')
+    if property_filter:
+        rooms = rooms.filter(property_id=property_filter)
+    properties = _assigned_properties(request).filter(is_active=True).order_by('name')
+    return render(request, 'employeeadmin/rooms.html', {
+        'rooms': rooms,
+        'properties': properties,
+        'property_filter': property_filter,
+        'operational_choices': Room.OPERATIONAL_STATUS_CHOICES,
+        'fin': _fin_level(request),
+    })
 
 
 @require_employee
@@ -162,3 +187,194 @@ def seasonal_rate_create(request):
 
     rate = RoomRate.objects.create(room=room, start_date=start, end_date=end, price=price)
     return JsonResponse({'message': 'Rate created.', 'id': str(rate.id)})
+
+
+@require_employee
+@require_POST
+def booking_complete(request, booking_id):
+    """Mark a booking as completed — scoped to employee's assigned properties."""
+    rooms = _assigned_rooms(request)
+    booking = get_object_or_404(Booking, pk=booking_id, room__in=rooms)
+    if booking.status != 'confirmed':
+        return JsonResponse({'error': 'Only confirmed bookings can be completed.'}, status=400)
+    booking.status = 'completed'
+    booking.save(update_fields=['status'])
+    return JsonResponse({'message': 'Booking marked as completed.'})
+
+
+# ── Room CRUD (Scoped) ─────────────────────────────────────────────────────────
+
+def _assigned_properties(request):
+    """Properties assigned to this employee."""
+    try:
+        return request.user.userprofile.assigned_properties.all()
+    except Exception:
+        return Property.objects.none()
+
+
+@require_employee
+@require_POST
+def room_create(request):
+    """Create a room — only within assigned properties."""
+    property_id = request.POST.get('property_id')
+    props = _assigned_properties(request)
+    prop = get_object_or_404(Property, pk=property_id)
+    if prop not in props:
+        return JsonResponse({'error': 'Not assigned to this property.'}, status=403)
+
+    name = request.POST.get('name', '').strip()
+    room_type = request.POST.get('room_type', 'single')
+    price = request.POST.get('price_per_night', '0')
+    capacity = request.POST.get('capacity', '2')
+    amenities = request.POST.get('amenities', '').strip()
+    description = request.POST.get('description', '').strip()
+
+    if not name:
+        return JsonResponse({'error': 'Room name is required.'}, status=400)
+    try:
+        price = Decimal(price)
+        capacity = int(capacity)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid price or capacity.'}, status=400)
+
+    room = Room.objects.create(
+        property=prop, name=name, city=prop.city, room_type=room_type,
+        price_per_night=price, capacity=capacity, amenities=amenities,
+        description=description,
+    )
+    return JsonResponse({'message': f'Room "{room.name}" created.', 'id': str(room.id)})
+
+
+@require_employee
+@require_POST
+def room_edit(request, room_id):
+    """Edit room details — scoped to assigned properties."""
+    import json
+    rooms = _assigned_rooms(request)
+    room = get_object_or_404(Room, pk=room_id)
+    if room not in rooms:
+        return JsonResponse({'error': 'Not assigned to this room\'s property.'}, status=403)
+
+    data = json.loads(request.body)
+    action = data.get('action')
+
+    if action == 'update_details':
+        for field in ('name', 'price_per_night', 'capacity', 'amenities', 'description'):
+            val = data.get(field)
+            if val is not None:
+                if field == 'price_per_night':
+                    val = Decimal(str(val))
+                elif field == 'capacity':
+                    val = int(val)
+                setattr(room, field, val)
+        room.save()
+        return JsonResponse({'message': 'Room updated.'})
+
+    if action == 'set_status':
+        new_status = data.get('operational_status', '')
+        valid = {s for s, _ in Room.OPERATIONAL_STATUS_CHOICES}
+        if new_status not in valid:
+            return JsonResponse({'error': 'Invalid status.'}, status=400)
+        room.operational_status = new_status
+        room.save(update_fields=['operational_status'])
+        return JsonResponse({'message': f'Status set to {new_status}.'})
+
+    if action == 'toggle_active':
+        room.is_active = not room.is_active
+        room.save(update_fields=['is_active'])
+        return JsonResponse({'message': f'Room {"activated" if room.is_active else "deactivated"}.', 'is_active': room.is_active})
+
+    return JsonResponse({'error': 'Unknown action.'}, status=400)
+
+
+# ── Room Image Management (Scoped) ─────────────────────────────────────────────
+
+@require_employee
+def room_images(request, room_id):
+    rooms = _assigned_rooms(request)
+    room = get_object_or_404(Room, pk=room_id)
+    if room not in rooms:
+        return JsonResponse({'error': 'Not assigned.'}, status=403)
+    images = room.images.all().order_by('order', '-is_primary')
+    return render(request, 'employeeadmin/room_images.html', {
+        'room': room,
+        'images': images,
+    })
+
+
+@require_employee
+@require_POST
+def room_image_upload(request, room_id):
+    rooms = _assigned_rooms(request)
+    room = get_object_or_404(Room, pk=room_id)
+    if room not in rooms:
+        return JsonResponse({'error': 'Not assigned.'}, status=403)
+
+    image_file = request.FILES.get('image')
+    if not image_file:
+        return JsonResponse({'error': 'No image file.'}, status=400)
+
+    caption = request.POST.get('caption', '').strip()
+    is_primary = request.POST.get('is_primary') == 'on'
+    if is_primary:
+        room.images.filter(is_primary=True).update(is_primary=False)
+
+    RoomImage.objects.create(
+        room=room, image=image_file, caption=caption, is_primary=is_primary,
+        order=room.images.count(),
+    )
+    return JsonResponse({'message': 'Image uploaded.'})
+
+
+@require_employee
+@require_POST
+def room_image_delete(request, image_id):
+    rooms = _assigned_rooms(request)
+    img = get_object_or_404(RoomImage, pk=image_id)
+    if img.room not in rooms:
+        return JsonResponse({'error': 'Not assigned.'}, status=403)
+    img.image.delete(save=False)
+    img.delete()
+    return JsonResponse({'message': 'Image deleted.'})
+
+
+@require_employee
+@require_POST
+def room_image_set_primary(request, image_id):
+    rooms = _assigned_rooms(request)
+    img = get_object_or_404(RoomImage, pk=image_id)
+    if img.room not in rooms:
+        return JsonResponse({'error': 'Not assigned.'}, status=403)
+    img.room.images.filter(is_primary=True).update(is_primary=False)
+    img.is_primary = True
+    img.save(update_fields=['is_primary'])
+    return JsonResponse({'message': 'Set as primary.'})
+
+
+
+# ── Room Status Board (scoped) ─────────────────────────────────────────────────
+
+@require_employee
+def room_status_board(request):
+    rooms = _assigned_rooms(request).select_related('property').order_by('property__name', 'name')
+    return render(request, 'employeeadmin/room_status_board.html', {
+        'rooms': rooms,
+        'status_choices': Room.OPERATIONAL_STATUS_CHOICES,
+    })
+
+
+@require_employee
+def room_status_board_data(request):
+    rooms = _assigned_rooms(request).select_related('property').order_by('property__name', 'name')
+    return JsonResponse({
+        'rooms': [
+            {
+                'id': str(r.id),
+                'name': r.name,
+                'property': r.property.name,
+                'status': r.operational_status,
+                'is_active': r.is_active,
+            }
+            for r in rooms
+        ]
+    })

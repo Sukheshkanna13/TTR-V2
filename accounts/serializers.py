@@ -163,7 +163,7 @@ class EmployeeCreationSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=150)
     email = serializers.EmailField()
     phone = serializers.CharField(max_length=15)
-    role = serializers.ChoiceField(choices=[("employee", "Employee"), ("super_admin", "Super Admin")])
+    role = serializers.ChoiceField(choices=[("employee_admin", "Employee Admin"), ("super_admin", "Super Admin")])
     fin_level = serializers.ChoiceField(choices=[("A", "A"), ("B", "B"), ("C", "C")], required=False, allow_null=True)
     assigned_properties = serializers.ListField(
         child=serializers.UUIDField(), required=False, allow_empty=True

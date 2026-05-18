@@ -641,25 +641,23 @@ class MyBookingsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        all_bookings = Booking.objects.select_related("room").filter(
-            user=request.user,
-        ).order_by("-created_at")
-
-        # Auto-expire any timed-out holds
-        for booking in all_bookings:
+        # Auto-expire timed-out pending holds
+        for booking in Booking.objects.filter(user=request.user, status='pending'):
             booking.expire_if_needed()
 
-        # Re-fetch after potential status changes
+        SHOW_STATUSES = ('confirmed', 'completed', 'cancelled')
         today = timezone.now().date()
         cutoff_24h = timezone.now() + timedelta(hours=24)
 
         upcoming = Booking.objects.select_related("room").filter(
             user=request.user,
+            status__in=SHOW_STATUSES,
             check_in__gte=today,
         ).order_by("check_in")
 
         past = Booking.objects.select_related("room").filter(
             user=request.user,
+            status__in=SHOW_STATUSES,
             check_in__lt=today,
         ).order_by("-check_in")
 
@@ -667,9 +665,8 @@ class MyBookingsView(APIView):
             result = []
             for b in bookings:
                 data = BookingSerializer(b).data
-                # Can cancel only if status allows AND check-in is > 24h away
                 can_cancel = (
-                    b.status in ("pending", "confirmed")
+                    b.status == 'confirmed'
                     and timezone.make_aware(
                         datetime.combine(b.check_in, dt_time.min)
                     ) > cutoff_24h
@@ -804,17 +801,10 @@ class UnblockRoomView(APIView):
 # ============================================================================
 
 def search_page(request):
-    """Render the room search page — passes DB-driven city list for the filter select."""
-    cities = list(
-        Property.objects.filter(is_active=True)
-        .values_list('city', flat=True)
-        .distinct()
-        .order_by('city')
-    )
-    selected_city = request.GET.get('city', '')
+    """Render the room search page — passes DB-driven property list for the filter select."""
+    properties = Property.objects.filter(is_active=True).order_by('name')
     return render(request, "rooms/search.html", {
-        'cities': cities,
-        'selected_city': selected_city,
+        'properties': properties,
         'back_url': '/',
         'back_label': 'Back to home',
     })

@@ -35,6 +35,8 @@ tbody tr:hover td{background:rgba(13,148,136,.15);}
     <a href="/admin-portal/dashboard/" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
     <a href="/admin-portal/bookings/" {% if request.resolver_match.url_name == 'bookings' %}class="active"{% endif %}>Bookings</a>
     <a href="/admin-portal/rooms/" {% if request.resolver_match.url_name == 'rooms' %}class="active"{% endif %}>Rooms</a>
+    <a href="{% url 'employeeadmin:room-status-board' %}" {% if request.resolver_match.url_name == 'room-status-board' %}class="active"{% endif %}>Status Board</a>
+    <a href="/admin-portal/availability/" {% if request.resolver_match.url_name == 'availability' %}class="active"{% endif %}>Availability</a>
     <a href="/accounts/logout/" style="margin-left:8px;color:#f87171;">Sign out</a>
   </div>
 </nav>

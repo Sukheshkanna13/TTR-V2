@@ -12,7 +12,10 @@ Only after Step 3 is a User row written to the database.
 import logging
 import secrets
 
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout, update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
 from django.shortcuts import redirect, render
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -22,6 +25,11 @@ from django_q.tasks import async_task
 
 from .models import PendingRegistration
 from .permissions import IsSuperAdmin
+from .role_routing import (
+    CENTRAL_LOGIN_URL,
+    get_post_login_redirect,
+    get_user_role,
+)
 from .serializers import (
     InitiateRegistrationSerializer,
     LoginSerializer,
@@ -357,9 +365,14 @@ class LoginView(APIView):
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
 
-        if check_login_lock(email):
+        lock = check_login_lock(email)
+        if lock['locked']:
             return Response(
-                {"error": "Account temporarily locked due to too many failed attempts. Please try again later."},
+                {
+                    "error": f"Account temporarily locked. Try again in {lock['remaining_minutes']} minute(s).",
+                    "code": "ACCOUNT_LOCKED",
+                    "remaining_minutes": lock["remaining_minutes"],
+                },
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
@@ -383,8 +396,24 @@ class LoginView(APIView):
         login(request, user, backend="accounts.backends.EmailBackend")
         logger.info("User logged in: %s", email)
 
+        next_url = request.data.get("next") or request.query_params.get("next")
+        redirect_url = get_post_login_redirect(user, next_url=next_url)
+        role = get_user_role(user)
+        if role in {"employee_admin", "super_admin"}:
+            logger.info(
+                "Admin login routed: email=%s role=%s redirect_url=%s ip=%s",
+                email,
+                role,
+                redirect_url,
+                request.META.get("REMOTE_ADDR"),
+            )
+
         return Response(
-            {"message": "Login successful.", "user": UserSerializer(user).data},
+            {
+                "message": "Login successful.",
+                "user": UserSerializer(user).data,
+                "redirect_url": redirect_url,
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -405,7 +434,7 @@ class LogoutView(APIView):
         """Allow GET logout for sidebar <a href> links in admin portals."""
         logger.info("User logged out (GET): %s", request.user.email)
         logout(request)
-        return redirect('/accounts/login/page/')
+        return redirect(CENTRAL_LOGIN_URL)
 
 
 class CurrentUserView(APIView):
@@ -427,88 +456,12 @@ def register_page(request):
     return render(request, "accounts/register.html")
 
 
-def employee_login_page(request):
-    """
-    Staff login page for employees.
-    GET  — render the login form.
-    POST — authenticate with email + password; rate-limited; redirect to /admin-portal/dashboard/.
-    """
-    from django.contrib.auth import authenticate as auth_authenticate, login as auth_login
-
-    if request.user.is_authenticated and hasattr(request.user, 'userprofile'):
-        if request.user.userprofile.role in ('employee', 'super_admin'):
-            return redirect('/admin-portal/dashboard/')
-
-    error = None
-    if request.method == 'POST':
-        email = request.POST.get('email', '').strip().lower()
-        password = request.POST.get('password', '')
-
-        lock = check_login_lock(email)
-        if lock['locked']:
-            error = f"Too many failed attempts. Try again in {lock['remaining_minutes']} minute(s)."
-        else:
-            user = auth_authenticate(request, username=email, password=password)
-            if user is not None and hasattr(user, 'userprofile') and user.userprofile.role in ('employee', 'super_admin'):
-                reset_login_attempts(email)
-                auth_login(request, user, backend='accounts.backends.EmailBackend')
-                return redirect('/admin-portal/dashboard/')
-            else:
-                record_failed_login(email)
-                lock = check_login_lock(email)
-                if lock['locked']:
-                    error = f"Account locked after too many attempts. Try again in {lock['remaining_minutes']} minute(s)."
-                else:
-                    error = 'Invalid credentials or insufficient permissions.'
-
-    return render(request, 'accounts/employee_login.html', {'error': error})
-
-
-def super_admin_login_page(request):
-    """
-    Super Admin login page.
-    GET  — render the login form.
-    POST — authenticate with email + password; rate-limited; redirect to /super-admin/dashboard/.
-    """
-    from django.contrib.auth import authenticate as auth_authenticate, login as auth_login
-
-    if request.user.is_authenticated and hasattr(request.user, 'userprofile'):
-        if request.user.userprofile.role == 'super_admin':
-            return redirect('/super-admin/dashboard/')
-
-    error = None
-    if request.method == 'POST':
-        email = request.POST.get('email', '').strip().lower()
-        password = request.POST.get('password', '')
-
-        lock = check_login_lock(email)
-        if lock['locked']:
-            error = f"Too many failed attempts. Try again in {lock['remaining_minutes']} minute(s)."
-        else:
-            user = auth_authenticate(request, username=email, password=password)
-            if user is not None and hasattr(user, 'userprofile') and user.userprofile.role == 'super_admin':
-                reset_login_attempts(email)
-                auth_login(request, user, backend='accounts.backends.EmailBackend')
-                return redirect('/super-admin/dashboard/')
-            else:
-                record_failed_login(email)
-                lock = check_login_lock(email)
-                if lock['locked']:
-                    error = f"Account locked after too many attempts. Try again in {lock['remaining_minutes']} minute(s)."
-                else:
-                    error = 'Invalid credentials or insufficient permissions.'
-
-    return render(request, 'accounts/super_admin_login.html', {'error': error})
-
-
 # =============================================================================
 # FOLIO PAGE (Guest Dashboard)
 # =============================================================================
 
-from django.contrib.auth.decorators import login_required
 
-
-@login_required(login_url='/accounts/login/page/')
+@login_required(login_url=CENTRAL_LOGIN_URL)
 def folio_page(request):
     from rooms.models import Booking
     bookings = Booking.objects.filter(user=request.user).select_related('room', 'room__property').order_by('-created_at')
@@ -528,7 +481,7 @@ def folio_page(request):
     return render(request, 'pages/folio.html', context)
 
 
-@login_required(login_url='/accounts/login/page/')
+@login_required(login_url=CENTRAL_LOGIN_URL)
 def edit_profile_page(request):
     return render(request, 'accounts/edit_profile.html', {
         'back_url': '/accounts/folio/',
@@ -536,7 +489,7 @@ def edit_profile_page(request):
     })
 
 
-@login_required(login_url='/accounts/login/page/')
+@login_required(login_url=CENTRAL_LOGIN_URL)
 def update_profile(request):
     """AJAX endpoint: update name/phone immediately; email requires OTP."""
     import json
@@ -718,3 +671,23 @@ def forgot_password_set(request):
                 error = 'Account not found.'
 
     return render(request, 'accounts/forgot_password_set.html', {'error': error})
+
+
+@login_required(login_url=CENTRAL_LOGIN_URL)
+@require_http_methods(["GET", "POST"])
+def change_password(request):
+    """Force admin-created users to replace temporary passwords before portal access."""
+    if request.method == "POST":
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            profile = getattr(user, "userprofile", None)
+            if profile:
+                profile.must_change_password = False
+                profile.save(update_fields=["must_change_password"])
+            update_session_auth_hash(request, user)
+            return redirect(get_post_login_redirect(user))
+    else:
+        form = PasswordChangeForm(request.user)
+
+    return render(request, "accounts/change_password.html", {"form": form})

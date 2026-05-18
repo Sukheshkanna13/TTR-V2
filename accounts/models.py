@@ -230,6 +230,7 @@ class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('guest', 'Guest'),
         ('employee', 'Employee'),
+        ('employee_admin', 'Employee Admin'),
         ('super_admin', 'Super Admin'),
     ]
     FIN_LEVEL_CHOICES = [

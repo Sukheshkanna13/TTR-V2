@@ -12,3 +12,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
 
 # CORS allowing all in dev
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Development login testing should not trap admins for long while flows are being tested.
+LOGIN_MAX_ATTEMPTS = 20
+LOGIN_LOCK_DURATION_MINUTES = 1

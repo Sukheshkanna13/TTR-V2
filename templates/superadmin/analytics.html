@@ -1,0 +1,63 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Analytics</h1>
+
+<div class="sa-card" style="margin-bottom:1rem">
+  <form method="get" style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap">
+    <div>
+      <label class="sa-label">From</label>
+      <input class="sa-input" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+    </div>
+    <div>
+      <label class="sa-label">To</label>
+      <input class="sa-input" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+    </div>
+    <button class="sa-btn sa-btn-primary" type="submit">Apply</button>
+    <a class="sa-btn" href="{% url 'superadmin:analytics' %}">Reset</a>
+  </form>
+</div>
+
+<div class="sa-card" style="margin-bottom:1rem">
+  <div class="sa-stats">
+    <div class="sa-stat">
+      <div class="sa-stat-val">₹{{ total_revenue|floatformat:0 }}</div>
+      <div class="sa-stat-label">Revenue</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ total_bookings }}</div>
+      <div class="sa-stat-label">Confirmed bookings</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ cancellation_rate }}%</div>
+      <div class="sa-stat-label">Cancellation rate</div>
+    </div>
+  </div>
+</div>
+
+<div class="sa-card">
+  <h2 class="sa-section-title">Revenue &amp; Occupancy by Property</h2>
+  <table class="sa-table">
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>Bookings</th>
+        <th>Revenue</th>
+        <th>Occupancy</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in occupancy_by_property %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.count }}</td>
+      <td>₹{{ row.revenue|floatformat:0 }}</td>
+      <td>{{ row.occupancy }}%</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4" style="color:#64748b;padding:24px 12px;">No data for selected period.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

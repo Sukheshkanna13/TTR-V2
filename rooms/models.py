@@ -99,13 +99,15 @@ class Room(models.Model):
         default="",
     )
     STATUS_AVAILABLE = "available"
-    STATUS_NEEDS_CLEANING = "needs_cleaning"
+    STATUS_CLEANING = "cleaning"
     STATUS_MAINTENANCE = "maintenance"
+    STATUS_OUT_OF_ORDER = "out_of_order"
 
     OPERATIONAL_STATUS_CHOICES = [
         (STATUS_AVAILABLE, "Available"),
-        (STATUS_NEEDS_CLEANING, "Needs Cleaning"),
+        (STATUS_CLEANING, "Cleaning"),
         (STATUS_MAINTENANCE, "Maintenance"),
+        (STATUS_OUT_OF_ORDER, "Out of Order"),
     ]
 
     is_active = models.BooleanField(

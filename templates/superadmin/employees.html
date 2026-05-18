@@ -1,21 +1,223 @@
 {% extends "superadmin/base.html" %}
 {% block title %}Employees{% endblock %}
 {% block content %}
-<h1 class="sa-page-title">Employees</h1>
+<h1 class="sa-page-title">Employee Management</h1>
+
+<!-- Create Employee -->
+<div class="sa-card" id="createSection">
+  <h2 class="sa-section-title">Create Employee</h2>
+  <form id="createForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+    <div>
+      <label class="sa-label">Email</label>
+      <input class="sa-input" type="email" name="email" required placeholder="employee@hotel.com">
+    </div>
+    <div>
+      <label class="sa-label">Full Name</label>
+      <input class="sa-input" type="text" name="full_name" required placeholder="Full name">
+    </div>
+    <div>
+      <label class="sa-label">Financial Level</label>
+      <select class="sa-input" name="fin_level">
+        <option value="C">C — No Financial Access</option>
+        <option value="B">B — Limited Financial Access</option>
+        <option value="A">A — Full Financial Access</option>
+      </select>
+    </div>
+    <div>
+      <label class="sa-label">Properties</label>
+      <select class="sa-input" name="properties" multiple style="min-width:200px;height:60px;">
+        {% for p in properties %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="sa-btn sa-btn-primary" type="submit">Create</button>
+  </form>
+  <div id="createResult" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:#064e3b;color:#6ee7b7;font-size:13px;"></div>
+</div>
+
+<!-- Employee List -->
 <div class="sa-card">
+  <h2 class="sa-section-title">All Employees</h2>
   <table>
-    <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Fin Level</th>
+        <th>Properties</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
     <tbody>
     {% for u in employees %}
-    <tr>
-      <td>{{ u.full_name|default:"—" }}</td>
+    <tr id="emp-{{ u.pk }}">
+      <td style="font-weight:600;">{{ u.full_name|default:"—" }}</td>
       <td>{{ u.email }}</td>
-      <td><span class="badge badge-slate">{{ u.userprofile.role }}</span></td>
+      <td>
+        <select class="sa-input sa-input-sm" onchange="updateFin({{ u.pk }}, this.value)"
+                style="width:60px;padding:2px 6px;">
+          <option value="A" {% if u.userprofile.fin_level == 'A' %}selected{% endif %}>A</option>
+          <option value="B" {% if u.userprofile.fin_level == 'B' %}selected{% endif %}>B</option>
+          <option value="C" {% if u.userprofile.fin_level == 'C' %}selected{% endif %}>C</option>
+        </select>
+      </td>
+      <td style="font-size:12px;">
+        {% for prop in u.userprofile.assigned_properties.all %}
+          <span class="badge badge-slate">{{ prop.name }}</span>
+        {% empty %}
+          <span style="color:#64748b;">None</span>
+        {% endfor %}
+        <button class="sa-btn sa-btn-sm" onclick="openPropsModal({{ u.pk }}, '{{ u.full_name|escapejs }}')"
+                style="margin-left:4px;" title="Assign properties">✎</button>
+      </td>
+      <td>
+        {% if u.is_active %}
+          <span class="badge badge-green">Active</span>
+        {% else %}
+          <span class="badge badge-red">Locked</span>
+        {% endif %}
+      </td>
+      <td style="white-space:nowrap;">
+        {% if u.is_active %}
+        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="empAction({{ u.pk }}, 'lock')">Lock</button>
+        {% else %}
+        <button class="sa-btn sa-btn-sm sa-btn-success" onclick="empAction({{ u.pk }}, 'unlock')">Unlock</button>
+        {% endif %}
+        <button class="sa-btn sa-btn-sm" onclick="empAction({{ u.pk }}, 'reset_password')">Reset PW</button>
+      </td>
     </tr>
     {% empty %}
-    <tr><td colspan="3" style="color:#64748b;padding:24px 12px;">No employees found.</td></tr>
+    <tr><td colspan="6" style="color:#64748b;padding:24px 12px;">No employees found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
+
+<!-- Property Assignment Modal -->
+<div id="propsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;width:400px;max-width:90vw;">
+    <h3 style="color:#f8fafc;font-size:16px;margin-bottom:16px;">Assign Properties — <span id="modalName"></span></h3>
+    <form id="propsForm">
+      <input type="hidden" id="propsUserId">
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:250px;overflow-y:auto;margin-bottom:16px;">
+        {% for p in properties %}
+        <label style="display:flex;align-items:center;gap:8px;color:#cbd5e1;font-size:13px;cursor:pointer;">
+          <input type="checkbox" name="property_ids" value="{{ p.id }}" class="prop-check">
+          {{ p.name }}
+        </label>
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="sa-btn" onclick="closePropsModal()">Cancel</button>
+        <button type="submit" class="sa-btn sa-btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+// Create employee
+document.getElementById('createForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('{% url "superadmin:employee-create" %}', {
+    method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
+  });
+  const data = await res.json();
+  const box = document.getElementById('createResult');
+  if (res.ok) {
+    box.style.display = 'block';
+    box.style.background = '#064e3b';
+    box.style.color = '#6ee7b7';
+    box.textContent = `${data.message}`;
+    setTimeout(() => location.reload(), 2500);
+  } else {
+    box.style.display = 'block';
+    box.style.background = '#450a0a';
+    box.style.color = '#fca5a5';
+    box.textContent = data.error;
+  }
+});
+
+// Employee actions (lock/unlock/reset_password)
+async function empAction(userId, action) {
+  const msg = action === 'lock' ? 'Lock this account?' :
+              action === 'unlock' ? 'Unlock this account?' :
+              'Reset password? The new temp password will be shown.';
+  if (!confirm(msg)) return;
+  const res = await fetch(`/super-admin/employees/${userId}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action}),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    if (data.temp_password) {
+      alert(`${data.message}\n\nTemporary password: ${data.temp_password}\n\nCopy this now — it won't be shown again.`);
+    } else {
+      alert(data.message);
+    }
+    location.reload();
+  } else {
+    alert(data.error);
+  }
+}
+
+// Update financial level
+async function updateFin(userId, level) {
+  const res = await fetch(`/super-admin/employees/${userId}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'update_fin', fin_level: level}),
+  });
+  const data = await res.json();
+  if (!res.ok) alert(data.error);
+}
+
+// Property assignment modal
+function openPropsModal(userId, name) {
+  document.getElementById('propsUserId').value = userId;
+  document.getElementById('modalName').textContent = name;
+  document.getElementById('propsModal').style.display = 'flex';
+}
+function closePropsModal() {
+  document.getElementById('propsModal').style.display = 'none';
+}
+
+document.getElementById('propsForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const userId = document.getElementById('propsUserId').value;
+  const checks = document.querySelectorAll('.prop-check:checked');
+  const ids = Array.from(checks).map(c => c.value);
+  const res = await fetch(`/super-admin/employees/${userId}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'update_properties', property_ids: ids}),
+  });
+  const data = await res.json();
+  if (res.ok) { closePropsModal(); location.reload(); }
+  else alert(data.error);
+});
+</script>
+
+<style>
+.sa-section-title{font-size:16px;font-weight:600;color:#f8fafc;margin-bottom:16px;}
+.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
+.sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-input-sm{padding:2px 6px;font-size:12px;}
+.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
+.sa-btn:hover{background:#334155;}
+.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+.sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
+.sa-btn-danger:hover{background:#991b1b;}
+.sa-btn-success{background:#064e3b;border-color:#064e3b;color:#6ee7b7;}
+.sa-btn-success:hover{background:#065f46;}
+.sa-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
 {% endblock %}

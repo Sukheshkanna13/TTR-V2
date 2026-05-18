@@ -1,0 +1,167 @@
+{% extends "employeeadmin/base.html" %}
+{% block title %}Availability{% endblock %}
+{% block content %}
+<h1 class="ea-page-title">Availability & Blocks</h1>
+
+<!-- Room selector -->
+<div class="ea-card">
+  <form method="get" style="display:flex;gap:.75rem;align-items:flex-end;">
+    <div>
+      <label class="ea-label">Select Room</label>
+      <select class="ea-input" name="room">
+        <option value="">— Choose a room —</option>
+        {% for r in rooms %}
+        <option value="{{ r.id }}" {% if selected_room and selected_room.id == r.id %}selected{% endif %}>
+          {{ r.name }} · {{ r.property.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="ea-btn ea-btn-primary" type="submit">View</button>
+  </form>
+</div>
+
+{% if selected_room %}
+<!-- OTA Blocks -->
+<div class="ea-card">
+  <h2 class="ea-section-title">OTA / Manual Blocks — {{ selected_room.name }}</h2>
+  <table>
+    <thead>
+      <tr><th>Start</th><th>End</th><th>Reason</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+    {% for block in ota_blocks %}
+    <tr id="block-{{ block.id }}">
+      <td>{{ block.start_date }}</td>
+      <td>{{ block.end_date }}</td>
+      <td>{{ block.reason }}</td>
+      <td>
+        <button class="ea-btn ea-btn-sm ea-btn-danger"
+                onclick="deleteBlock('{{ block.id }}')">Remove</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4" style="color:#5eead4;padding:16px 12px;">No blocks for this room.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #0d9488;">
+    <h3 class="ea-sub-title">Add Block</h3>
+    <form id="addBlockForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+      <div>
+        <label class="ea-label">Start</label>
+        <input class="ea-input" type="date" name="start_date" required>
+      </div>
+      <div>
+        <label class="ea-label">End</label>
+        <input class="ea-input" type="date" name="end_date" required>
+      </div>
+      <div>
+        <label class="ea-label">Reason</label>
+        <input class="ea-input" type="text" name="reason" placeholder="e.g. OTA booking" value="Manual Block">
+      </div>
+      <button class="ea-btn ea-btn-primary" type="submit">Add Block</button>
+    </form>
+  </div>
+</div>
+
+<!-- Seasonal Rates (fin A/B only) -->
+{% if fin != 'C' %}
+<div class="ea-card">
+  <h2 class="ea-section-title">Seasonal Rates — {{ selected_room.name }}</h2>
+  <table>
+    <thead>
+      <tr><th>Start</th><th>End</th><th>Price (₹)</th></tr>
+    </thead>
+    <tbody>
+    {% for rate in seasonal_rates %}
+    <tr>
+      <td>{{ rate.start_date }}</td>
+      <td>{{ rate.end_date }}</td>
+      <td>₹{{ rate.price|floatformat:0 }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3" style="color:#5eead4;padding:16px 12px;">No seasonal rates configured.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #0d9488;">
+    <h3 class="ea-sub-title">Add Rate</h3>
+    <form id="addRateForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+      <div>
+        <label class="ea-label">Start</label>
+        <input class="ea-input" type="date" name="start_date" required>
+      </div>
+      <div>
+        <label class="ea-label">End</label>
+        <input class="ea-input" type="date" name="end_date" required>
+      </div>
+      <div>
+        <label class="ea-label">Price (₹)</label>
+        <input class="ea-input" type="number" name="price" step="1" min="1" required style="width:120px;">
+      </div>
+      <button class="ea-btn ea-btn-primary" type="submit">Add Rate</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+const roomId = '{{ selected_room.id }}';
+
+document.getElementById('addBlockForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  fd.append('room_id', roomId);
+  const res = await fetch('{% url "employeeadmin:ota-block-create" %}', {
+    method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) { alert(data.message); location.reload(); }
+  else alert(data.error);
+});
+
+async function deleteBlock(id) {
+  if (!confirm('Remove this block?')) return;
+  const res = await fetch(`/admin-portal/availability/block/${id}/delete/`, {
+    method: 'POST', headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) { document.getElementById('block-' + id)?.remove(); }
+  else alert(data.error);
+}
+
+{% if fin != 'C' %}
+document.getElementById('addRateForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  fd.append('room_id', roomId);
+  const res = await fetch('{% url "employeeadmin:seasonal-rate-create" %}', {
+    method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) { alert(data.message); location.reload(); }
+  else alert(data.error);
+});
+{% endif %}
+</script>
+{% endif %}
+
+<style>
+.ea-section-title{font-size:16px;font-weight:600;color:#f0fdfa;margin-bottom:16px;}
+.ea-sub-title{font-size:13px;color:#5eead4;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;}
+.ea-input{background:#0d3d3a;border:1px solid #0d9488;color:#ccfbf1;padding:6px 10px;border-radius:6px;font-size:13px;}
+.ea-input:focus{outline:none;border-color:#14b8a6;}
+.ea-label{display:block;font-size:11px;color:#5eead4;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.ea-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #0d9488;background:#134e4a;color:#ccfbf1;text-decoration:none;}
+.ea-btn:hover{background:#0d9488;}
+.ea-btn-primary{background:#0d9488;border-color:#0d9488;color:#f0fdfa;}
+.ea-btn-primary:hover{background:#0f766e;}
+.ea-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
+.ea-btn-danger:hover{background:#991b1b;}
+.ea-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
+{% endblock %}

@@ -134,6 +134,13 @@
       imgEl.src = getRoomImage(b.room.room_type || '');
       imgEl.alt = b.room.name;
 
+      // Persist search context so back-to-search restores correct dates
+      if (b.check_in && b.check_out) {
+        sessionStorage.setItem('ttr_search_checkin', b.check_in);
+        sessionStorage.setItem('ttr_search_checkout', b.check_out);
+        sessionStorage.setItem('ttr_search_guests', String(b.guests || 1));
+      }
+
       holdExpiresAt = new Date(b.hold_expires_at).getTime();
       startTimer();
     } catch {
@@ -235,6 +242,30 @@
       payBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay now with Razorpay`;
     }
   }
+
+  function goBackToSearch() {
+    const ci = sessionStorage.getItem('ttr_search_checkin') || '';
+    const co = sessionStorage.getItem('ttr_search_checkout') || '';
+    const g  = sessionStorage.getItem('ttr_search_guests') || '1';
+    const p  = new URLSearchParams();
+    if (ci) p.set('check_in', ci);
+    if (co) p.set('check_out', co);
+    if (g)  p.set('guests', g);
+    window.location.href = '/rooms/search/page/?' + p.toString();
+  }
+
+  // Override the back-nav anchor so it navigates with stored dates instead of bare /rooms/search/
+  document.addEventListener('DOMContentLoaded', () => {
+    const backLink = document.querySelector('a[href="/rooms/search/"]');
+    if (backLink) {
+      backLink.href = 'javascript:void(0)';
+      backLink.onclick = (e) => {
+        e.preventDefault();
+        if (!confirm('Navigating away will release your room hold. Continue?')) return;
+        goBackToSearch();
+      };
+    }
+  });
 
   loadBooking();
 </script>
