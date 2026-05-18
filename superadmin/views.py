@@ -737,3 +737,32 @@ def room_image_set_primary(request, image_id):
     img.is_primary = True
     img.save(update_fields=['is_primary'])
     return JsonResponse({'message': 'Set as primary image.'})
+
+
+# ── Room Status Board ──────────────────────────────────────────────────────────
+
+@require_super_admin
+def room_status_board(request):
+    properties = Property.objects.filter(is_active=True).prefetch_related('rooms')
+    return render(request, 'superadmin/room_status_board.html', {
+        'properties': properties,
+        'status_choices': Room.OPERATIONAL_STATUS_CHOICES,
+    })
+
+
+@require_super_admin
+@require_GET
+def room_status_board_data(request):
+    rooms = Room.objects.select_related('property').order_by('property__name', 'name')
+    return JsonResponse({
+        'rooms': [
+            {
+                'id': str(r.id),
+                'name': r.name,
+                'property': r.property.name,
+                'status': r.operational_status,
+                'is_active': r.is_active,
+            }
+            for r in rooms
+        ]
+    })

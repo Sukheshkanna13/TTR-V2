@@ -36,6 +36,7 @@ tbody tr:hover td{background:rgba(51,65,85,.3);}
     <a href="/super-admin/properties/" {% if request.resolver_match.url_name == 'properties' %}class="active"{% endif %}>Properties</a>
     <a href="/super-admin/bookings/" {% if request.resolver_match.url_name == 'bookings' %}class="active"{% endif %}>Bookings</a>
     <a href="/super-admin/rooms/" {% if request.resolver_match.url_name == 'rooms' %}class="active"{% endif %}>Rooms</a>
+    <a href="{% url 'superadmin:room-status-board' %}" {% if request.resolver_match.url_name == 'room-status-board' %}class="active"{% endif %}>Status Board</a>
     <a href="/super-admin/employees/" {% if request.resolver_match.url_name == 'employees' %}class="active"{% endif %}>Employees</a>
     <a href="/super-admin/analytics/" {% if request.resolver_match.url_name == 'analytics' %}class="active"{% endif %}>Analytics</a>
     <a href="/super-admin/tax-config/" {% if request.resolver_match.url_name == 'tax-config' %}class="active"{% endif %}>Tax</a>

@@ -104,3 +104,32 @@ class DashboardLiveDataTest(TestCase):
         res = self.client.get(reverse('superadmin:dashboard-live'))
         data = res.json()
         self.assertEqual(data['active_bookings'], 0)
+
+
+class RoomStatusBoardTest(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.user, _ = _make_super_admin('sa2@test.com')
+        self.client.force_login(self.user)
+
+    def test_status_board_renders(self):
+        res = self.client.get(reverse('superadmin:room-status-board'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'status-board')
+
+    def test_status_board_json_returns_rooms(self):
+        from rooms.models import Property, Room
+        prop = Property.objects.create(
+            name='Test Prop', city='Chennai', address='1 Main St', is_active=True,
+        )
+        Room.objects.create(
+            property=prop, name='R1', city='Chennai', room_type='single',
+            price_per_night=1000, capacity=2, operational_status='available',
+        )
+        res = self.client.get(reverse('superadmin:room-status-board-data'))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn('rooms', data)
+        self.assertEqual(len(data['rooms']), 1)
+        self.assertEqual(data['rooms'][0]['status'], 'available')
