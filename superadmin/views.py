@@ -327,6 +327,50 @@ def loyalty_config(request):
     })
 
 
+# ── Rooms ──────────────────────────────────────────────────────────────────────
+
+@require_super_admin
+def rooms_list(request):
+    property_filter = request.GET.get('property', '')
+    rooms = Room.objects.select_related('property').order_by('property__name', 'name')
+    if property_filter:
+        rooms = rooms.filter(property_id=property_filter)
+    properties = Property.objects.filter(is_active=True).order_by('name')
+    return render(request, 'superadmin/rooms.html', {
+        'rooms': rooms,
+        'properties': properties,
+        'property_filter': property_filter,
+        'operational_choices': Room.OPERATIONAL_STATUS_CHOICES,
+    })
+
+
+@require_super_admin
+@require_POST
+def room_update(request, room_id):
+    room = get_object_or_404(Room, pk=room_id)
+    data = json.loads(request.body)
+    action = data.get('action')
+
+    if action == 'set_status':
+        new_status = data.get('operational_status', '')
+        valid = {s for s, _ in Room.OPERATIONAL_STATUS_CHOICES}
+        if new_status not in valid:
+            return JsonResponse({'error': 'Invalid status.'}, status=400)
+        room.operational_status = new_status
+        room.save(update_fields=['operational_status'])
+        _log(request, 'ROOM_STATUS_UPDATED', detail=f"room={room.name}, status={new_status}")
+        return JsonResponse({'message': f'Status set to {new_status}.'})
+
+    if action == 'toggle_active':
+        room.is_active = not room.is_active
+        room.save(update_fields=['is_active'])
+        state = 'activated' if room.is_active else 'deactivated'
+        _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
+        return JsonResponse({'message': f'Room {state}.', 'is_active': room.is_active})
+
+    return JsonResponse({'error': 'Unknown action.'}, status=400)
+
+
 # ── Audit Log ──────────────────────────────────────────────────────────────────
 
 @require_super_admin

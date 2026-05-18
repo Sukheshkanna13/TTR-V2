@@ -1,0 +1,101 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Rooms{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Rooms</h1>
+
+<div class="sa-card" style="margin-bottom:1rem">
+  <form method="get" style="display:flex;gap:.75rem;align-items:flex-end">
+    <div>
+      <label class="sa-label">Property</label>
+      <select class="sa-input" name="property" onchange="this.form.submit()">
+        <option value="">All properties</option>
+        {% for p in properties %}
+        <option value="{{ p.id }}" {% if property_filter == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <a class="sa-btn" href="{% url 'superadmin:rooms' %}">Clear</a>
+  </form>
+</div>
+
+<div class="sa-card">
+  <table class="sa-table">
+    <thead>
+      <tr>
+        <th>Room</th>
+        <th>Property</th>
+        <th>Type</th>
+        <th>Price / night</th>
+        <th>Capacity</th>
+        <th>Operational Status</th>
+        <th>Active</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rooms %}
+    <tr id="row-{{ r.id }}">
+      <td>{{ r.name }}</td>
+      <td>{{ r.property.name }}</td>
+      <td>{{ r.get_room_type_display }}</td>
+      <td>₹{{ r.price_per_night|floatformat:0 }}</td>
+      <td>{{ r.capacity }}</td>
+      <td>
+        <select class="sa-input sa-input-sm" onchange="setStatus('{{ r.id }}', this.value)">
+          {% for val, label in operational_choices %}
+          <option value="{{ val }}" {% if r.operational_status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </td>
+      <td>
+        <span id="active-badge-{{ r.id }}" class="sa-badge {% if r.is_active %}sa-badge-confirmed{% else %}sa-badge-cancelled{% endif %}">
+          {% if r.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </td>
+      <td>
+        <button class="sa-btn sa-btn-sm"
+                onclick="toggleActive('{{ r.id }}', this)">
+          {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
+        </button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8" style="color:#64748b;padding:24px 12px;">No rooms found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+async function roomAction(roomId, payload) {
+  const res = await fetch(`/superadmin/rooms/${roomId}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+async function setStatus(roomId, status) {
+  const data = await roomAction(roomId, {action: 'set_status', operational_status: status});
+  if (data.error) alert(data.error);
+}
+
+async function toggleActive(roomId, btn) {
+  const data = await roomAction(roomId, {action: 'toggle_active'});
+  if (data.error) { alert(data.error); return; }
+  const badge = document.getElementById('active-badge-' + roomId);
+  if (data.is_active) {
+    badge.textContent = 'Active';
+    badge.className = 'sa-badge sa-badge-confirmed';
+    btn.textContent = 'Deactivate';
+  } else {
+    badge.textContent = 'Inactive';
+    badge.className = 'sa-badge sa-badge-cancelled';
+    btn.textContent = 'Activate';
+  }
+}
+</script>
+{% endblock %}
