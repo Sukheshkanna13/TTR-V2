@@ -83,7 +83,7 @@ def dashboard_live_data(request):
     today = timezone.now().date()
 
     active_bookings = Booking.objects.filter(
-        status='confirmed', check_in__lte=today, check_out__gte=today,
+        status='confirmed', check_in__lte=today, check_out__gt=today,
     ).count()
 
     todays_checkins = Booking.objects.filter(
