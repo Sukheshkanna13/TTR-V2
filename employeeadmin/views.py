@@ -16,36 +16,32 @@ def _fin_level(request):
 
 
 def _assigned_rooms(request):
-    """Rooms belonging to properties assigned to this employee."""
+    """Rooms belonging to properties assigned to this employee.
+
+    Security: an employee with no assigned properties sees NO rooms,
+    not all rooms. Prevents privilege escalation when properties are
+    not yet assigned on employee creation.
+    """
     try:
-        props = request.user.userprofile.assigned_properties.values_list('id', flat=True)
-        if props:
-            return Room.objects.filter(property_id__in=props)
+        props = list(request.user.userprofile.assigned_properties.values_list('id', flat=True))
     except Exception:
-        pass
-    return Room.objects.all()
+        return Room.objects.none()
+    if not props:
+        return Room.objects.none()
+    return Room.objects.filter(property_id__in=props)
 
 
 @require_employee
 def dashboard(request):
     today = timezone.now().date()
     fin = _fin_level(request)
+    rooms = _assigned_rooms(request)
 
-    active_bookings = Booking.objects.filter(
-        status='confirmed',
-        check_in__lte=today,
-        check_out__gt=today,
-    ).count()
+    bookings_qs = Booking.objects.filter(room__in=rooms, status='confirmed')
 
-    upcoming_checkouts = Booking.objects.filter(
-        status='confirmed',
-        check_out=today,
-    ).select_related('user', 'room')
-
-    upcoming_checkins = Booking.objects.filter(
-        status='confirmed',
-        check_in=today,
-    ).select_related('user', 'room')
+    active_bookings = bookings_qs.filter(check_in__lte=today, check_out__gt=today).count()
+    upcoming_checkouts = bookings_qs.filter(check_out=today).select_related('user', 'room')
+    upcoming_checkins = bookings_qs.filter(check_in=today).select_related('user', 'room')
 
     return render(request, 'employeeadmin/dashboard.html', {
         'active_bookings': active_bookings,
@@ -59,9 +55,11 @@ def dashboard(request):
 @require_employee
 def bookings_list(request):
     fin = _fin_level(request)
+    rooms = _assigned_rooms(request)
     bookings = Booking.objects.filter(
+        room__in=rooms,
         status__in=('confirmed', 'completed', 'cancelled'),
-    ).select_related('user', 'room').order_by('-check_in')[:50]
+    ).select_related('user', 'room', 'room__property').order_by('-check_in')[:50]
     return render(request, 'employeeadmin/bookings.html', {'bookings': bookings, 'fin': fin})
 
 
