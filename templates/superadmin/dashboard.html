@@ -2,11 +2,24 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <h1 class="sa-page-title">Dashboard</h1>
+
 <div class="sa-card">
   <div class="sa-stats">
     <div class="sa-stat">
       <div class="sa-stat-val">{{ active_bookings }}</div>
       <div class="sa-stat-label">Active stays</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ todays_checkins }}</div>
+      <div class="sa-stat-label">Check-ins today</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ todays_checkouts }}</div>
+      <div class="sa-stat-label">Check-outs today</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ pending_holds }}</div>
+      <div class="sa-stat-label">Pending holds</div>
     </div>
     <div class="sa-stat">
       <div class="sa-stat-val">₹{{ today_revenue|floatformat:0 }}</div>
@@ -20,6 +33,44 @@
       <div class="sa-stat-val">{{ total_rooms }}</div>
       <div class="sa-stat-label">Total rooms</div>
     </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ total_guests }}</div>
+      <div class="sa-stat-label">Guests</div>
+    </div>
   </div>
 </div>
+
+{% if recent_bookings %}
+<div class="sa-card" style="margin-top:1.5rem">
+  <h2 class="sa-section-title">Recent Bookings</h2>
+  <table class="sa-table">
+    <thead>
+      <tr>
+        <th>Reference</th>
+        <th>Guest</th>
+        <th>Room</th>
+        <th>Property</th>
+        <th>Check-in</th>
+        <th>Check-out</th>
+        <th>Status</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in recent_bookings %}
+      <tr>
+        <td><code>{{ b.booking_reference|default:b.id }}</code></td>
+        <td>{{ b.user.full_name }}</td>
+        <td>{{ b.room.name }}</td>
+        <td>{{ b.room.property.name }}</td>
+        <td>{{ b.check_in }}</td>
+        <td>{{ b.check_out }}</td>
+        <td><span class="sa-badge sa-badge-{{ b.status }}">{{ b.status }}</span></td>
+        <td>₹{{ b.total_price|floatformat:0 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}

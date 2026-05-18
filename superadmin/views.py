@@ -38,6 +38,16 @@ def dashboard(request):
         status='confirmed', check_in__lte=today, check_out__gt=today,
     ).count()
 
+    todays_checkins = Booking.objects.filter(
+        status='confirmed', check_in=today,
+    ).select_related('user', 'room__property').count()
+
+    todays_checkouts = Booking.objects.filter(
+        status='confirmed', check_out=today,
+    ).select_related('user', 'room__property').count()
+
+    pending_holds = Booking.objects.filter(status='held').count()
+
     today_revenue = Booking.objects.filter(
         status='confirmed', check_in=today,
     ).aggregate(t=Sum('total_price'))['t'] or 0
@@ -49,12 +59,20 @@ def dashboard(request):
     total_rooms = Room.objects.count()
     total_guests = User.objects.filter(userprofile__role='guest').count()
 
+    recent_bookings = Booking.objects.select_related(
+        'user', 'room__property'
+    ).order_by('-created_at')[:8]
+
     return render(request, 'superadmin/dashboard.html', {
         'active_bookings': active_bookings,
+        'todays_checkins': todays_checkins,
+        'todays_checkouts': todays_checkouts,
+        'pending_holds': pending_holds,
         'today_revenue': today_revenue,
         'month_revenue': month_revenue,
         'total_rooms': total_rooms,
         'total_guests': total_guests,
+        'recent_bookings': recent_bookings,
     })
 
 
