@@ -176,23 +176,73 @@ def employee_update(request, user_id):
 
 @require_super_admin
 def analytics(request):
+    import datetime as dt
     today = timezone.now().date()
-    last_30 = today.replace(day=1)
+
+    date_from_str = request.GET.get('from', '')
+    date_to_str = request.GET.get('to', '')
+    try:
+        date_from = dt.date.fromisoformat(date_from_str) if date_from_str else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = dt.date.fromisoformat(date_to_str) if date_to_str else today
+    except ValueError:
+        date_to = today
+
+    confirmed_qs = Booking.objects.filter(
+        status='confirmed', check_in__gte=date_from, check_in__lte=date_to,
+    )
+
+    agg = confirmed_qs.aggregate(
+        total_revenue=Sum('total_price'),
+        total_bookings=Count('id'),
+    )
+    total_revenue = agg['total_revenue'] or 0
+    total_bookings = agg['total_bookings'] or 0
+
+    cancelled_count = Booking.objects.filter(
+        status='cancelled', check_in__gte=date_from, check_in__lte=date_to,
+    ).count()
+    all_closed = total_bookings + cancelled_count
+    cancellation_rate = round(cancelled_count / all_closed * 100, 1) if all_closed else 0
 
     revenue_by_property = (
-        Booking.objects.filter(status='confirmed', check_in__gte=last_30)
-        .values('room__property__name')
+        confirmed_qs
+        .values('room__property__name', 'room__property__id')
         .annotate(revenue=Sum('total_price'), count=Count('id'))
         .order_by('-revenue')
     )
 
-    recent_bookings = Booking.objects.filter(
-        status='confirmed'
-    ).select_related('user', 'room__property').order_by('-check_in')[:20]
+    # Occupancy: confirmed booking-nights / (days_in_range * active_rooms_per_property)
+    days_in_range = max((date_to - date_from).days, 1)
+    property_rooms = {
+        p['property']: p['room_count']
+        for p in Room.objects.filter(is_active=True).values('property').annotate(room_count=Count('id'))
+    }
+    occupancy_by_property = []
+    for row in revenue_by_property:
+        prop_id = row['room__property__id']
+        room_count = property_rooms.get(prop_id, 1)
+        capacity_nights = days_in_range * room_count
+        booked_nights = sum(
+            (b.check_out - b.check_in).days
+            for b in confirmed_qs.filter(room__property_id=prop_id).only('check_in', 'check_out')
+        )
+        occupancy_by_property.append({
+            'name': row['room__property__name'],
+            'revenue': row['revenue'],
+            'count': row['count'],
+            'occupancy': round(booked_nights / capacity_nights * 100, 1) if capacity_nights else 0,
+        })
 
     return render(request, 'superadmin/analytics.html', {
-        'revenue_by_property': revenue_by_property,
-        'recent_bookings': recent_bookings,
+        'total_revenue': total_revenue,
+        'total_bookings': total_bookings,
+        'cancellation_rate': cancellation_rate,
+        'occupancy_by_property': occupancy_by_property,
+        'date_from': date_from,
+        'date_to': date_to,
         'today': today,
     })
 
