@@ -1,0 +1,145 @@
+{% extends "employeeadmin/base.html" %}
+{% block title %}Images — {{ room.name }}{% endblock %}
+{% block page_title %}Room Images{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="{% url 'employeeadmin:rooms' %}" class="btn btn-ghost btn-sm">← Rooms</a>
+    <h2>{{ room.name }} <span style="color:var(--muted);font-weight:400;">— {{ room.property.name }}</span></h2>
+  </div>
+</div>
+
+<!-- Upload Section -->
+<div class="card" style="margin-bottom:18px;">
+  <div class="section-head" style="margin-bottom:12px;">
+    <h2>Upload Image</h2>
+  </div>
+  <form id="upload-form" enctype="multipart/form-data" onsubmit="uploadImage(event)">
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Image File</label>
+        <input type="file" name="image" accept="image/*" class="form-control" required id="file-input">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Caption (optional)</label>
+        <input type="text" name="caption" class="form-control" placeholder="e.g. Bedroom view" id="caption-input">
+      </div>
+      <div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);margin-bottom:8px;cursor:pointer;">
+          <input type="checkbox" name="is_primary" id="primary-input" style="accent-color:var(--accent);">
+          Set as primary
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm" id="upload-btn">Upload</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Image Grid -->
+<div class="card">
+  <div class="section-head" style="margin-bottom:14px;">
+    <h2>Images <span style="color:var(--muted);font-weight:400;font-size:.85rem;">({{ images|length }})</span></h2>
+  </div>
+
+  {% if images %}
+  <div id="image-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;">
+    {% for img in images %}
+    <div class="image-card" id="img-{{ img.id }}" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <div style="position:relative;height:140px;overflow:hidden;background:#000;">
+        <img src="{{ img.image.url }}" alt="{{ img.caption|default:room.name }}"
+             style="width:100%;height:100%;object-fit:cover;display:block;">
+        {% if img.is_primary %}
+        <span class="badge badge-green" style="position:absolute;top:6px;left:6px;">Primary</span>
+        {% endif %}
+      </div>
+      <div style="padding:10px;">
+        {% if img.caption %}
+        <p style="font-size:.78rem;color:var(--text);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ img.caption }}">{{ img.caption }}</p>
+        {% else %}
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">No caption</p>
+        {% endif %}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          {% if not img.is_primary %}
+          <button class="btn btn-ghost btn-sm" onclick="setPrimary('{{ img.id }}')">Set Primary</button>
+          {% endif %}
+          <button class="btn btn-danger btn-sm" onclick="deleteImage('{{ img.id }}')">Delete</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:40px 20px;color:var(--muted);">
+    <div style="font-size:2rem;margin-bottom:8px;">🖼</div>
+    <p>No images uploaded yet. Use the form above to add the first image.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function uploadImage(e) {
+  e.preventDefault();
+  const btn = document.getElementById('upload-btn');
+  btn.textContent = 'Uploading…';
+  btn.disabled = true;
+
+  const formData = new FormData();
+  formData.append('image', document.getElementById('file-input').files[0]);
+  formData.append('caption', document.getElementById('caption-input').value);
+  formData.append('is_primary', document.getElementById('primary-input').checked ? 'true' : 'false');
+
+  fetch('/admin-portal/rooms/{{ room.id }}/images/upload/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF },
+    body: formData
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { alert(d.error); }
+      else { location.reload(); }
+    })
+    .catch(() => alert('Upload failed. Please try again.'))
+    .finally(() => {
+      btn.textContent = 'Upload';
+      btn.disabled = false;
+    });
+}
+
+function setPrimary(imageId) {
+  if (!confirm('Set this image as the primary image for this room?')) return;
+
+  fetch(`/admin-portal/rooms/images/${imageId}/set-primary/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' }
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { alert(d.error); }
+      else { location.reload(); }
+    })
+    .catch(() => alert('Failed to set primary image. Please try again.'));
+}
+
+function deleteImage(imageId) {
+  if (!confirm('Delete this image? This action cannot be undone.')) return;
+
+  fetch(`/admin-portal/rooms/images/${imageId}/delete/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' }
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { alert(d.error); }
+      else {
+        const card = document.getElementById('img-' + imageId);
+        if (card) card.remove();
+      }
+    })
+    .catch(() => alert('Failed to delete image. Please try again.'));
+}
+</script>
+{% endblock %}

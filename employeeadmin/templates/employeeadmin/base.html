@@ -79,6 +79,7 @@
     <a href="{% url 'employeeadmin:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
     <a href="{% url 'employeeadmin:bookings' %}" class="{% if request.resolver_match.url_name == 'bookings' %}active{% endif %}">📋 Bookings</a>
     <a href="{% url 'employeeadmin:rooms' %}" class="{% if request.resolver_match.url_name == 'rooms' %}active{% endif %}">🏠 Rooms</a>
+    <a href="{% url 'employeeadmin:room-status-board' %}" class="{% if 'status-board' in request.resolver_match.url_name %}active{% endif %}">📋 Status Board</a>
     <a href="{% url 'employeeadmin:availability' %}" class="{% if request.resolver_match.url_name == 'availability' %}active{% endif %}">📅 Availability</a>
   </nav>
   <div class="ea-footer">
