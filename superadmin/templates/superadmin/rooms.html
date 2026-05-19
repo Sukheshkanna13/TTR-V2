@@ -134,7 +134,8 @@ function setRoomStatus(roomId, status) {
     headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
     body: JSON.stringify({action: 'set_status', operational_status: status})
   }).then(r => r.json()).then(d => {
-    if (d.error) alert(d.error);
+    if (d.error) { alert(d.error); return; }
+    location.reload();
   });
 }
 
