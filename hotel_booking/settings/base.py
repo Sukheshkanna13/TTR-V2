@@ -114,11 +114,14 @@ WSGI_APPLICATION = "hotel_booking.wsgi.application"
 
 # Default to SQLite but allow override via DATABASE_URL
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'ttr_v2',
+        'USER': 'root',
+        'PASSWORD': 'vengeance',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
+    }
 }
 
 

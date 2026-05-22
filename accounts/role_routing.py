@@ -20,16 +20,24 @@ def get_user_profile(user):
     if not getattr(user, "is_authenticated", False):
         return None
 
+    is_su = getattr(user, "is_superuser", False)
     try:
-        return user.userprofile
+        profile = user.userprofile
+        if is_su and profile.role != ROLE_SUPER_ADMIN:
+            profile.role = ROLE_SUPER_ADMIN
+            profile.save(update_fields=["role"])
+        return profile
     except Exception:
         from accounts.models import UserProfile
 
-        profile, _ = UserProfile.objects.get_or_create(user=user, defaults={"role": ROLE_GUEST})
+        default_role = ROLE_SUPER_ADMIN if is_su else ROLE_GUEST
+        profile, _ = UserProfile.objects.get_or_create(user=user, defaults={"role": default_role})
         return profile
 
 
 def get_user_role(user):
+    if getattr(user, "is_superuser", False):
+        return ROLE_SUPER_ADMIN
     profile = get_user_profile(user)
     return getattr(profile, "role", ROLE_GUEST) or ROLE_GUEST
 

@@ -73,6 +73,18 @@ class UnifiedLoginRedirectTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["redirect_url"], "/super-admin/dashboard/")
 
+    def test_superuser_without_profile_role_redirects_to_super_admin_dashboard(self):
+        User.objects.create_superuser(
+            email="superuser-no-profile@example.com",
+            full_name="Super User",
+            password="Pass1234!",
+        )
+
+        response = self.post_login("superuser-no-profile@example.com")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["redirect_url"], "/super-admin/dashboard/")
+
     def test_admin_must_change_password_goes_straight_to_dashboard(self):
         make_user("admin-reset@example.com", role="employee_admin", must_change_password=True)
 
