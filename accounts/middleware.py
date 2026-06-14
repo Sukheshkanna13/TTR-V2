@@ -7,8 +7,11 @@ from .role_routing import (
     ROLE_EMPLOYEE,
     ROLE_EMPLOYEE_ADMIN,
     ROLE_SUPER_ADMIN,
+    STAFF_ROLES,
+    get_default_redirect_for_role,
     get_login_url_with_next,
     get_user_role,
+    is_customer_facing_path,
 )
 
 class AutoLogoutMiddleware:
@@ -83,6 +86,13 @@ class RoleRoutingMiddleware:
         role = None
         if user.is_authenticated:
             role = get_user_role(user)
+
+        # Staff accounts are operational-only. If a signed-in staff member lands
+        # on a customer-facing page (home, room search, booking, folio), bounce
+        # them back to their portal dashboard instead of letting them act as a
+        # guest. Keeps admin and guest identities cleanly separated.
+        if role in STAFF_ROLES and is_customer_facing_path(path):
+            return redirect(get_default_redirect_for_role(role))
 
         # Django admin → superuser only
         if path.startswith('/admin/') and not path.startswith('/admin-portal/'):

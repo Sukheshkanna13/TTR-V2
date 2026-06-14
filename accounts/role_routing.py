@@ -15,6 +15,23 @@ ROLE_SUPER_ADMIN = "super_admin"
 EMPLOYEE_ADMIN_ROLES = {ROLE_EMPLOYEE, ROLE_EMPLOYEE_ADMIN}
 SUPER_ADMIN_ROLES = {ROLE_SUPER_ADMIN}
 
+# All operational/staff roles. Staff accounts are operational-only — they must
+# not act as guests on the customer-facing site.
+STAFF_ROLES = EMPLOYEE_ADMIN_ROLES | SUPER_ADMIN_ROLES
+
+# Customer-facing path prefixes. A staff member landing on any of these is
+# bounced back to their own portal dashboard (see RoleRoutingMiddleware).
+CUSTOMER_FACING_PREFIXES = (
+    "/experiences/",
+    "/things-to-do/",
+    "/cause/",
+    "/explore/",
+    "/rooms/",
+    "/bookings/",
+    "/accounts/folio/",
+    "/accounts/profile/",
+)
+
 
 def get_user_profile(user):
     if not getattr(user, "is_authenticated", False):
@@ -55,6 +72,15 @@ def is_safe_local_path(path):
     return parsed.scheme == "" and parsed.netloc == "" and path.startswith("/")
 
 
+def is_customer_facing_path(path):
+    """True for guest-only pages (home, room search, booking, folio)."""
+    if not path:
+        return False
+    if path == HOME_URL:
+        return True
+    return any(path.startswith(prefix) for prefix in CUSTOMER_FACING_PREFIXES)
+
+
 def is_role_allowed_for_path(role, path):
     if not is_safe_local_path(path):
         return False
@@ -64,6 +90,10 @@ def is_role_allowed_for_path(role, path):
 
     if path.startswith("/admin-portal/"):
         return role in EMPLOYEE_ADMIN_ROLES
+
+    # Staff accounts are operational-only: never honor a next= into a guest page.
+    if role in STAFF_ROLES and is_customer_facing_path(path):
+        return False
 
     return True
 

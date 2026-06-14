@@ -187,6 +187,75 @@ class PortalAccessTests(TestCase):
         self.assertRedirects(response, "/accounts/login/page/?next=%2Fsuper-admin%2Flogin%2F", fetch_redirect_response=False)
 
 
+class StaffStayInPortalTests(TestCase):
+    """Staff accounts are operational-only: they must not act as guests on the
+    customer-facing site. Any staff hit on a customer page bounces to their portal."""
+
+    def test_super_admin_on_home_redirects_to_super_admin_dashboard(self):
+        user = make_user("sa-home@example.com", role="super_admin")
+        self.client.force_login(user)
+
+        response = self.client.get("/")
+
+        self.assertRedirects(response, "/super-admin/dashboard/", fetch_redirect_response=False)
+
+    def test_employee_admin_on_home_redirects_to_employee_dashboard(self):
+        user = make_user("ea-home@example.com", role="employee_admin")
+        self.client.force_login(user)
+
+        response = self.client.get("/")
+
+        self.assertRedirects(response, "/admin-portal/dashboard/", fetch_redirect_response=False)
+
+    def test_employee_on_booking_page_redirects_to_employee_dashboard(self):
+        user = make_user("emp-book@example.com", role="employee")
+        self.client.force_login(user)
+
+        response = self.client.get("/bookings/my-bookings/page/")
+
+        self.assertRedirects(response, "/admin-portal/dashboard/", fetch_redirect_response=False)
+
+    def test_super_admin_on_rooms_search_redirects_to_dashboard(self):
+        user = make_user("sa-rooms@example.com", role="super_admin")
+        self.client.force_login(user)
+
+        response = self.client.get("/rooms/search/page/")
+
+        self.assertRedirects(response, "/super-admin/dashboard/", fetch_redirect_response=False)
+
+    def test_guest_on_home_is_not_redirected(self):
+        user = make_user("guest-home@example.com", role="guest")
+        self.client.force_login(user)
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_anonymous_on_home_is_not_redirected(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_super_admin_can_still_reach_their_dashboard(self):
+        user = make_user("sa-dash@example.com", role="super_admin")
+        self.client.force_login(user)
+
+        response = self.client.get("/super-admin/dashboard/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_staff_next_url_into_customer_page_is_not_honored(self):
+        make_user("sa-next@example.com", role="super_admin")
+        response = self.client.post(
+            reverse("accounts:login"),
+            data=json.dumps({"email": "sa-next@example.com", "password": "Pass1234!", "next": "/"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["redirect_url"], "/super-admin/dashboard/")
+
+
 class LoginRecoveryCommandTests(TestCase):
     def test_clear_login_locks_removes_specific_email_only(self):
         LoginAttempt.objects.create(email="one@example.com", attempts=5)

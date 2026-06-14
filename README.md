@@ -40,6 +40,36 @@ Prevents database bloating from abandoned sign-ups:
 
 ---
 
+## 📊 Project Status (V2)
+
+V2 is **functionally near-complete**. The full booking spine works end-to-end:
+availability → 10-minute hold → Razorpay → webhook (HMAC) → confirmation → invoice email
++ WhatsApp + loyalty award. Both operational portals (Super Admin, Staff) ship with live
+polling dashboards.
+
+> **Single source of truth for feature status:** [`docs/FEATURE-STATUS.md`](docs/FEATURE-STATUS.md)
+> (code-verified). The Google Sheet roadmap drifts — update FEATURE-STATUS.md in the same PR
+> as each feature lands. Paste-ready sheet rows live in [`docs/ROADMAP-SYNC-2026-06-13.md`](docs/ROADMAP-SYNC-2026-06-13.md).
+
+**Shipped & verified:** OTP + Google OAuth (account merge), unified role routing, room
+availability + 10-min hold + auto-release, Razorpay webhook with HMAC, invoice generation
+(`TT-YYYY-XXXXX` + tax engine), invoice email, WhatsApp confirmation, loyalty award + tier
+promotion, financial masking, both admin micro-apps, and the Things To Do / Explore pages.
+
+**Remaining V2 work (the only open items):**
+
+| Priority | Item | Notes |
+|----------|------|-------|
+| P1 | Guest-facing loyalty page | `loyalty/views.py` is an empty stub — guests can't view points/tier yet |
+| P1 | Tier-upgrade email | Tier promotion happens silently; needs a notification on upgrade |
+| P1 | Availability calendar API | No `GET /api/properties/{id}/calendar/` endpoint yet |
+| P2 | Coupon redemption | No `Coupon` model / `redeem` / `apply_coupon` — only a ledger-reason placeholder |
+
+**V3 (not started, expected):** OTA channel-manager sync, full loyalty campaigns, Volunteer /
+Travel for a Cause, analytics dashboard.
+
+---
+
 ## 🚪 Portal Access & Role Routing
 
 Authentication is centralized at `/accounts/login/page/`. The system intercepts logins and dynamically routes users based on their assigned role:
@@ -117,6 +147,7 @@ The project strictly follows the **Django MVT** (Model-View-Template) pattern.
 - `core/`: Shared utilities, landing pages, static files, and background task definitions.
 - `superadmin/`: Full platform control views, immutable `AuditLog`, and `PropertyTaxConfig`.
 - `employeeadmin/`: Scoped views restricting staff to their assigned properties for CRUD operations.
+- `loyalty/`: Points engine — `award_booking_points()` and tier promotion (`LoyaltyConfig`, `LoyaltyTier`, `CampaignRule`, `LoyaltyLedger`). All rules DB-driven, configured by Super Admin.
 
 ### 📜 Development Guidelines
 1. **Fat Models, Thin Views**: Business logic (`expire_if_needed()`, availability checks, dynamic price calculations) belongs in `models.py`. `views.py` is strictly for request handling and orchestration.
