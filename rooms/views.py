@@ -21,10 +21,23 @@ from django.db.models import Q
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from accounts.permissions import IsEmployee
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    """
+    Session auth without CSRF enforcement, so the hold-release endpoint can be
+    called via navigator.sendBeacon on page unload (which cannot attach the CSRF
+    header). Safe here: the action is idempotent and only releases the caller's
+    own pending hold, so forging it has no security impact beyond self-griefing.
+    """
+
+    def enforce_csrf(self, request):
+        return
 
 from .models import Booking, Room, OTABlock, Property
 from payments.models import Payment
@@ -294,47 +307,66 @@ class HoldRoomView(APIView):
         try:
             with transaction.atomic():
                 now = timezone.now()
-
-                # Lock all bookings for this room that could overlap
-                overlapping = Booking.objects.select_for_update().filter(
-                    room=room,
-                    check_in__lt=check_out,
-                    check_out__gt=check_in,
-                ).filter(
-                    Q(status="confirmed")
-                    | Q(status="pending", hold_expires_at__gt=now)
-                )
-
-                # Lock overlapping OTA blocks
-                overlapping_blocks = OTABlock.objects.select_for_update().filter(
-                    room=room,
-                    start_date__lt=check_out,
-                    end_date__gt=check_in,
-                )
-
-                if overlapping.exists() or overlapping_blocks.exists():
-                    return Response(
-                        {
-                            "error": "Sorry, this room was just taken for the selected dates. Please pick another room.",
-                            "code": "ROOM_TAKEN",
-                        },
-                        status=status.HTTP_409_CONFLICT,
-                    )
-
-                # Room is available — create PENDING hold
                 hold_duration = getattr(settings, 'HOLD_DURATION_MINUTES', 10)
                 hold_expires_at = now + timedelta(minutes=hold_duration)
 
-                booking = Booking.objects.create(
+                # RECLAIM: if this guest already holds this exact room+dates
+                # (e.g. they hit Back and returned), refresh and reuse that hold
+                # instead of rejecting them with a 409 against their own hold.
+                existing_hold = Booking.objects.select_for_update().filter(
                     room=room,
                     user=request.user,
+                    status="pending",
                     check_in=check_in,
                     check_out=check_out,
-                    guests=guests,
-                    total_price=total_price,
-                    status="pending",
-                    hold_expires_at=hold_expires_at,
-                )
+                    hold_expires_at__gt=now,
+                ).first()
+
+                if existing_hold:
+                    existing_hold.hold_expires_at = hold_expires_at
+                    existing_hold.total_price = total_price
+                    existing_hold.guests = guests
+                    existing_hold.save(update_fields=["hold_expires_at", "total_price", "guests"])
+                    booking = existing_hold
+                else:
+                    # Lock all OTHER bookings for this room that could overlap.
+                    # The guest's own pending holds never block them.
+                    overlapping = Booking.objects.select_for_update().filter(
+                        room=room,
+                        check_in__lt=check_out,
+                        check_out__gt=check_in,
+                    ).filter(
+                        Q(status="confirmed")
+                        | Q(status="pending", hold_expires_at__gt=now)
+                    ).exclude(user=request.user, status="pending")
+
+                    # Lock overlapping OTA blocks
+                    overlapping_blocks = OTABlock.objects.select_for_update().filter(
+                        room=room,
+                        start_date__lt=check_out,
+                        end_date__gt=check_in,
+                    )
+
+                    if overlapping.exists() or overlapping_blocks.exists():
+                        return Response(
+                            {
+                                "error": "Sorry, this room was just taken for the selected dates. Please pick another room.",
+                                "code": "ROOM_TAKEN",
+                            },
+                            status=status.HTTP_409_CONFLICT,
+                        )
+
+                    # Room is available — create PENDING hold
+                    booking = Booking.objects.create(
+                        room=room,
+                        user=request.user,
+                        check_in=check_in,
+                        check_out=check_out,
+                        guests=guests,
+                        total_price=total_price,
+                        status="pending",
+                        hold_expires_at=hold_expires_at,
+                    )
 
         except Exception as e:
             logger.error("Hold failed for user %s: %s", request.user.email, str(e))
@@ -361,26 +393,41 @@ class HoldRoomView(APIView):
             from payments.models import Payment
             from payments.utils import create_razorpay_order
 
-            order = create_razorpay_order(
-                amount_inr=booking.total_price,
-                booking_id=booking.id,
-            )
-            booking.razorpay_order_id = order["id"]
-            booking.save(update_fields=["razorpay_order_id"])
-
-            Payment.objects.create(
-                booking=booking,
-                razorpay_order_id=order["id"],
+            # Reuse the existing order for a reclaimed hold of the same amount,
+            # otherwise create a fresh one.
+            existing_payment = Payment.objects.filter(
+                booking=booking, status="created",
                 amount=booking.total_price,
-                status="created",
-            )
+            ).first()
 
-            payment_details = {
-                "order_id": order["id"],
-                "amount": order["amount"],       # paise
-                "currency": order["currency"],
-                "key_id": settings.RAZORPAY_KEY_ID,
-            }
+            if booking.razorpay_order_id and existing_payment:
+                payment_details = {
+                    "order_id": booking.razorpay_order_id,
+                    "amount": int(booking.total_price * 100),  # paise
+                    "currency": "INR",
+                    "key_id": settings.RAZORPAY_KEY_ID,
+                }
+            else:
+                order = create_razorpay_order(
+                    amount_inr=booking.total_price,
+                    booking_id=booking.id,
+                )
+                booking.razorpay_order_id = order["id"]
+                booking.save(update_fields=["razorpay_order_id"])
+
+                Payment.objects.create(
+                    booking=booking,
+                    razorpay_order_id=order["id"],
+                    amount=booking.total_price,
+                    status="created",
+                )
+
+                payment_details = {
+                    "order_id": order["id"],
+                    "amount": order["amount"],       # paise
+                    "currency": order["currency"],
+                    "key_id": settings.RAZORPAY_KEY_ID,
+                }
         except Exception as pay_err:
             logger.error("Razorpay order creation failed for booking %s: %s", booking.id, str(pay_err))
             # Don't block the hold — frontend can call /payments/create-order/ separately
@@ -534,6 +581,44 @@ class CancelBookingView(APIView):
                 "message": f"Booking cancelled successfully.{refund_message}",
                 "booking": BookingSerializer(booking).data,
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ReleaseHoldView(APIView):
+    """
+    POST /bookings/<id>/release/
+
+    Release an unpaid hold early so the room frees immediately, instead of
+    blocking other guests (and the same guest) for the full 10-minute window.
+
+    Called by the checkout page when the guest dismisses the payment modal,
+    payment fails, or they navigate away / refresh / hit Back (the last three
+    via navigator.sendBeacon). Idempotent and ownership-scoped, so it is safe
+    to fire on unload and to call more than once.
+    """
+
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, booking_id):
+        try:
+            booking = Booking.objects.select_related("room").get(
+                id=booking_id,
+                user=request.user,
+            )
+        except Booking.DoesNotExist:
+            return Response(
+                {"error": "Booking not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        released = booking.release_hold("abandoned")
+        if released:
+            logger.info("Hold released early: %s released %s", request.user.email, booking.room.name)
+
+        return Response(
+            {"message": "Hold released.", "released": released, "status": booking.status},
             status=status.HTTP_200_OK,
         )
 

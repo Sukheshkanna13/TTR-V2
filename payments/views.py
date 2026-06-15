@@ -208,6 +208,10 @@ class VerifyPaymentView(APIView):
                 status="failed",
             )
 
+            # Release the hold so the room frees immediately instead of staying
+            # locked until the 10-minute timeout.
+            booking.release_hold("payment_failed")
+
             logger.warning(
                 "Payment verification FAILED for order %s, user %s",
                 order_id,
@@ -331,8 +335,8 @@ class WebhookView(APIView):
 
         event_type = event.get("event", "")
 
-        # We only care about payment.captured
-        if event_type != "payment.captured":
+        # We care about payment.captured (confirm) and payment.failed (release hold)
+        if event_type not in ("payment.captured", "payment.failed"):
             return Response({"status": "ignored"}, status=status.HTTP_200_OK)
 
         # Extract payment details from the event
@@ -345,6 +349,19 @@ class WebhookView(APIView):
                 {"error": "Missing order_id in payload."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # payment.failed → release the hold so the room frees immediately.
+        if event_type == "payment.failed":
+            try:
+                failed_booking = Booking.objects.get(razorpay_order_id=order_id)
+            except Booking.DoesNotExist:
+                return Response(status=status.HTTP_200_OK)
+            Payment.objects.filter(razorpay_order_id=order_id).update(
+                razorpay_payment_id=payment_id, status="failed",
+            )
+            failed_booking.release_hold("payment_failed")
+            logger.info("Webhook released hold for failed payment, order %s", order_id)
+            return Response({"status": "released"}, status=status.HTTP_200_OK)
 
         # Find the booking
         try:

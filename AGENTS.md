@@ -165,3 +165,20 @@ Guest login and admin login are completely separate systems with separate access
 ## Loyalty Program (V2)
 
 Points are earned on: first booking, per night stayed, repeat bookings (higher rate), monthly repeat (multiplier), reviews, referrals. Three tiers (Base → Mid → Top) with configurable names, thresholds, and discounts set by Super Admin. Guests redeem points for discount coupons. All rules are runtime-configurable — nothing is hardcoded.
+
+---
+
+## Change Log
+
+Significant changes by AI sessions are logged in [`docs/AGENT-CHANGELOG.md`](docs/AGENT-CHANGELOG.md)
+(newest first), with root cause + what changed for each fix. Read it before
+touching booking holds, the checkout flow, or the folio / employee-management
+pages.
+
+**Booking hold lifecycle (read before editing checkout):** holds release the
+instant a guest abandons checkout via `POST /bookings/<id>/release/`
+(`Booking.release_hold()`), wired in `checkout.html` to modal-dismiss /
+payment-failure / back-nav / `pagehide` (sendBeacon). Payment-failure paths
+release server-side too. The qcluster sweep (`release_expired_holds`, every 1 min)
+is only a safety net. Do **not** release on `visibilitychange` — it breaks
+UPI/OTP flows where the guest backgrounds the tab to approve payment.

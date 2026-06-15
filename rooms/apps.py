@@ -14,12 +14,15 @@ class RoomsConfig(AppConfig):
         try:
             from django_q.models import Schedule
             
-            # Register release_expired_holds every 10 minutes
-            Schedule.objects.get_or_create(
+            # Safety-net sweep every 1 minute. Holds are normally released the
+            # instant a guest abandons checkout (ReleaseHoldView / payment-failure
+            # paths); this sweep only catches holds whose client never pinged
+            # (e.g. crashed tab), keeping inventory accurate for OTA sync.
+            Schedule.objects.update_or_create(
                 func="rooms.tasks.release_expired_holds",
                 defaults={
                     "schedule_type": Schedule.MINUTES,
-                    "minutes": 10,
+                    "minutes": 1,
                     "repeats": -1
                 }
             )

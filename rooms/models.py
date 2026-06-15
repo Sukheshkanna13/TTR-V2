@@ -328,6 +328,29 @@ class Booking(models.Model):
             return True
         return False
 
+    def release_hold(self, reason="abandoned"):
+        """
+        Release an unpaid hold early, freeing the room immediately instead of
+        waiting for the 10-minute timeout.
+
+        Single source of truth for ending a PENDING hold — used by the explicit
+        release endpoint (back-nav / refresh / modal dismiss) and the payment
+        failure paths (signature mismatch, webhook payment.failed).
+
+        reason:
+            "payment_failed" → status becomes FAILED
+            anything else    → status becomes EXPIRED (user abandoned the hold)
+
+        Idempotent: a no-op (returns False) for any non-pending booking, so it is
+        safe to call repeatedly and via navigator.sendBeacon.
+        """
+        if self.status != "pending":
+            return False
+        self.status = "failed" if reason == "payment_failed" else "expired"
+        self.hold_expires_at = None
+        self.save(update_fields=["status", "hold_expires_at"])
+        return True
+
     def generate_booking_reference(self):
         """Generate TT-{year}-{pk:05d} reference. Called on booking confirmation."""
         if self.booking_reference:

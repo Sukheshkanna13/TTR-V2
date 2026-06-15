@@ -463,20 +463,28 @@ def register_page(request):
 
 @login_required(login_url=CENTRAL_LOGIN_URL)
 def folio_page(request):
+    """
+    My Stays — guest folio. Shows only real stays (confirmed + completed),
+    total nights stayed, Wayfarer rewards, and account options. Abandoned
+    attempts (pending / expired / failed / cancelled) are intentionally excluded.
+    """
     from rooms.models import Booking
-    bookings = Booking.objects.filter(user=request.user).select_related('room', 'room__property').order_by('-created_at')
-    confirmed_bookings = bookings.filter(status='confirmed')
-    total_spent = sum(b.total_price for b in bookings.filter(status__in=['confirmed', 'completed']))
-    nights_stayed = sum(b.num_nights for b in bookings.filter(status__in=['confirmed', 'completed']))
+    stays = list(
+        Booking.objects.filter(
+            user=request.user,
+            status__in=['confirmed', 'completed'],
+        ).select_related('room', 'room__property').order_by('-check_in')
+    )
+    nights_stayed = sum(b.num_nights for b in stays)
+    total_spent = sum(b.total_price for b in stays)
     profile = getattr(request.user, 'userprofile', None)
     context = {
-        'bookings': bookings[:10],
-        'total_bookings': bookings.count(),
-        'confirmed_count': confirmed_bookings.count(),
-        'total_spent': total_spent,
+        'stays': stays[:12],
+        'stays_count': len(stays),
         'nights_stayed': nights_stayed,
-        'loyalty_points': getattr(profile, 'loyalty_points', 0),
-        'loyalty_tier': getattr(profile, 'loyalty_tier', None),
+        'total_spent': total_spent,
+        'loyalty_points': getattr(profile, 'loyalty_points', 0) or 0,
+        'loyalty_tier': (getattr(profile, 'loyalty_tier', '') or 'bronze'),
     }
     return render(request, 'pages/folio.html', context)
 

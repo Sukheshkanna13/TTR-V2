@@ -1,5 +1,113 @@
-from django.test import TestCase
-from rooms.models import Room, Property
+from datetime import timedelta
+from decimal import Decimal
+
+from django.test import TestCase, Client
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from django.utils import timezone
+
+from rooms.models import Room, Property, Booking
+
+User = get_user_model()
+
+
+def _guest(email='guest@test.com'):
+    return User.objects.create_user(
+        email=email, full_name='Guest', phone='7777777777',
+        password='guestpass123', is_active=True,
+    )
+
+
+def _room():
+    prop = Property.objects.create(name='P', city='Pondy', address='x', is_active=True)
+    return Room.objects.create(
+        property=prop, name='R', city='Pondy', room_type='single',
+        price_per_night=Decimal('2000'), capacity=2, operational_status='available',
+    )
+
+
+def _hold(user, room, days_ahead=5, mins=10):
+    today = timezone.now().date()
+    ci = today + timedelta(days=days_ahead)
+    return Booking.objects.create(
+        room=room, user=user, check_in=ci, check_out=ci + timedelta(days=2),
+        guests=1, total_price=Decimal('4000'), status='pending',
+        hold_expires_at=timezone.now() + timedelta(minutes=mins),
+    )
+
+
+class ReleaseHoldModelTest(TestCase):
+    def test_release_pending_sets_expired_and_clears_expiry(self):
+        b = _hold(_guest(), _room())
+        self.assertTrue(b.release_hold('abandoned'))
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'expired')
+        self.assertIsNone(b.hold_expires_at)
+
+    def test_release_payment_failed_marks_failed(self):
+        b = _hold(_guest(), _room())
+        b.release_hold('payment_failed')
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'failed')
+
+    def test_release_is_noop_on_confirmed(self):
+        b = _hold(_guest(), _room())
+        b.status = 'confirmed'
+        b.save(update_fields=['status'])
+        self.assertFalse(b.release_hold('abandoned'))
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'confirmed')
+
+
+class ReleaseHoldEndpointTest(TestCase):
+    def setUp(self):
+        self.user = _guest()
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.room = _room()
+
+    def test_release_frees_the_room(self):
+        b = _hold(self.user, self.room)
+        res = self.client.post(reverse('bookings:release', args=[b.id]))
+        self.assertEqual(res.status_code, 200)
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'expired')
+
+    def test_release_is_idempotent(self):
+        b = _hold(self.user, self.room)
+        self.client.post(reverse('bookings:release', args=[b.id]))
+        res = self.client.post(reverse('bookings:release', args=[b.id]))
+        self.assertEqual(res.status_code, 200)
+
+    def test_cannot_release_another_users_hold(self):
+        other = _guest('other@test.com')
+        b = _hold(other, self.room)
+        res = self.client.post(reverse('bookings:release', args=[b.id]))
+        self.assertEqual(res.status_code, 404)
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'pending')
+
+
+class SameUserReclaimTest(TestCase):
+    def setUp(self):
+        self.user = _guest()
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.room = _room()
+
+    def test_same_user_rebook_reuses_own_hold_not_409(self):
+        existing = _hold(self.user, self.room)
+        payload = {
+            'room_id': str(self.room.id),
+            'check_in': existing.check_in.isoformat(),
+            'check_out': existing.check_out.isoformat(),
+            'guests': 1,
+        }
+        res = self.client.post(reverse('bookings:hold'), data=payload, content_type='application/json')
+        self.assertIn(res.status_code, (200, 201))
+        # No second pending hold should be created for the same room+dates
+        pend = Booking.objects.filter(room=self.room, user=self.user, status='pending').count()
+        self.assertEqual(pend, 1)
 
 
 class RoomOperationalStatusTest(TestCase):

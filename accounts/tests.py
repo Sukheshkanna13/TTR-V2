@@ -300,3 +300,49 @@ class LoginRecoveryCommandTests(TestCase):
     def test_dev_settings_use_testing_friendly_lock_policy(self):
         self.assertEqual(settings.LOGIN_MAX_ATTEMPTS, 20)
         self.assertEqual(settings.LOGIN_LOCK_DURATION_MINUTES, 1)
+
+
+class FolioPageTests(TestCase):
+    """My Stays (folio) shows only confirmed/completed stays — never abandoned attempts."""
+
+    def _booking(self, user, room, status, days_ahead=5):
+        from datetime import timedelta
+        from decimal import Decimal
+        ci = timezone.now().date() + timedelta(days=days_ahead)
+        from rooms.models import Booking
+        return Booking.objects.create(
+            room=room, user=user, check_in=ci, check_out=ci + timedelta(days=2),
+            guests=1, total_price=Decimal('4000'), status=status,
+        )
+
+    def setUp(self):
+        from decimal import Decimal
+        from rooms.models import Property, Room
+        self.user = make_user("folio@example.com", role="guest")
+        self.client.force_login(self.user)
+        prop = Property.objects.create(name='P', city='Pondy', address='x', is_active=True)
+        self.room = Room.objects.create(
+            property=prop, name='Heritage Suite', city='Pondy', room_type='deluxe',
+            price_per_night=Decimal('2000'), capacity=2,
+        )
+
+    def test_only_confirmed_and_completed_appear(self):
+        self._booking(self.user, self.room, 'confirmed', days_ahead=5)
+        self._booking(self.user, self.room, 'pending', days_ahead=20)
+        self._booking(self.user, self.room, 'expired', days_ahead=30)
+        self._booking(self.user, self.room, 'failed', days_ahead=40)
+        res = self.client.get(reverse('accounts:folio'))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context['stays_count'], 1)
+        for s in res.context['stays']:
+            self.assertIn(s.status, ('confirmed', 'completed'))
+
+    def test_total_nights_only_counts_stays(self):
+        self._booking(self.user, self.room, 'confirmed', days_ahead=5)   # 2 nights
+        self._booking(self.user, self.room, 'pending', days_ahead=20)    # ignored
+        res = self.client.get(reverse('accounts:folio'))
+        self.assertEqual(res.context['nights_stayed'], 2)
+
+    def test_change_password_link_present(self):
+        res = self.client.get(reverse('accounts:folio'))
+        self.assertContains(res, reverse('accounts:change-password'))
