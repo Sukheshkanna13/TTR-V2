@@ -8,7 +8,8 @@ urlpatterns = [
     path('dashboard/live/', views.dashboard_live_data, name='dashboard-live'),
     path('employees/', views.employees_list, name='employees'),
     path('employees/create/', views.employee_create, name='employee-create'),
-    path('employees/<int:user_id>/update/', views.employee_update, name='employee-update'),
+    path('employees/<uuid:user_id>/update/', views.employee_update, name='employee-update'),
+    path('employees/<uuid:user_id>/delete/', views.employee_delete, name='employee-delete'),
     path('analytics/', views.analytics, name='analytics'),
     path('tax-config/', views.tax_config, name='tax-config'),
     path('loyalty-config/', views.loyalty_config, name='loyalty-config'),
@@ -33,5 +34,5 @@ urlpatterns = [
     path('rooms/images/<uuid:image_id>/set-primary/', views.room_image_set_primary, name='room-image-set-primary'),
     # Guests
     path('guests/', views.guests_list, name='guests'),
-    path('guests/<int:user_id>/loyalty/', views.loyalty_adjust, name='loyalty-adjust'),
+    path('guests/<uuid:user_id>/loyalty/', views.loyalty_adjust, name='loyalty-adjust'),
 ]

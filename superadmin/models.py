@@ -10,6 +10,8 @@ class AuditLog(models.Model):
         ('EMPLOYEE_UPDATED', 'Employee Updated'),
         ('EMPLOYEE_LOCKED', 'Employee Locked'),
         ('EMPLOYEE_UNLOCKED', 'Employee Unlocked'),
+        ('EMPLOYEE_REVOKED', 'Employee Revoked'),
+        ('EMPLOYEE_DELETED', 'Employee Deleted'),
         ('PASSWORD_RESET', 'Password Reset'),
         ('BOOKING_CANCELLED', 'Booking Cancelled'),
         ('BOOKING_COMPLETED', 'Booking Completed'),

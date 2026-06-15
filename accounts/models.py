@@ -252,8 +252,49 @@ class UserProfile(models.Model):
     loyalty_points = models.PositiveIntegerField(default=0)
     loyalty_tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='bronze')
 
+    # Employee provenance + lifecycle
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='employees_created',
+    )
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='employees_revoked',
+    )
+
     def __str__(self):
         return f"{self.user.email} Profile ({self.role})"
+
+    @property
+    def is_revoked(self):
+        return self.revoked_at is not None
+
+    @property
+    def can_hard_delete(self):
+        """A record may be permanently deleted only if it was never used."""
+        return self.user.last_login is None
+
+    def revoke(self, by_user):
+        """Soft-revoke: disable login, strip access, keep the record for audit."""
+        self.user.is_active = False
+        self.user.save(update_fields=['is_active'])
+        self.assigned_properties.clear()
+        self.revoked_at = timezone.now()
+        self.revoked_by = by_user
+        self.save(update_fields=['revoked_at', 'revoked_by'])
+
+    def reinstate(self):
+        """Reverse a revoke: clear the revoked stamp and re-enable login."""
+        self.user.is_active = True
+        self.user.save(update_fields=['is_active'])
+        self.revoked_at = None
+        self.revoked_by = None
+        self.save(update_fields=['revoked_at', 'revoked_by'])
 
     def recalculate_tier(self):
         """Update loyalty_tier based on current loyalty_points and save."""

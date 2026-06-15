@@ -33,7 +33,7 @@
     </div>
     <button class="sa-btn sa-btn-primary" type="submit">Create</button>
   </form>
-  <div id="createResult" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:#064e3b;color:#6ee7b7;font-size:13px;"></div>
+  <div id="createError" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:#450a0a;color:#fca5a5;font-size:13px;"></div>
 </div>
 
 <!-- Employee List -->
@@ -47,6 +47,9 @@
         <th>Fin Level</th>
         <th>Properties</th>
         <th>Status</th>
+        <th>Created</th>
+        <th>Last login</th>
+        <th>Created by</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -56,8 +59,8 @@
       <td style="font-weight:600;">{{ u.full_name|default:"—" }}</td>
       <td>{{ u.email }}</td>
       <td>
-        <select class="sa-input sa-input-sm" onchange="updateFin({{ u.pk }}, this.value)"
-                style="width:60px;padding:2px 6px;">
+        <select class="sa-input sa-input-sm" onchange="updateFin('{{ u.pk }}', this.value)"
+                style="width:60px;padding:2px 6px;" {% if u.userprofile.is_revoked %}disabled{% endif %}>
           <option value="A" {% if u.userprofile.fin_level == 'A' %}selected{% endif %}>A</option>
           <option value="B" {% if u.userprofile.fin_level == 'B' %}selected{% endif %}>B</option>
           <option value="C" {% if u.userprofile.fin_level == 'C' %}selected{% endif %}>C</option>
@@ -69,36 +72,54 @@
         {% empty %}
           <span style="color:#64748b;">None</span>
         {% endfor %}
-        <button class="sa-btn sa-btn-sm" onclick="openPropsModal({{ u.pk }}, '{{ u.full_name|escapejs }}')"
+        {% if not u.userprofile.is_revoked %}
+        <button class="sa-btn sa-btn-sm" onclick="openPropsModal('{{ u.pk }}', '{{ u.full_name|escapejs }}')"
                 style="margin-left:4px;" title="Assign properties">✎</button>
+        {% endif %}
       </td>
       <td>
-        {% if u.is_active %}
+        {% if u.userprofile.is_revoked %}
+          <span class="badge badge-red">Revoked</span>
+        {% elif u.is_active %}
           <span class="badge badge-green">Active</span>
         {% else %}
-          <span class="badge badge-red">Locked</span>
+          <span class="badge badge-amber">Locked</span>
+        {% endif %}
+        {% if u.userprofile.must_change_password %}
+          <span class="badge badge-slate" title="Must change password on next login">PW pending</span>
         {% endif %}
       </td>
+      <td style="font-size:12px;color:#94a3b8;white-space:nowrap;">{{ u.date_joined|date:"d M Y" }}</td>
+      <td style="font-size:12px;color:#94a3b8;white-space:nowrap;">{{ u.last_login|date:"d M Y H:i"|default:"Never" }}</td>
+      <td style="font-size:12px;color:#94a3b8;">{{ u.userprofile.created_by.full_name|default:"—" }}</td>
       <td style="white-space:nowrap;">
-        {% if u.is_active %}
-        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="empAction({{ u.pk }}, 'lock')">Lock</button>
+        {% if u.userprofile.is_revoked %}
+          <button class="sa-btn sa-btn-sm sa-btn-success" onclick="empAction('{{ u.pk }}', 'reinstate')">Reinstate</button>
+          {% if u.last_login is None %}
+          <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="empDelete('{{ u.pk }}')">Delete</button>
+          {% endif %}
         {% else %}
-        <button class="sa-btn sa-btn-sm sa-btn-success" onclick="empAction({{ u.pk }}, 'unlock')">Unlock</button>
+          {% if u.is_active %}
+          <button class="sa-btn sa-btn-sm sa-btn-amber" onclick="empAction('{{ u.pk }}', 'lock')">Lock</button>
+          {% else %}
+          <button class="sa-btn sa-btn-sm sa-btn-success" onclick="empAction('{{ u.pk }}', 'unlock')">Unlock</button>
+          {% endif %}
+          <button class="sa-btn sa-btn-sm" onclick="empAction('{{ u.pk }}', 'reset_password')">Reset PW</button>
+          <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="empAction('{{ u.pk }}', 'revoke')">Revoke</button>
         {% endif %}
-        <button class="sa-btn sa-btn-sm" onclick="empAction({{ u.pk }}, 'reset_password')">Reset PW</button>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="6" style="color:#64748b;padding:24px 12px;">No employees found.</td></tr>
+    <tr><td colspan="9" style="color:#64748b;padding:24px 12px;">No employees found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
 
 <!-- Property Assignment Modal -->
-<div id="propsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;width:400px;max-width:90vw;">
-    <h3 style="color:#f8fafc;font-size:16px;margin-bottom:16px;">Assign Properties — <span id="modalName"></span></h3>
+<div id="propsModal" class="sa-modal-overlay">
+  <div class="sa-modal">
+    <h3 class="sa-modal-title">Assign Properties — <span id="modalName"></span></h3>
     <form id="propsForm">
       <input type="hidden" id="propsUserId">
       <div style="display:flex;flex-direction:column;gap:8px;max-height:250px;overflow-y:auto;margin-bottom:16px;">
@@ -117,10 +138,44 @@
   </div>
 </div>
 
+<!-- Credential Reveal Modal (copy once, no auto-hide) -->
+<div id="credModal" class="sa-modal-overlay">
+  <div class="sa-modal">
+    <h3 class="sa-modal-title">Temporary Password</h3>
+    <p style="color:#94a3b8;font-size:13px;margin-bottom:12px;" id="credMessage"></p>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <code id="credValue" style="flex:1;background:#0f172a;border:1px solid #334155;color:#6ee7b7;padding:10px 12px;border-radius:8px;font-size:15px;letter-spacing:.5px;user-select:all;"></code>
+      <button type="button" class="sa-btn sa-btn-primary" id="credCopyBtn" onclick="copyCred()">Copy</button>
+    </div>
+    <p style="color:#f59e0b;font-size:12px;margin-bottom:16px;">Copy it now — it will not be shown again.</p>
+    <div style="display:flex;justify-content:flex-end;">
+      <button type="button" class="sa-btn" onclick="closeCredModal()">Done</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 
-// Create employee
+// ── Credential reveal modal ───────────────────────────────────────────────
+function showCred(message, password) {
+  document.getElementById('credMessage').textContent = message || '';
+  document.getElementById('credValue').textContent = password;
+  document.getElementById('credCopyBtn').textContent = 'Copy';
+  document.getElementById('credModal').style.display = 'flex';
+}
+function copyCred() {
+  const pw = document.getElementById('credValue').textContent;
+  navigator.clipboard.writeText(pw).then(() => {
+    document.getElementById('credCopyBtn').textContent = 'Copied ✓';
+  });
+}
+function closeCredModal() {
+  document.getElementById('credModal').style.display = 'none';
+  location.reload();
+}
+
+// ── Create employee ───────────────────────────────────────────────────────
 document.getElementById('createForm').addEventListener('submit', async e => {
   e.preventDefault();
   const fd = new FormData(e.target);
@@ -128,27 +183,26 @@ document.getElementById('createForm').addEventListener('submit', async e => {
     method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
   });
   const data = await res.json();
-  const box = document.getElementById('createResult');
+  const err = document.getElementById('createError');
   if (res.ok) {
-    box.style.display = 'block';
-    box.style.background = '#064e3b';
-    box.style.color = '#6ee7b7';
-    box.textContent = `${data.message}`;
-    setTimeout(() => location.reload(), 2500);
+    err.style.display = 'none';
+    showCred('Employee created. Share this temporary password securely.', data.temp_password);
   } else {
-    box.style.display = 'block';
-    box.style.background = '#450a0a';
-    box.style.color = '#fca5a5';
-    box.textContent = data.error;
+    err.style.display = 'block';
+    err.textContent = data.error;
   }
 });
 
-// Employee actions (lock/unlock/reset_password)
+// ── Employee actions (lock/unlock/reset_password/revoke/reinstate) ────────
 async function empAction(userId, action) {
-  const msg = action === 'lock' ? 'Lock this account?' :
-              action === 'unlock' ? 'Unlock this account?' :
-              'Reset password? The new temp password will be shown.';
-  if (!confirm(msg)) return;
+  const prompts = {
+    lock: 'Lock this account? The employee will be unable to log in.',
+    unlock: 'Unlock this account?',
+    reset_password: 'Reset password? A new temporary password will be shown once.',
+    revoke: 'Revoke this employee? Their access and property assignments will be removed.',
+    reinstate: 'Reinstate this employee and re-enable login?',
+  };
+  if (!confirm(prompts[action])) return;
   const res = await fetch(`/super-admin/employees/${userId}/update/`, {
     method: 'POST',
     headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
@@ -156,18 +210,26 @@ async function empAction(userId, action) {
   });
   const data = await res.json();
   if (res.ok) {
-    if (data.temp_password) {
-      alert(`${data.message}\n\nTemporary password: ${data.temp_password}\n\nCopy this now — it won't be shown again.`);
-    } else {
-      alert(data.message);
-    }
-    location.reload();
+    if (data.temp_password) { showCred(data.message, data.temp_password); }
+    else { location.reload(); }
   } else {
     alert(data.error);
   }
 }
 
-// Update financial level
+// ── Permanent delete (never-logged-in accounts only) ──────────────────────
+async function empDelete(userId) {
+  if (!confirm('Permanently delete this account? This cannot be undone.')) return;
+  const res = await fetch(`/super-admin/employees/${userId}/delete/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) { location.reload(); }
+  else { alert(data.error); }
+}
+
+// ── Financial level ───────────────────────────────────────────────────────
 async function updateFin(userId, level) {
   const res = await fetch(`/super-admin/employees/${userId}/update/`, {
     method: 'POST',
@@ -178,7 +240,7 @@ async function updateFin(userId, level) {
   if (!res.ok) alert(data.error);
 }
 
-// Property assignment modal
+// ── Property assignment modal ─────────────────────────────────────────────
 function openPropsModal(userId, name) {
   document.getElementById('propsUserId').value = userId;
   document.getElementById('modalName').textContent = name;
@@ -208,6 +270,7 @@ document.getElementById('propsForm').addEventListener('submit', async e => {
 .sa-section-title{font-size:16px;font-weight:600;color:#f8fafc;margin-bottom:16px;}
 .sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
 .sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-input:disabled{opacity:.5;cursor:not-allowed;}
 .sa-input-sm{padding:2px 6px;font-size:12px;}
 .sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
 .sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
@@ -216,8 +279,14 @@ document.getElementById('propsForm').addEventListener('submit', async e => {
 .sa-btn-primary:hover{background:#1d4ed8;}
 .sa-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
 .sa-btn-danger:hover{background:#991b1b;}
+.sa-btn-amber{background:#78350f;border-color:#78350f;color:#fcd34d;}
+.sa-btn-amber:hover{background:#92400e;}
 .sa-btn-success{background:#064e3b;border-color:#064e3b;color:#6ee7b7;}
 .sa-btn-success:hover{background:#065f46;}
 .sa-btn-sm{padding:4px 10px;font-size:12px;}
+.badge-amber{background:#78350f;color:#fcd34d;}
+.sa-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;}
+.sa-modal{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;width:440px;max-width:90vw;}
+.sa-modal-title{color:#f8fafc;font-size:16px;margin-bottom:16px;}
 </style>
 {% endblock %}

@@ -137,7 +137,9 @@ def dashboard_live_data(request):
 def employees_list(request):
     employees = User.objects.filter(
         userprofile__role='employee'
-    ).select_related('userprofile').prefetch_related('userprofile__assigned_properties')
+    ).select_related(
+        'userprofile', 'userprofile__created_by'
+    ).prefetch_related('userprofile__assigned_properties').order_by('-date_joined')
     properties = Property.objects.filter(is_active=True)
     return render(request, 'superadmin/employees.html', {
         'employees': employees,
@@ -176,6 +178,7 @@ def employee_create(request):
     profile.role = 'employee'
     profile.fin_level = fin_level
     profile.must_change_password = True
+    profile.created_by = request.user
     profile.save()
     if property_ids:
         profile.assigned_properties.set(Property.objects.filter(id__in=property_ids))
@@ -195,6 +198,20 @@ def employee_update(request, user_id):
     employee = get_object_or_404(User, pk=user_id)
     data = json.loads(request.body)
     action = data.get('action')
+
+    if employee == request.user and action in ('lock', 'revoke'):
+        return JsonResponse({'error': 'You cannot disable your own account.'}, status=400)
+
+    if action == 'revoke':
+        employee.userprofile.revoke(request.user)
+        _log(request, 'EMPLOYEE_REVOKED', target_user=employee)
+        return JsonResponse({'message': 'Employee revoked. Access removed.'})
+
+    if action == 'reinstate':
+        employee.userprofile.reinstate()
+        _log(request, 'EMPLOYEE_UNLOCKED', target_user=employee,
+             detail='reinstated from revoked')
+        return JsonResponse({'message': 'Employee reinstated.'})
 
     if action == 'lock':
         employee.is_active = False
@@ -234,6 +251,28 @@ def employee_update(request, user_id):
         return JsonResponse({'message': 'Properties updated.'})
 
     return JsonResponse({'error': 'Unknown action.'}, status=400)
+
+
+@require_super_admin
+@require_POST
+def employee_delete(request, user_id):
+    """Permanently delete an employee — only allowed if the account was never used."""
+    employee = get_object_or_404(User, pk=user_id)
+
+    if employee == request.user:
+        return JsonResponse({'error': 'You cannot delete your own account.'}, status=400)
+
+    if not employee.userprofile.can_hard_delete:
+        return JsonResponse(
+            {'error': 'Account has activity — revoke instead of deleting.'},
+            status=400,
+        )
+
+    # Log before deletion: AuditLog.target_user is SET_NULL, so capture identity now.
+    _log(request, 'EMPLOYEE_DELETED', target_user=employee,
+         detail=f"email={employee.email}, name={employee.full_name}")
+    employee.delete()
+    return JsonResponse({'message': 'Employee permanently deleted.'})
 
 
 # ── Analytics ──────────────────────────────────────────────────────────────────
