@@ -3378,3 +3378,5 @@ img {
   justify-content: center;
   flex-wrap: wrap;
 }
+/* Utility: hidden (used by JS show/hide across pages) */
+.hidden { display: none !important; }
