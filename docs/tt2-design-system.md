@@ -24,10 +24,15 @@ templates reference these tokens, the whole site is re-themed at once. Inline px
 across customer pages (`pages/`, `accounts/`, `bookings/`) were squared too; only
 intentional `border-radius: 50%` circles remain.
 
-**⏳ Phase 2+ — Net-new v2 components (not yet built):** an audit of `style.css` vs
-templates found the existing customer pages already define/use all their `tt-*` classes
-(the Phase 1 token change re-themed them cleanly). The genuinely missing pieces are the
-v2 *additions*, none of which exist in `style.css` or templates yet:
+**✅ Phase 2 — Full component CSS ported (2026-06-16):** the complete component library
+from §5–§9 is now in `static/css/style.css` (appended after the base layer, last-wins so
+spec values are authoritative). Every component the templates use is upgraded to exact v2
+values, and all ~90 previously-missing classes (below) are now defined and available.
+Remaining work is *markup* — wiring the net-new components into templates (e.g. the mobile
+Marriott hero needs `.tt-hero-mobile-*` / `.tt-msb` markup in `index.html`; the star widget
+needs `RoomSerializer` + the JS card builder). CSS is ready for all of it.
+
+**Reference — net-new v2 components (CSS now present; markup pending):**
 > - `.tt-star*` — split-fill star rating (§9.10a)
 > - `.tt-slider*` — property image carousel (§9.10b / §9.11)
 > - `.tt-msb*` — mobile search bar (§9.7)
