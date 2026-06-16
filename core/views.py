@@ -80,6 +80,33 @@ def cause_page(request):
     return render(request, "pages/cause.html")
 
 
+def retreat_page(request):
+    """Nature Retreat — showcase page advertising the Near Auroville property."""
+    highlights = [
+        {'icon': 'wifi', 'title': 'High-speed Wi-Fi', 'desc': 'Stay connected throughout the property'},
+        {'icon': 'sun', 'title': 'One Acre Garden', 'desc': 'Lush greenery and peaceful open spaces'},
+        {'icon': 'shield', 'title': 'Swimming Pool', 'desc': 'Refreshing pool for guests of all ages'},
+        {'icon': 'bed', 'title': '12 Rooms', 'desc': 'Comfortable rooms with attached baths'},
+        {'icon': 'lock', 'title': 'Free Parking', 'desc': 'Secure on-site parking available'},
+        {'icon': 'gift', 'title': 'Near Matrimandir', 'desc': '5-7 minutes from the iconic Matrimandir'},
+    ]
+    experiences = [
+        {'title': 'Experience Local Artisans',
+         'desc': 'Discover the charm of local craftsmanship through simple demonstrations and hands-on workshops. Meet local artisans, explore handmade jewellery, weaving and jute crafts.',
+         'img': 'images/Natures-retreat/1.jpeg'},
+        {'title': 'Garden Fun for Kids',
+         'desc': 'Let the little hands explore nature through simple gardening and outdoor activities. A fun and joyful way for children to play, learn and enjoy the beauty of nature.',
+         'img': 'images/Natures-retreat/2.jpeg'},
+        {'title': 'Poolside Evenings & Summer Fun',
+         'desc': 'Relax, unwind and enjoy refreshing moments by the pool. During special weekends and group stays — cheerful poolside gatherings and summer vibes.',
+         'img': 'images/Natures-retreat/3.jpeg'},
+    ]
+    gallery = [f"images/Auroville/{n}.jpeg" for n in range(1, 9)]
+    return render(request, "pages/retreat.html", {
+        'highlights': highlights, 'experiences': experiences, 'gallery': gallery,
+    })
+
+
 def explore_page(request):
     """Render the Explore page with Attraction model data and category filter."""
     from .models import Attraction
