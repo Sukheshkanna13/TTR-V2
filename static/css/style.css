@@ -3,7 +3,7 @@
    Adapted for Django server-side templates
    ─────────────────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* ── Design Tokens ── */
 :root {
@@ -19,15 +19,16 @@
   --text-faint:  #9aa1ad;
   --line:        #e6e7e3;
   --line-strong: #c9cbc4;
-  --accent:      #4a4ce0;
-  --accent-deep: #2d2fa6;
-  --accent-soft: #eeeefb;
+  --accent:      #5161CB;
+  --accent-deep: #3f4da3;
+  --accent-soft: #eef0fa;
   --whatsapp:    #25d366;
   --danger:      #b91c1c;
-  --pill:        4px;
-  --r-sm:        4px;
-  --r-md:        6px;
-  --r-lg:        10px;
+  /* Border radius — FULLY SQUARED OFF (all 0). Only deliberate circles use 50%. */
+  --pill:        0px;
+  --r-sm:        0px;
+  --r-md:        0px;
+  --r-lg:        0px;
   --ease:        cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --shadow-sm:   0 1px 2px rgba(10,22,40,.04);
@@ -66,7 +67,7 @@ img { display: block; max-width: 100%; }
 .tt-h3 { font-weight: 600; letter-spacing: -.01em; font-size: 22px; color: var(--ink); }
 .tt-eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-soft); font-weight: 500; }
 .tt-sub { font-size: clamp(17px,1.4vw,21px); color: var(--text-soft); font-weight: 400; line-height: 1.55; }
-.tt-italic-soft { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: -.01em; }
+.tt-italic-soft { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif; font-weight: 500; font-size: .92em; letter-spacing: -.020em; }
 .tt-muted { color: var(--text-muted); }
 .tt-soft  { color: var(--text-soft);  }
 
@@ -287,7 +288,7 @@ img { display: block; max-width: 100%; }
 .tt-tab { padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; font-size: 14px; color: var(--text-muted); transition: all .2s; margin-bottom: -1px; display: flex; align-items: center; gap: 8px; }
 .tt-tab:hover { color: var(--ink); }
 .tt-tab.active { border-bottom-color: var(--ink); color: var(--ink); }
-.tt-tab-count { background: var(--bg-soft); padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.tt-tab-count { background: var(--bg-soft); padding: 2px 8px; border-radius: 0; font-size: 12px; font-weight: 600; }
 .tt-tab.active .tt-tab-count { background: var(--accent-soft); color: var(--accent-deep); }
 
 /* ── Modal ── */
@@ -435,7 +436,7 @@ img { display: block; max-width: 100%; }
   width: 22px;
   height: 2px;
   background: var(--ink);
-  border-radius: 2px;
+  border-radius: 0;
   transition: transform .2s, opacity .2s;
 }
 

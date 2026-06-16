@@ -16,6 +16,11 @@ from django.views.generic import RedirectView
 from accounts import views as accounts_views
 from rooms import views as rooms_views
 
+# Customise the standard Django admin site header/title
+admin.site.site_header = "Temples & Towns"
+admin.site.site_title = "T&T Admin"
+admin.site.index_title = "Management Dashboard"
+
 urlpatterns = [
     # Core pages
     path("", include("core.urls")),

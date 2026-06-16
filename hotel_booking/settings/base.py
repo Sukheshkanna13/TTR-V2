@@ -56,16 +56,6 @@ INSTALLED_APPS = [
 SITE_ID = 1
 
 
-# =============================================================================
-# ADMIN CUSTOMISATION
-# =============================================================================
-
-# Customise the standard Django admin site header/title
-from django.contrib import admin as _admin  # noqa: E402 — imported here to avoid circular issues at module level
-_admin.AdminSite.site_header  = "Temples & Towns"
-_admin.AdminSite.site_title   = "T&T Admin"
-_admin.AdminSite.index_title  = "Management Dashboard"
-
 
 # =============================================================================
 # MIDDLEWARE

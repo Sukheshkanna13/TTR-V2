@@ -65,9 +65,9 @@
               <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
                 <span class="tt-card-name" style="margin:0;">{{ booking.room.name }}</span>
                 {% if booking.status == 'completed' %}
-                <span style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.04em;background:#dbeafe;color:#1d4ed8;text-transform:uppercase;">Completed</span>
+                <span style="display:inline-block;padding:3px 10px;border-radius:0;font-size:11px;font-weight:600;letter-spacing:.04em;background:#dbeafe;color:#1d4ed8;text-transform:uppercase;">Completed</span>
                 {% else %}
-                <span style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.04em;background:#dcfce7;color:#166534;text-transform:uppercase;">Confirmed</span>
+                <span style="display:inline-block;padding:3px 10px;border-radius:0;font-size:11px;font-weight:600;letter-spacing:.04em;background:#dcfce7;color:#166534;text-transform:uppercase;">Confirmed</span>
                 {% endif %}
               </div>
 
@@ -153,8 +153,8 @@
               <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px;">
                 <span>{{ loyalty_points }} pts</span><span>1500 pts (Gold)</span>
               </div>
-              <div style="height:6px;background:var(--line);border-radius:100px;overflow:hidden;">
-                <div style="height:100%;width:{% widthratio loyalty_points 1500 100 %}%;max-width:100%;background:#64748b;border-radius:100px;transition:width .4s;"></div>
+              <div style="height:6px;background:var(--line);border-radius:0;overflow:hidden;">
+                <div style="height:100%;width:{% widthratio loyalty_points 1500 100 %}%;max-width:100%;background:#64748b;border-radius:0;transition:width .4s;"></div>
               </div>
             </div>
 
@@ -173,8 +173,8 @@
               <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px;">
                 <span>{{ loyalty_points }} pts</span><span>500 pts (Silver)</span>
               </div>
-              <div style="height:6px;background:var(--line);border-radius:100px;overflow:hidden;">
-                <div style="height:100%;width:{% widthratio loyalty_points 500 100 %}%;max-width:100%;background:#b45309;border-radius:100px;transition:width .4s;"></div>
+              <div style="height:6px;background:var(--line);border-radius:0;overflow:hidden;">
+                <div style="height:100%;width:{% widthratio loyalty_points 500 100 %}%;max-width:100%;background:#b45309;border-radius:0;transition:width .4s;"></div>
               </div>
             </div>
           {% endif %}
