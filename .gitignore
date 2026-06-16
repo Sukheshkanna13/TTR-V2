@@ -38,3 +38,4 @@ media/
 celerybeat-schedule
 celerybeat.pid
 .gstack/
+src-reference/
