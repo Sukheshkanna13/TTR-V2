@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Checkout — Temples &amp; Towns{% endblock %}
+{% block title %}Checkout — Temple and Towns Resorts{% endblock %}
 
 {% block content %}
 <div style="min-height:60vh;padding:48px 20px;background:var(--bg-soft);">
@@ -220,7 +220,7 @@
         key:         orderData.order.key_id,
         amount:      orderData.order.amount,
         currency:    orderData.order.currency,
-        name:        'Temples & Towns',
+        name:        'Temple and Towns Resorts',
         description: `Booking: ${orderData.booking.room_name}`,
         order_id:    orderData.order.order_id,
         handler: async (response) => {

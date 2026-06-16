@@ -3380,3 +3380,9 @@ img {
 }
 /* Utility: hidden (used by JS show/hide across pages) */
 .hidden { display: none !important; }
+
+/* Utilities restored for auth/checkout/search states */
+.tt-loading { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.tt-spinner { width: 32px; height: 32px; border: 2px solid var(--line-strong); border-top-color: var(--ink);
+  border-radius: 50%; animation: tt-spin .7s linear infinite; margin: 0 auto 16px; }
+.tt-alert { padding: 12px 16px; font-size: 14px; border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; }
