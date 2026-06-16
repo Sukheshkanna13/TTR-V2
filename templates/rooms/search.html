@@ -5,6 +5,15 @@
 {% block content %}
 <div class="tt-page">
   {% include "components/_back_nav.html" with back_url=back_url back_label=back_label %}
+
+  <!-- Stays header (approved search.jsx style) -->
+  <div style="margin:8px 0 32px;">
+    <div class="tt-eyebrow">Stays</div>
+    <h1 class="tt-h1" style="margin-top:12px;margin-bottom:0;">Find your stay in
+      <span class="tt-italic-soft" style="color:var(--accent);" id="staysCityLabel">Pondicherry &amp; Auroville</span>
+    </h1>
+  </div>
+
   <div class="tt-results-layout">
 
     <!-- Filter sidebar -->
@@ -157,6 +166,19 @@
     return `${ROOM_DETAIL_URL}?id=${roomId}&check_in=${searchParams.check_in}&check_out=${searchParams.check_out}&guests=${searchParams.guests}`;
   }
 
+  // Split-fill star rating (approved StarRating) — 5 muted stars + clipped ink overlay
+  function starHTML(rating) {
+    if (rating === null || rating === undefined) return '';
+    const pct = (Number(rating) / 5) * 100;
+    const star = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9 6.7 19.7l1.1-5.9-4.3-4.1 5.9-.8L12 3.5Z"/></svg>';
+    const row = star.repeat(5);
+    return `<span style="position:relative;display:inline-flex;align-items:center;color:var(--line-strong);gap:2px;">
+      <span style="display:flex;gap:2px;">${row}</span>
+      <span style="position:absolute;top:0;left:0;display:flex;gap:2px;overflow:hidden;width:${pct}%;color:var(--ink);">${row}</span>
+      <span style="color:var(--ink);font-weight:600;margin-left:6px;font-size:13px;">${Number(rating).toFixed(2)}</span>
+    </span>`;
+  }
+
   function getRoomImage(room) {
     const map = {
       'single':  'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80',
@@ -260,44 +282,38 @@
           ? Number(room.dynamic_total_price)
           : Number(room.price_per_night) * numNights;
 
+        const imgSrc = room.primary_image || getRoomImage(room);
         const card = document.createElement('div');
-        card.className = 'tt-card tt-room-card';
-        card.style.cursor = 'pointer';
+        card.className = 'tt-card';
+        card.style.cssText = 'display:flex;flex-direction:row;align-items:stretch;overflow:hidden;cursor:pointer;';
         card.onclick = (e) => {
-          if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
+          if (e.target.closest('button') || e.target.closest('a')) return;
           window.location.href = detailUrl;
         };
         card.innerHTML = `
-          <div class="tt-room-card-img" style="position:relative;overflow:hidden;">
-            <img src="${getRoomImage(room)}" alt="${room.name}"
-                 style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-md) 0 0 var(--r-md);"
+          <div style="flex:0 0 320px;position:relative;overflow:hidden;">
+            <img src="${imgSrc}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;"
                  onerror="this.style.background='var(--bg-soft)'">
-            <div style="position:absolute;top:10px;left:10px;">
-              <span class="tt-tag" style="font-size:11px;padding:4px 10px;">${typeLabel}</span>
-            </div>
+            <div class="tt-card-tags"><span class="tt-tag">${typeLabel}</span></div>
           </div>
-          <div class="tt-room-card-info">
+          <div style="flex:1;padding:24px 32px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;">
             <div>
-              <div class="tt-card-name">${room.name}</div>
-              <div class="tt-card-area" style="margin-top:4px;">
-                ${typeLabel} &middot; Max ${room.capacity} guests &middot; ${room.city}
-              </div>
+              <div class="tt-eyebrow" style="font-size:11px;">${room.city} &middot; Max ${room.capacity} guests</div>
+              <h3 class="tt-h3" style="margin-top:8px;margin-bottom:8px;">${room.name}</h3>
+              <div style="margin-bottom:12px;">${starHTML(room.property_rating)}</div>
+              <p style="color:var(--text-soft);margin:0;font-size:15px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                ${room.description || 'Comfortable room with premium amenities.'}
+              </p>
+              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">${amenityChips}${extraChips}</div>
             </div>
-            <p class="tt-card-blurb" style="margin:0;">
-              ${room.description ? room.description.substring(0, 130) + (room.description.length > 130 ? '…' : '') : 'Comfortable room with premium amenities.'}
-            </p>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${amenityChips}${extraChips}</div>
-          </div>
-          <div class="tt-room-card-price">
-            <div>
-              <div class="tt-eyebrow" style="margin-bottom:4px;">From</div>
-              <div class="tt-card-price">₹${Number(room.price_per_night).toLocaleString('en-IN')}</div>
-              <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">per night</div>
-              <div style="font-size:12px;color:var(--text-soft);margin-top:4px;">
-                ${numNights} night${numNights > 1 ? 's' : ''} · Total ₹${totalPrice.toLocaleString('en-IN')}
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid var(--line);gap:16px;">
+              <div>
+                <div class="tt-muted" style="font-size:13px;">${numNights} night${numNights > 1 ? 's' : ''} &middot; total</div>
+                <div class="tt-card-price" style="font-size:20px;">₹${totalPrice.toLocaleString('en-IN')}</div>
+                <div style="font-size:12px;color:var(--text-muted);">₹${Number(room.price_per_night).toLocaleString('en-IN')} / night</div>
               </div>
+              <a href="${detailUrl}" class="tt-btn tt-btn-primary tt-btn-sm">Book now &rarr;</a>
             </div>
-            <a href="${detailUrl}" class="tt-btn tt-btn-primary tt-btn-sm">View details</a>
           </div>`;
         resultsDiv.appendChild(card);
       });

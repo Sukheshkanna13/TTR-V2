@@ -36,6 +36,8 @@ class RoomSerializer(serializers.ModelSerializer):
     amenities_list = serializers.ReadOnlyField()
     images = RoomImageSerializer(many=True, read_only=True)
     primary_image = serializers.SerializerMethodField()
+    property_rating = serializers.SerializerMethodField()
+    property_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Room
@@ -52,7 +54,16 @@ class RoomSerializer(serializers.ModelSerializer):
             "images",
             "primary_image",
             "dynamic_total_price",
+            "property_rating",
+            "property_name",
         ]
+
+    def get_property_rating(self, obj):
+        rating = getattr(obj.property, "rating", None)
+        return float(rating) if rating is not None else None
+
+    def get_property_name(self, obj):
+        return getattr(obj.property, "name", "")
 
     dynamic_total_price = serializers.SerializerMethodField()
 
