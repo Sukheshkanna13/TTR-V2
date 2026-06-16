@@ -133,6 +133,11 @@ class Room(models.Model):
         db_index=True,
         help_text="Current operational state of the room.",
     )
+    is_featured = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Show this room in the Featured Stays carousel on the home page.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
