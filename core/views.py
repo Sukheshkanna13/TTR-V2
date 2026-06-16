@@ -7,7 +7,9 @@ from django.shortcuts import render
 
 
 def home_page(request):
-    """Render the landing page — passes DB-driven city list for the search select."""
+    """Render the landing page — search select is DB-driven; showcase content
+    (featured cards, moments, journeys, tiers) mirrors the approved design.
+    Booking links route into the Django flow (search/property), not external OTAs."""
     from rooms.models import Property
     cities = list(
         Property.objects.filter(is_active=True)
@@ -15,7 +17,40 @@ def home_page(request):
         .distinct()
         .order_by('city')
     )
-    return render(request, "pages/index.html", {'cities': cities})
+
+    def imgs(folder, nums):
+        return [f"images/{folder}/{n}.jpeg" for n in nums]
+
+    featured = [
+        {'name': 'White Town 1BHK — 1st Floor', 'area': 'White Town · 100m from beach',
+         'area_short': 'White Town', 'rating': '4.93', 'images': imgs('1F-1BHK', [1, 2, 3, 4, 5])},
+        {'name': 'White Town 1BHK — 2nd Floor', 'area': 'White Town · 100m from beach',
+         'area_short': 'White Town', 'rating': '4.86', 'images': imgs('2F-1BHK', [1, 2, 3, 4, 5])},
+        {'name': 'Nature Retreat', 'area': 'Near Auroville · 1-acre garden & pool',
+         'area_short': 'Near Auroville', 'rating': '4.90', 'images': imgs('Auroville', [1, 2, 3, 4, 5])},
+    ]
+    moments = [
+        {'img': 'images/pottery.png', 'cap': 'Pottery, Near Auroville'},
+        {'img': 'images/temple-courtyard.png', 'cap': 'Sandalwood courtyards'},
+        {'img': 'images/sea-evening.png', 'cap': 'Promenade, dusk'},
+        {'img': 'images/street-food.png', 'cap': 'White Town evenings'},
+        {'img': 'images/morning-yoga.png', 'cap': 'Yoga Near Auroville'},
+        {'img': 'images/banyan-tree.png', 'cap': 'Nature walks'},
+    ]
+    journeys = [
+        {'img': 'images/nature.png', 'cat': 'Retreat', 'title': 'Mangroove', 'loc': 'Pondicherry'},
+        {'img': 'images/coastal.png', 'cat': 'Heritage', 'title': 'Coastline', 'loc': 'White Town'},
+        {'img': 'images/temple.png', 'cat': 'Culture', 'title': 'Culture', 'loc': 'Near Auroville'},
+    ]
+    tiers = [
+        {'tier': 'Bronze', 'range': '0 – 499 pts', 'perks': 'Base rate'},
+        {'tier': 'Silver', 'range': '500 – 1999 pts', 'perks': '5% off'},
+        {'tier': 'Gold', 'range': '2000+ pts', 'perks': '12% off'},
+    ]
+    return render(request, "pages/index.html", {
+        'cities': cities, 'featured': featured, 'moments': moments,
+        'journeys': journeys, 'tiers': tiers,
+    })
 
 
 def experiences_page(request):

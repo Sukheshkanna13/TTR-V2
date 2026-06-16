@@ -1,316 +1,268 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Temples & Towns — Curated Stays in South India{% endblock %}
+{% block title %}Temple and Towns Resorts — Stays in Pondicherry &amp; Near Auroville{% endblock %}
 
 {% block content %}
-<div class="tt-page">
 
-  <!-- Hero -->
-  <section class="tt-section-hero">
-    <div class="tt-hero-grid">
-      <!-- Left -->
-      <div>
-        <div class="tt-eyebrow" style="margin-bottom:20px;">FEATURED STAYS</div>
-        <h1 class="tt-h1" style="margin:0 0 24px;">
-          Explore stays that feel <em class="tt-italic-soft">modern,</em><br>
-          calm, and unmistakably Indian.
-        </h1>
-        <p class="tt-sub" style="max-width:480px;margin:0 0 36px;">
-          Inspired by the spirit of Temple and Towns — now as resorts. Clean design, smooth booking,
-          and a platform built to scale.
-        </p>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;">
-          <a href="{% url 'core:cause' %}" class="tt-btn tt-btn-outline">Travel for a Cause</a>
-          <a href="{% url 'rooms:search-page' %}" class="tt-btn tt-btn-primary">Find a stay &rarr;</a>
-        </div>
-      </div>
-      <!-- Right -->
-      <div style="position:relative;">
-        <div style="border-radius:var(--r-lg);overflow:hidden;position:relative;">
-          <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80"
-               alt="Featured stay"
-               style="width:100%;height:460px;object-fit:cover;display:block;">
-          <!-- Overlaid labels -->
-          <div style="position:absolute;bottom:20px;left:20px;display:flex;flex-direction:column;gap:8px;">
-            <span style="background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:500;padding:5px 12px;border-radius:0;backdrop-filter:blur(4px);">Temple stays &middot; Sacred circuits</span>
-            <span style="background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:500;padding:5px 12px;border-radius:0;backdrop-filter:blur(4px);align-self:flex-start;">Town escapes &middot; Slow travel</span>
-          </div>
-        </div>
-      </div>
+<!-- ════════════ HERO ════════════ -->
+<section class="tt-hero-full" style="position:relative;min-height:88vh;display:flex;align-items:flex-end;overflow:hidden;">
+  <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full"
+       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;">
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,22,40,.18) 0%,rgba(10,22,40,.05) 40%,rgba(10,22,40,.55) 100%);z-index:1;"></div>
+
+  <div class="tt-page" style="position:relative;z-index:2;width:100%;padding-bottom:56px;">
+    <div style="max-width:760px;">
+      <h1 class="tt-display" style="color:#fff;margin:0 0 28px;">
+        Explore stays that feel <span class="tt-italic-soft">modern,</span><br>
+        calm, and unmistakably Indian.
+      </h1>
     </div>
-  </section>
 
-  <!-- Search / date bar -->
-  <section style="background:var(--bg-soft);border-radius:var(--r-md);padding:28px 32px;margin-bottom:0;">
-    <form id="searchForm" onsubmit="handleSearch(event)">
-      <div class="tt-search-form-row">
-        <div style="flex:1;min-width:140px;">
-          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">CHECK-IN</div>
-          <input type="date" id="check_in" required
-                 style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:14px;color:var(--ink);background:#fff;box-sizing:border-box;">
-        </div>
-        <div style="flex:1;min-width:140px;">
-          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">CHECK-OUT</div>
-          <input type="date" id="check_out" required
-                 style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:14px;color:var(--ink);background:#fff;box-sizing:border-box;">
-        </div>
-        <div style="flex:1;min-width:140px;">
-          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">DESTINATION</div>
-          <select id="city" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:14px;color:var(--ink);background:#fff;box-sizing:border-box;">
-            <option value="">All locations</option>
-            {% for city in cities %}<option value="{{ city }}">{{ city }}</option>{% endfor %}
-          </select>
-        </div>
-        <div style="flex:0 0 130px;min-width:110px;">
-          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">GUESTS</div>
-          <div style="display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:#fff;">
-            <button type="button" onclick="changeGuests(-1)" style="padding:10px 13px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink);line-height:1;">&#8722;</button>
-            <input type="number" id="guests" min="1" max="10" value="2" readonly
-                   style="width:28px;text-align:center;border:none;font-size:14px;color:var(--ink);background:transparent;padding:0;-moz-appearance:textfield;">
-            <button type="button" onclick="changeGuests(1)" style="padding:10px 13px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink);line-height:1;">&#43;</button>
-          </div>
-        </div>
-        <button type="submit" class="tt-btn tt-btn-primary" style="flex-shrink:0;padding:11px 28px;">
-          Search stays
-        </button>
+    <!-- Working search form (hero) -->
+    <form id="searchForm" onsubmit="handleSearch(event)"
+          style="background:#fff;display:flex;flex-wrap:wrap;align-items:flex-end;gap:0;max-width:920px;box-shadow:var(--shadow-lg);">
+      <div style="flex:1.4;min-width:180px;padding:16px 20px;border-right:1px solid var(--line);">
+        <label class="tt-eyebrow" style="display:block;margin-bottom:6px;">Where to</label>
+        <select id="city" style="width:100%;border:none;font-size:15px;color:var(--ink);background:#fff;font-weight:500;outline:none;">
+          <option value="">All locations</option>
+          {% for city in cities %}<option value="{{ city }}">{{ city }}</option>{% endfor %}
+        </select>
       </div>
-      <div id="searchError" style="display:none;margin-top:10px;font-size:13px;color:var(--danger);"></div>
+      <div style="flex:1;min-width:150px;padding:16px 20px;border-right:1px solid var(--line);">
+        <label class="tt-eyebrow" style="display:block;margin-bottom:6px;">Check in</label>
+        <input type="date" id="check_in" required style="width:100%;border:none;font-size:15px;color:var(--ink);outline:none;">
+      </div>
+      <div style="flex:1;min-width:150px;padding:16px 20px;border-right:1px solid var(--line);">
+        <label class="tt-eyebrow" style="display:block;margin-bottom:6px;">Check out</label>
+        <input type="date" id="check_out" required style="width:100%;border:none;font-size:15px;color:var(--ink);outline:none;">
+      </div>
+      <div style="min-width:120px;padding:16px 20px;border-right:1px solid var(--line);">
+        <label class="tt-eyebrow" style="display:block;margin-bottom:6px;">Guests</label>
+        <input type="number" id="guests" min="1" max="10" value="2"
+               style="width:64px;border:none;font-size:15px;color:var(--ink);outline:none;">
+      </div>
+      <button type="submit" class="tt-btn tt-btn-primary tt-btn-lg" style="margin:0;align-self:stretch;border-radius:0;">
+        Search stays
+      </button>
     </form>
-  </section>
+  </div>
+</section>
 
-  <!-- Photo grid -->
-  <section class="tt-section-sm">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+<!-- ════════════ FEATURED STAYS (carousel cards) ════════════ -->
+<section class="tt-section">
+  <div class="tt-page">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:40px;flex-wrap:wrap;gap:16px;">
       <div>
-        <div class="tt-eyebrow" style="margin-bottom:10px;">Moments from our stays</div>
-        <p class="tt-muted" style="margin:0;max-width:480px;">
-          Temple towns, coastlines, and community — real photography from our journeys.
+        <div class="tt-eyebrow">Featured stays</div>
+        <h2 class="tt-h2" style="margin-top:14px;margin-bottom:0;">Hand-picked, this season.</h2>
+      </div>
+      <a href="{% url 'rooms:search-page' %}" class="tt-btn-link">See all stays &rarr;</a>
+    </div>
+
+    <div class="tt-grid-3">
+      {% for c in featured %}
+      <div class="tt-card" onclick="location.href='{% url 'rooms:search-page' %}'">
+        <div class="tt-card-media home-carousel" data-idx="0">
+          <div class="tt-slider-track">
+            {% for img in c.images %}
+            <img src="{% static img %}" alt="{{ c.name }}" class="tt-slider-img" loading="lazy" draggable="false">
+            {% endfor %}
+          </div>
+          <button type="button" class="tt-slider-btn prev" aria-label="Previous" onclick="event.stopPropagation();carPrev(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+          </button>
+          <button type="button" class="tt-slider-btn next" aria-label="Next" onclick="event.stopPropagation();carNext(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <div class="tt-slider-dots">
+            {% for img in c.images %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endfor %}
+          </div>
+          <div class="tt-card-tags">
+            <span class="tt-tag">{{ c.area_short }}</span>
+            <span class="tt-tag tt-tag-dark">&#9733; {{ c.rating }}</span>
+          </div>
+        </div>
+        <div class="tt-card-body">
+          <div class="tt-card-row" style="align-items:center;">
+            <span class="tt-card-name">{{ c.name }}</span>
+            <button type="button" class="tt-btn-card-cta" onclick="event.stopPropagation();location.href='{% url 'rooms:search-page' %}'">Book now</button>
+          </div>
+          <div class="tt-card-area">{{ c.area }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ MOMENTS CAROUSEL ════════════ -->
+<section class="tt-section" style="overflow:hidden;padding-top:40px;">
+  <div class="tt-page">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:40px;gap:24px;flex-wrap:wrap;">
+      <div style="max-width:620px;">
+        <div class="tt-eyebrow">AI Imagined</div>
+        <h2 class="tt-h2" style="margin-top:14px;">Moments from our vacation.</h2>
+      </div>
+      <a href="{% url 'rooms:search-page' %}" class="tt-btn-link">See all stays &rarr;</a>
+    </div>
+  </div>
+  <div class="tt-moments-carousel-container" id="momentsCarousel" style="cursor:grab;">
+    <div class="tt-moments-carousel-track-js" id="momentsTrack">
+      {% for m in moments %}
+      <div class="tt-moments-carousel-item">
+        <img src="{% static m.img %}" alt="{{ m.cap }}" draggable="false" style="width:100%;height:100%;object-fit:cover;display:block;">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.45) 100%);z-index:1;"></div>
+        <span class="tt-moment-cap">{{ m.cap }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ DARK JOURNEYS ════════════ -->
+<section class="tt-section-sm">
+  <div class="tt-page">
+    <div class="tt-dark-section">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:40px;gap:24px;flex-wrap:wrap;">
+        <div>
+          <div class="tt-eyebrow">Featured journeys</div>
+          <h2 class="tt-h2" style="margin-top:14px;margin-bottom:14px;">Hand-picked, this season.</h2>
+          <p style="margin:0;font-size:16px;line-height:1.55;">Coming soon..</p>
+        </div>
+        <a href="{% url 'rooms:search-page' %}" class="tt-btn-link">Explore stays &rarr;</a>
+      </div>
+      <div class="tt-journey-grid">
+        {% for j in journeys %}
+        <div class="tt-journey">
+          <img src="{% static j.img %}" alt="{{ j.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.7) 100%);z-index:1;"></div>
+          <span class="tt-journey-cat">{{ j.cat }}</span>
+          <div class="tt-journey-body">
+            <div class="tt-journey-title">{{ j.title }}</div>
+            <div class="tt-journey-loc">{{ j.loc }}</div>
+            <div class="tt-journey-link">Coming soon &rarr;</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ HOW IT WORKS ════════════ -->
+<section class="tt-section" style="padding-top:0;">
+  <div class="tt-page">
+    <div style="border-top:1px solid var(--line);padding-top:80px;text-align:center;">
+      <div style="max-width:640px;margin:0 auto;">
+        <div class="tt-eyebrow">How booking works</div>
+        <h2 class="tt-h2" style="margin-top:14px;">Explore, Request, Stay.</h2>
+        <p style="color:var(--text-soft);margin-top:16px;font-size:17px;line-height:1.6;">
+          Our curated stays offer a personalised booking experience. Connect with us directly to ensure your stay is perfectly tailored to your needs.
         </p>
       </div>
-      <a href="{% url 'core:cause' %}" class="tt-nav-link" style="font-size:14px;font-weight:500;">CSR &amp; impact &rarr;</a>
     </div>
-    <div class="tt-grid-3" style="gap:16px;">
-      <img src="https://images.unsplash.com/photo-1564507592333-c60657eea523?w=500&q=80"
-           alt="Indian temple"
-           style="width:100%;height:220px;object-fit:cover;border-radius:var(--r-md);">
-      <img src="https://images.unsplash.com/photo-1598977763782-e3aea6b0b4b1?w=500&q=80"
-           alt="Coastal view"
-           style="width:100%;height:220px;object-fit:cover;border-radius:var(--r-md);">
-      <img src="https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&q=80"
-           alt="Pondicherry"
-           style="width:100%;height:220px;object-fit:cover;border-radius:var(--r-md);">
-    </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Featured Stays -->
-  <section class="tt-section-sm">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px;flex-wrap:wrap;gap:12px;">
+<!-- ════════════ WAYFARER REWARDS ════════════ -->
+<section class="tt-section-sm" style="padding-top:0;">
+  <div class="tt-page">
+    <div style="background:var(--bg-soft);color:var(--ink);padding:64px 56px;display:grid;grid-template-columns:1.4fr 1fr;gap:56px;align-items:center;border:1px solid var(--line);">
       <div>
-        <div class="tt-eyebrow" style="margin-bottom:10px;">FEATURED STAYS</div>
-        <h2 class="tt-h2" style="margin:0;">Hand-picked, <em class="tt-italic-soft">this season.</em></h2>
-      </div>
-      <a href="{% url 'rooms:search-page' %}" class="tt-nav-link" style="font-size:14px;font-weight:500;">See all stays &rarr;</a>
-    </div>
-    <div class="tt-grid-3" style="gap:24px;">
-
-      <!-- Card 1 -->
-      <div class="tt-card" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);">
-        <div style="position:relative;">
-          <img src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=600&q=80"
-               alt="Maison Auroville"
-               style="width:100%;height:200px;object-fit:cover;display:block;">
-          <span style="position:absolute;top:12px;left:12px;background:rgba(10,22,40,.75);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:0;">Pondicherry</span>
-          <span style="position:absolute;top:12px;right:12px;background:rgba(10,22,40,.75);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:0;">&#9733; 4.8</span>
-        </div>
-        <div style="padding:20px;">
-          <div class="tt-card-name" style="margin-bottom:4px;">Maison Auroville</div>
-          <div class="tt-card-area">White Town &middot; Rue Suffren</div>
-          <p style="font-size:13px;color:var(--text-soft);line-height:1.6;margin:12px 0;">A restored colonial villa with shaded courtyards and a quiet pool.</p>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
-            <span class="tt-card-price">&#8377;7,400 / night</span>
-            <a href="{% url 'rooms:search-page' %}" class="tt-btn tt-btn-sm tt-btn-primary">Book now &rarr;</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="tt-card" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);">
-        <div style="position:relative;">
-          <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80"
-               alt="The Promenade House"
-               style="width:100%;height:200px;object-fit:cover;display:block;">
-          <span style="position:absolute;top:12px;left:12px;background:rgba(10,22,40,.75);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:0;">Pondicherry</span>
-          <span style="position:absolute;top:12px;right:12px;background:rgba(10,22,40,.75);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:0;">&#9733; 4.7</span>
-        </div>
-        <div style="padding:20px;">
-          <div class="tt-card-name" style="margin-bottom:4px;">The Promenade House</div>
-          <div class="tt-card-area">Goubert Avenue &middot; Seafront</div>
-          <p style="font-size:13px;color:var(--text-soft);line-height:1.6;margin:12px 0;">Sea-view rooms steps from the Promenade with fresh-baked mornings.</p>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
-            <span class="tt-card-price">&#8377;9,200 / night</span>
-            <a href="{% url 'rooms:search-page' %}" class="tt-btn tt-btn-sm tt-btn-primary">Book now &rarr;</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="tt-card" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);">
-        <div style="position:relative;">
-          <img src="https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=80"
-               alt="Le Jardin d'Eau"
-               style="width:100%;height:200px;object-fit:cover;display:block;">
-          <span style="position:absolute;top:12px;left:12px;background:rgba(10,22,40,.75);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:0;">Pondicherry</span>
-          <span style="position:absolute;top:12px;right:12px;background:rgba(10,22,40,.75);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:0;">&#9733; 4.6</span>
-        </div>
-        <div style="padding:20px;">
-          <div class="tt-card-name" style="margin-bottom:4px;">Le Jardin d&rsquo;Eau</div>
-          <div class="tt-card-area">Mission Street &middot; Heritage</div>
-          <p style="font-size:13px;color:var(--text-soft);line-height:1.6;margin:12px 0;">Bougainvillea-filled garden hotel with hand-built bohra beds.</p>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
-            <span class="tt-card-price">&#8377;5,800 / night</span>
-            <a href="{% url 'rooms:search-page' %}" class="tt-btn tt-btn-sm tt-btn-primary">Book now &rarr;</a>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- How Booking Works -->
-  <div class="tt-hr"></div>
-  <section class="tt-section-sm">
-    <div class="tt-eyebrow" style="margin-bottom:16px;">HOW BOOKING WORKS</div>
-    <div class="tt-booking-steps">
-      <div>
-        <h2 class="tt-h2" style="margin:0 0 20px;">Your stay,<br>from first look to check-in.</h2>
-        <p class="tt-sub" style="margin:0;max-width:300px;">
-          Browse, choose, and pay online — your room is reserved for you the moment you commit, with a calm hand at every step.
+        <div class="tt-eyebrow">Wayfarer rewards</div>
+        <h2 class="tt-h2" style="margin-top:14px;margin-bottom:16px;">Stay more, earn more.</h2>
+        <p style="font-size:17px;color:var(--text-soft);line-height:1.55;max-width:480px;margin:0;">
+          Earn points every night. Unlock early check-ins, room upgrades, and exclusive rates. Our guests earn points from their very first stay.
         </p>
+        <a href="{% if user.is_authenticated %}{% url 'accounts:folio' %}{% else %}{% url 'accounts:login-page' %}{% endif %}"
+           class="tt-btn tt-btn-primary tt-btn-lg" style="margin-top:32px;">Explore rewards &rarr;</a>
       </div>
-      <div class="tt-grid-4" style="gap:28px;">
-        <div>
-          <div style="margin-bottom:12px;color:var(--accent);" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
+      <div>
+        {% for t in tiers %}
+        <div style="border-top:1px solid var(--line-strong);padding:20px 0;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:600;font-size:17px;">{{ t.tier }}</div>
+            <div class="tt-muted" style="font-size:13px;margin-top:2px;">{{ t.range }}</div>
           </div>
-          <div style="font-weight:600;font-size:16px;margin-bottom:8px;">Dream it</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Browse handpicked stays across Pondicherry, Auroville, and Bengaluru.</p>
+          <div class="tt-muted" style="font-size:13px;">{{ t.perks }}</div>
         </div>
-        <div>
-          <div style="margin-bottom:12px;color:var(--accent);" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5a2.25 2.25 0 002.25-2.25m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5a2.25 2.25 0 012.25 2.25v7.5" />
-            </svg>
-          </div>
-          <div style="font-weight:600;font-size:16px;margin-bottom:8px;">Pick your stay</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Choose your room, dates, and how many guests are travelling with you.</p>
-        </div>
-        <div>
-          <div style="margin-bottom:12px;color:var(--accent);" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-            </svg>
-          </div>
-          <div style="font-weight:600;font-size:16px;margin-bottom:8px;">Secure it</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Your room is held for ten minutes while you pay — no one else can take it.</p>
-        </div>
-        <div>
-          <div style="margin-bottom:12px;color:var(--accent);" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div style="font-weight:600;font-size:16px;margin-bottom:8px;">Relax</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Payment confirmed — your invoice lands in your inbox and a WhatsApp confirmation follows.</p>
-        </div>
+        {% endfor %}
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Wayfarer Rewards -->
-  <section class="tt-section-sm">
-    <div class="tt-wayfarer-box" style="background:var(--ink);border-radius:var(--r-md);padding:56px 64px;color:#fff;">
-      <div class="tt-eyebrow" style="color:rgba(255,255,255,.5);margin-bottom:16px;">WAYFARER REWARDS</div>
-      <h2 class="tt-h2" style="color:#fff;margin:0 0 48px;">Stay more.</h2>
-      <div class="tt-wayfarer-tiers">
-
-        <div class="tt-wayfarer-tier-col" style="padding:0 40px 0 0;border-right:1px solid rgba(255,255,255,.15);">
-          <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.5);margin-bottom:12px;">BRONZE</div>
-          <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">0 – 499 pts</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.55);">Base rate</div>
-        </div>
-
-        <div class="tt-wayfarer-tier-col" style="padding:0 40px;border-right:1px solid rgba(255,255,255,.15);">
-          <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.5);margin-bottom:12px;">SILVER</div>
-          <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">500 – 1,999 pts</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.55);">5% off</div>
-        </div>
-
-        <div class="tt-wayfarer-tier-col" style="padding:0 0 0 40px;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.5);margin-bottom:12px;">GOLD</div>
-          <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">2,000 + pts</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.55);">12% off</div>
-        </div>
-
-      </div>
-      <div style="margin-top:40px;padding-top:40px;border-top:1px solid rgba(255,255,255,.15);">
-        {% if user.is_authenticated %}
-        <a href="/accounts/folio/" class="tt-btn tt-btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;">Join Wayfarer</a>
-        {% else %}
-        <a href="/accounts/login/page/?next=/accounts/folio/" class="tt-btn tt-btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;">Join Wayfarer</a>
-        {% endif %}
-      </div>
-    </div>
-  </section>
-
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+  // ── Hero search (preserves existing search contract) ──
   function handleSearch(e) {
     e.preventDefault();
-    const errEl    = document.getElementById('searchError');
-    const city     = document.getElementById('city').value.trim();
-    const check_in  = document.getElementById('check_in').value;
+    const city = document.getElementById('city').value.trim();
+    const check_in = document.getElementById('check_in').value;
     const check_out = document.getElementById('check_out').value;
-    const guests    = parseInt(document.getElementById('guests').value) || 2;
-
-    // Client-side validation before redirecting
-    if (!check_in || !check_out) {
-      errEl.textContent = 'Please select check-in and check-out dates.';
-      errEl.style.display = 'block'; return;
-    }
-    if (new Date(check_out) <= new Date(check_in)) {
-      errEl.textContent = 'Check-out must be after check-in.';
-      errEl.style.display = 'block'; return;
-    }
-    if (guests < 1) {
-      errEl.textContent = 'At least 1 guest is required.';
-      errEl.style.display = 'block'; return;
-    }
-    errEl.style.display = 'none';
-
-    // Build URL — city is optional; search page handles all-city results
+    const guests = parseInt(document.getElementById('guests').value) || 2;
+    if (!check_in || !check_out) { alert('Please choose check-in and check-out dates.'); return; }
+    if (new Date(check_out) <= new Date(check_in)) { alert('Check-out must be after check-in.'); return; }
     const params = new URLSearchParams({ check_in, check_out, guests: String(guests) });
     if (city) params.set('city', city);
     window.location.href = "{% url 'rooms:search-page' %}?" + params.toString();
   }
+  (function defaultDates() {
+    const today = new Date();
+    const cin = new Date(today); cin.setDate(cin.getDate() + 1);
+    const cout = new Date(today); cout.setDate(cout.getDate() + 4);
+    const iso = d => d.toISOString().split('T')[0];
+    const ci = document.getElementById('check_in'), co = document.getElementById('check_out');
+    ci.min = iso(today); co.min = iso(today);
+    ci.value = iso(cin); co.value = iso(cout);
+  })();
 
-  function changeGuests(delta) {
-    const input = document.getElementById('guests');
-    input.value = Math.min(10, Math.max(1, parseInt(input.value) + delta));
+  // ── Property image carousels ──
+  function carGo(media, dir) {
+    const imgs = media.querySelectorAll('.tt-slider-img');
+    const dots = media.querySelectorAll('.tt-dot');
+    let idx = parseInt(media.dataset.idx || '0', 10);
+    idx = (idx + dir + imgs.length) % imgs.length;
+    media.dataset.idx = idx;
+    media.querySelector('.tt-slider-track').style.transform = `translateX(-${idx * 100}%)`;
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
   }
+  function carNext(btn) { carGo(btn.closest('.home-carousel'), 1); }
+  function carPrev(btn) { carGo(btn.closest('.home-carousel'), -1); }
+  document.querySelectorAll('.home-carousel').forEach(media => {
+    let sx = 0, dragging = false;
+    media.addEventListener('touchstart', e => { sx = e.touches[0].clientX; dragging = true; }, { passive: true });
+    media.addEventListener('touchend', e => {
+      if (!dragging) return; dragging = false;
+      const dx = e.changedTouches[0].clientX - sx;
+      if (Math.abs(dx) > 40) carGo(media, dx < 0 ? 1 : -1);
+    });
+  });
 
-  // Default dates: tomorrow + day after; enforce min=today
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const cin   = new Date(today); cin.setDate(cin.getDate() + 1);
-  const cout  = new Date(today); cout.setDate(cout.getDate() + 2);
-  document.getElementById('check_in').min   = todayStr;
-  document.getElementById('check_out').min  = todayStr;
-  document.getElementById('check_in').value  = cin.toISOString().split('T')[0];
-  document.getElementById('check_out').value = cout.toISOString().split('T')[0];
+  // ── Moments carousel: auto-scroll + drag ──
+  (function moments() {
+    const el = document.getElementById('momentsCarousel');
+    if (!el) return;
+    let raf, paused = false, isDown = false, startX = 0, startScroll = 0;
+    const speed = 0.6;
+    const step = () => {
+      if (!paused) {
+        el.scrollLeft += speed;
+        if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) el.scrollLeft = 0;
+      }
+      raf = requestAnimationFrame(step);
+    };
+    step();
+    el.addEventListener('mouseenter', () => paused = true);
+    el.addEventListener('mouseleave', () => { if (!isDown) paused = false; });
+    el.addEventListener('mousedown', e => { isDown = true; paused = true; startX = e.pageX; startScroll = el.scrollLeft; el.style.cursor = 'grabbing'; });
+    window.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; paused = false; });
+    el.addEventListener('mousemove', e => { if (!isDown) return; e.preventDefault(); el.scrollLeft = startScroll - (e.pageX - startX); });
+    el.addEventListener('touchstart', e => { paused = true; startX = e.touches[0].pageX; startScroll = el.scrollLeft; }, { passive: true });
+    el.addEventListener('touchmove', e => { el.scrollLeft = startScroll - (e.touches[0].pageX - startX); }, { passive: true });
+    el.addEventListener('touchend', () => paused = false);
+  })();
 </script>
 {% endblock %}
