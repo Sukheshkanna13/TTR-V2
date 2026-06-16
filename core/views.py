@@ -70,14 +70,58 @@ def experiences_page(request):
     return render(request, "pages/experiences.html")
 
 
-def things_to_do_page(request):
-    """Render the Things to do page."""
-    return render(request, "pages/things_to_do.html")
-
-
 def cause_page(request):
-    """Render the Travel for a Cause page."""
-    return render(request, "pages/cause.html")
+    """Travel for Cause — CSR showcase (from CauseScreen)."""
+    causes = [
+        {'loc': 'Karnataka', 'title': 'Sandalwood restoration',
+         'desc': 'Replanting native sandalwood with the Forest Dept.',
+         'img': 'images/travelforcause/sandalwoods.jpg',
+         'wa': "Hi, I'd like to book a stay and support the Sandalwood restoration cause."},
+        {'loc': 'Tamil Nadu', 'title': 'Pondicherry coastal cleanup',
+         'desc': 'Weekly beach cleans and turtle hatchery support.',
+         'img': 'images/travelforcause/coastalcleanup.jpg',
+         'wa': "Hi, I'd like to book a stay and support the Pondicherry coastal cleanup cause."},
+        {'loc': 'Pan-India', 'title': 'Artisan grants',
+         'desc': 'Direct grants to potters, weavers, brassworkers.',
+         'img': 'images/travelforcause/artisangrants.jpg.webp',
+         'wa': "Hi, I'd like to book a stay and support the Artisan grants cause."},
+    ]
+    return render(request, "pages/cause.html", {'causes': causes})
+
+
+def things_to_do_page(request):
+    """Things to do — host-curated activities (from ThingsScreen)."""
+    things = [
+        {'cat': 'Outdoor', 'title': 'Cycling the East Coast Road',
+         'desc': 'Half-day ride, cycle and helmet included.', 'price': 'Request to book',
+         'img': 'images/coastal_cycling.png', 'wa': "Hi, I'd like to book the East Coast Road cycling experience."},
+        {'cat': 'Wellness', 'title': 'Abhyanga massage',
+         'desc': 'Sixty minutes of warm-oil bliss.', 'price': 'Request to book',
+         'img': 'images/spa_abhyanga.png', 'wa': "Hi, I'd like to book an Abhyanga massage."},
+        {'cat': 'Crafts', 'title': 'Block-printing class',
+         'desc': 'Take home what you print.', 'price': 'Request to book',
+         'img': 'images/block_printing.png', 'wa': "Hi, I'd like to book a block-printing class."},
+    ]
+    return render(request, "pages/things_to_do.html", {'things': things})
+
+
+def events_page(request):
+    """Events — Nature Retreat events (from EventsScreen)."""
+    events = [
+        {'cat': 'Near Auroville', 'title': 'Experience Local Artisans',
+         'desc': 'Demonstrations and hands-on workshops. Meet local artisans, explore handmade jewellery, weaving and jute crafts. Take home a little piece of Near Auroville.',
+         'img': 'images/Natures-retreat/1.jpeg'},
+        {'cat': 'Near Auroville', 'title': 'Garden Fun for Kids',
+         'desc': 'Let the little hands explore nature through simple gardening and outdoor activities — a joyful way for children to play, learn and enjoy nature.',
+         'img': 'images/Natures-retreat/2.jpeg'},
+        {'cat': 'Near Auroville', 'title': 'Poolside Evenings & Summer Fun',
+         'desc': 'Relax and enjoy refreshing moments by the pool. On special weekends and group stays, cheerful poolside gatherings and summer vibes.',
+         'img': 'images/Natures-retreat/3.jpeg'},
+        {'cat': 'Near Auroville', 'title': 'Robotics & Creative Tech',
+         'desc': 'Beginner-friendly robotics and creative technology sessions for curious young minds, led by our in-house tech enthusiast.',
+         'img': 'images/Auroville/5.jpeg'},
+    ]
+    return render(request, "pages/events.html", {'events': events})
 
 
 def retreat_page(request):

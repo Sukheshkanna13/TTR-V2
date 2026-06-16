@@ -1,120 +1,38 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Travel for a Cause — Temples & Towns{% endblock %}
+{% block title %}Travel for Cause — Temple and Towns Resorts{% endblock %}
 
 {% block content %}
-<div class="tt-page">
-
-  <!-- Header -->
-  <section class="tt-section-sm" style="max-width:680px;">
-    <div class="tt-eyebrow" style="margin-bottom:16px;">CSR &amp; COMMUNITY</div>
-    <h1 class="tt-h1" style="margin:0 0 24px;">Travel that <em class="tt-italic-soft">gives back.</em></h1>
-    <p class="tt-sub" style="margin:0;">
-      A portion of every booking funds restoration of temple craft, artisan livelihoods,
-      and coastal cleanup near our properties. Choose a cause when you book.
+<section class="tt-section" style="padding-top:64px;padding-bottom:0;">
+  <div class="tt-page">
+    <div class="tt-breadcrumb" style="margin-bottom:24px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-muted);">
+      <a href="{% url 'core:home' %}" style="color:var(--text-muted);">Home</a><span>/</span>
+      <span style="color:var(--ink);">Travel for Cause</span>
+    </div>
+    <div class="tt-eyebrow">CSR &amp; community</div>
+    <h1 class="tt-h1" style="margin:12px 0 0;">Travel that <span class="tt-italic-soft" style="color:var(--accent);font-weight:600;">gives back.</span></h1>
+    <p style="max-width:640px;margin-top:24px;font-size:17px;line-height:1.55;color:var(--text-soft);">
+      A portion of every booking funds restoration of temple craft, artisan livelihoods, and coastal cleanup near our properties. Choose a cause when you book.
     </p>
-  </section>
+  </div>
+</section>
 
-  <!-- Cause cards -->
-  <section class="tt-section-sm">
-    <div class="tt-grid-3" style="gap:24px;">
-
-      <!-- Card 1 -->
-      <div class="tt-card" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);">
-        <img src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&q=80"
-             alt="Sandalwood restoration"
-             style="width:100%;height:200px;object-fit:cover;border-radius:0;">
-        <div style="padding:24px;">
-          <div class="tt-eyebrow" style="margin-bottom:10px;">KARNATAKA</div>
-          <div style="font-weight:700;font-size:18px;color:var(--ink);margin-bottom:8px;">Sandalwood restoration</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0 0 20px;">
-            Replanting native sandalwood with Forest Dept.
-          </p>
-          <!-- Progress bar -->
-          <div style="margin-bottom:10px;">
-            <div style="height:4px;background:var(--line);border-radius:0;">
-              <div style="height:4px;background:var(--ink);border-radius:0;width:42%;"></div>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:13px;font-weight:700;color:var(--ink);">&#8377;4.2L raised</span>
-            <span class="tt-muted" style="font-size:13px;">of &#8377;10L</span>
-          </div>
+<section class="tt-section">
+  <div class="tt-page">
+    <div class="tt-grid-3">
+      {% for c in causes %}
+      <a href="https://wa.me/918553441449?text={{ c.wa|urlencode }}" target="_blank" rel="noopener" class="tt-card" style="text-decoration:none;">
+        <div class="tt-card-media" style="aspect-ratio:4/3;overflow:hidden;">
+          <img src="{% static c.img %}" alt="{{ c.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
         </div>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="tt-card" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);">
-        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80"
-             alt="Coastal cleanup"
-             style="width:100%;height:200px;object-fit:cover;border-radius:0;">
-        <div style="padding:24px;">
-          <div class="tt-eyebrow" style="margin-bottom:10px;">TAMIL NADU</div>
-          <div style="font-weight:700;font-size:18px;color:var(--ink);margin-bottom:8px;">Pondicherry coastal cleanup</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0 0 20px;">
-            Weekly beach cleans and turtle hatchery support.
-          </p>
-          <!-- Progress bar -->
-          <div style="margin-bottom:10px;">
-            <div style="height:4px;background:var(--line);border-radius:0;">
-              <div style="height:4px;background:var(--ink);border-radius:0;width:47%;"></div>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:13px;font-weight:700;color:var(--ink);">&#8377;2.8L raised</span>
-            <span class="tt-muted" style="font-size:13px;">of &#8377;6L</span>
-          </div>
+        <div class="tt-card-body">
+          <div class="tt-eyebrow" style="font-size:11px;letter-spacing:.12em;color:var(--text-muted);">{{ c.loc }}</div>
+          <h3 class="tt-h3" style="margin-top:6px;margin-bottom:8px;font-size:20px;">{{ c.title }}</h3>
+          <p class="tt-muted" style="font-size:14px;margin:0;line-height:1.5;">{{ c.desc }}</p>
         </div>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="tt-card" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);">
-        <img src="https://images.unsplash.com/photo-1543966888-7c1dc482a810?w=600&q=80"
-             alt="Artisan grants"
-             style="width:100%;height:200px;object-fit:cover;border-radius:0;">
-        <div style="padding:24px;">
-          <div class="tt-eyebrow" style="margin-bottom:10px;">PAN-INDIA</div>
-          <div style="font-weight:700;font-size:18px;color:var(--ink);margin-bottom:8px;">Artisan grants</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0 0 20px;">
-            Direct grants to potters, weavers, brassworkers.
-          </p>
-          <!-- Progress bar -->
-          <div style="margin-bottom:10px;">
-            <div style="height:4px;background:var(--line);border-radius:0;">
-              <div style="height:4px;background:var(--ink);border-radius:0;width:64%;"></div>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:13px;font-weight:700;color:var(--ink);">&#8377;5.1L raised</span>
-            <span class="tt-muted" style="font-size:13px;">of &#8377;8L</span>
-          </div>
-        </div>
-      </div>
-
+      </a>
+      {% endfor %}
     </div>
-  </section>
-
-  <!-- Impact section -->
-  <section class="tt-section-sm">
-    <div style="background:var(--ink);border-radius:var(--r-md);padding:56px 64px;color:#fff;text-align:center;">
-      <div class="tt-eyebrow" style="color:rgba(255,255,255,.5);margin-bottom:16px;">IMPACT</div>
-      <h2 class="tt-h2" style="color:#fff;margin:0 0 48px;">Our impact so far</h2>
-      <div class="tt-grid-3" style="gap:0;">
-        <div style="border-right:1px solid rgba(255,255,255,.15);padding:0 32px;">
-          <div style="font-size:36px;font-weight:700;color:#fff;margin-bottom:8px;">&#8377;12L+</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.6);">Raised for causes</div>
-        </div>
-        <div style="border-right:1px solid rgba(255,255,255,.15);padding:0 32px;">
-          <div style="font-size:36px;font-weight:700;color:#fff;margin-bottom:8px;">847</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.6);">Guests participated</div>
-        </div>
-        <div style="padding:0 32px;">
-          <div style="font-size:36px;font-weight:700;color:#fff;margin-bottom:8px;">3</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.6);">Active programs</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-</div>
+  </div>
+</section>
 {% endblock %}

@@ -71,7 +71,7 @@
         <a href="{% url 'core:things-to-do' %}" class="tt-nav-link{% if url_name == 'things-to-do' %} active{% endif %}">Things to do</a>
         <a href="{% url 'core:retreat' %}" class="tt-nav-link{% if url_name == 'retreat' %} active{% endif %}">Nature Retreat</a>
         <a href="{% url 'core:cause' %}" class="tt-nav-link{% if url_name == 'cause' %} active{% endif %}">Travel for Cause</a>
-        <a href="{% url 'core:explore' %}" class="tt-nav-link{% if url_name == 'explore' %} active{% endif %}">Events</a>
+        <a href="{% url 'core:events' %}" class="tt-nav-link{% if url_name == 'events' %} active{% endif %}">Events</a>
       </div>
 
       <!-- RIGHT: support + hamburger -->
@@ -94,7 +94,7 @@
       <a href="{% url 'core:things-to-do' %}" class="tt-mobile-link">Things to do</a>
       <a href="{% url 'core:retreat' %}" class="tt-mobile-link">Nature Retreat</a>
       <a href="{% url 'core:cause' %}" class="tt-mobile-link">Travel for Cause</a>
-      <a href="{% url 'core:explore' %}" class="tt-mobile-link">Events</a>
+      <a href="{% url 'core:events' %}" class="tt-mobile-link">Events</a>
       {% if user.is_authenticated %}
         <a href="{% url 'accounts:folio' %}" class="tt-mobile-link">Guest folio</a>
         <span class="tt-mobile-link" role="button" onclick="logout()" style="cursor:pointer;">Sign out</span>

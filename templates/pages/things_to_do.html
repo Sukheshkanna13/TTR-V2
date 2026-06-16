@@ -1,103 +1,37 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Things to Do — Temples & Towns{% endblock %}
+{% block title %}Things to do — Temple and Towns Resorts{% endblock %}
 
 {% block content %}
-<div class="tt-page">
+<div class="tt-page" style="padding-top:56px;">
+  <div class="tt-breadcrumb" style="margin-bottom:0;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-muted);">
+    <a href="{% url 'core:home' %}" style="color:var(--text-muted);">Home</a><span>/</span>
+    <span style="color:var(--ink);">Things to do</span>
+  </div>
+</div>
 
-  <!-- Header -->
-  <section class="tt-section-sm" style="max-width:680px;">
-    <h1 class="tt-h1" style="margin:0 0 24px;">Things <em class="tt-italic-soft">to do.</em></h1>
-    <p class="tt-sub" style="margin:0;">
-      Explore the best of Pondicherry and Bengaluru — temples, cafés, beaches, and more.
-    </p>
-  </section>
+<div class="tt-page" style="padding-top:32px;padding-bottom:96px;">
+  <div class="tt-eyebrow">Things to do</div>
+  <h1 class="tt-h1" style="margin:12px 0 0;">Beyond the <span style="color:var(--accent);font-weight:600;">room.</span></h1>
+  <p style="color:var(--text-soft);margin-top:12px;font-size:16px;max-width:620px;">A short list, hand-picked by hosts. Book on the spot or save for later.</p>
 
-  <!-- Pondicherry -->
-  <section class="tt-section-sm">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:32px;">
-      <h2 class="tt-h2" style="margin:0;">Pondicherry</h2>
-      <div class="tt-hr" style="flex:1;margin:0;"></div>
+  <div class="tt-grid-3" style="margin-top:48px;">
+    {% for it in things %}
+    <div class="tt-card">
+      <div class="tt-card-media" style="aspect-ratio:4/3;overflow:hidden;">
+        <img src="{% static it.img %}" alt="{{ it.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+      </div>
+      <div class="tt-card-body">
+        <div class="tt-eyebrow" style="font-size:11px;">{{ it.cat }}</div>
+        <h3 class="tt-h3" style="margin-top:6px;margin-bottom:8px;">{{ it.title }}</h3>
+        <p class="tt-muted" style="font-size:14px;margin:0;">{{ it.desc }}</p>
+        <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;">{{ it.price }}</span>
+          <a href="https://wa.me/918553441449?text={{ it.wa|urlencode }}" target="_blank" rel="noopener" class="tt-btn-link" style="font-size:13px;">Book &rarr;</a>
+        </div>
+      </div>
     </div>
-    <div class="tt-grid-2" style="gap:16px;">
-
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:24px;display:flex;gap:16px;align-items:flex-start;">
-        <span style="font-size:28px;flex-shrink:0;">🌊</span>
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px;">Promenade Beach</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Morning walks and evening chai by the sea</p>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:24px;display:flex;gap:16px;align-items:flex-start;">
-        <span style="font-size:28px;flex-shrink:0;">🏛️</span>
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px;">Sri Aurobindo Ashram</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Centre of spiritual heritage</p>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:24px;display:flex;gap:16px;align-items:flex-start;">
-        <span style="font-size:28px;flex-shrink:0;">🍜</span>
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px;">Kasha Ki Aasha</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Rooftop café in a French colonial building</p>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:24px;display:flex;gap:16px;align-items:flex-start;">
-        <span style="font-size:28px;flex-shrink:0;">🚲</span>
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px;">Auroville Cycling Tour</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Explore the experimental township on two wheels</p>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Bengaluru -->
-  <section class="tt-section-sm">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:32px;">
-      <h2 class="tt-h2" style="margin:0;">Bengaluru</h2>
-      <div class="tt-hr" style="flex:1;margin:0;"></div>
-    </div>
-    <div class="tt-grid-2" style="gap:16px;">
-
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:24px;display:flex;gap:16px;align-items:flex-start;">
-        <span style="font-size:28px;flex-shrink:0;">🌿</span>
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px;">Lalbagh Botanical Garden</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">240 acres of curated greenery</p>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:24px;display:flex;gap:16px;align-items:flex-start;">
-        <span style="font-size:28px;flex-shrink:0;">☕</span>
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px;">Third Wave Coffee Trail</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Indiranagar to Koramangala</p>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:24px;display:flex;gap:16px;align-items:flex-start;">
-        <span style="font-size:28px;flex-shrink:0;">🎨</span>
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px;">National Gallery of Modern Art</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Indian modernism at its finest</p>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:24px;display:flex;gap:16px;align-items:flex-start;">
-        <span style="font-size:28px;flex-shrink:0;">🛍️</span>
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px;">Commercial Street</div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.65;margin:0;">Heritage bazaar meets contemporary shopping</p>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}
