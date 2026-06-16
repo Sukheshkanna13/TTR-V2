@@ -4,130 +4,143 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Temples & Towns{% endblock %}</title>
+  <title>{% block title %}Temple and Towns Resorts{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
+{% with url_name=request.resolver_match.url_name %}
 
-  <!-- Utility strip -->
+  <!-- ── Top utility bar ── -->
   <div class="tt-utility">
     <div class="tt-utility-inner">
       <div class="tt-utility-left">
-        <span>Reservations &amp; support</span>
-        <span style="color:var(--line-strong);">·</span>
-        <span>
-          <span style="color:#22c55e;font-size:10px;vertical-align:middle;">●</span>
-          &nbsp;<a href="tel:+918553441449" style="color:var(--ink);text-decoration:none;font-weight:500;">+91-8553441449</a>
-        </span>
+        <span class="tt-utility-support">Reservations &amp; support</span>
+        <a href="https://wa.me/918553441449" target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:8px;font-weight:500;">
+          <span class="tt-wa-dot">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.6-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5 0-.2 0-.3 0-.5-.1-.1-.6-1.5-.8-2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.1 2.9.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.6-.7 1.9-1.4.2-.6.2-1.2.1-1.4-.1-.1-.3-.2-.5-.3M12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.4 1.3 4.9L2 22l5.3-1.3c1.4.8 3 1.3 4.7 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
+          </span>
+          +91-8553441449
+        </a>
       </div>
       <div class="tt-utility-right">
-        <a href="https://wa.me/918553441449?text=Hi!%20I%27d%20love%20help%20planning%20my%20perfect%20Pondicherry%20getaway.%20Could%20you%20craft%20a%20personalised%20itinerary%20for%20me%3F" target="_blank" rel="noopener">Plan with an Expert</a>
-        <a href="#">Events</a>
+        <a href="{% url 'rooms:search-page' %}">Trip Planner</a>
+        <a href="{% url 'core:experiences' %}">Nature Retreat</a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'accounts:folio' %}">Guest folio</a>
+        {% else %}
+          <a href="{% url 'accounts:login-page' %}">Sign in</a>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Main navigation -->
-  <nav class="tt-nav">
-    <div class="tt-nav-inner">
-      <a href="{% url 'core:home' %}" class="tt-logo" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-        <img src="{% static 'images/logo.png' %}" alt="Temple and Towns" style="height:40px;width:auto;">
-        <span class="tt-logo-wordmark" style="font-size:17px;font-weight:700;letter-spacing:-.03em;color:var(--ink);">Temple and Towns</span>
-      </a>
-      <div class="tt-nav-links">
-        {% with url_name=request.resolver_match.url_name %}
-        <a href="{% url 'core:home' %}" class="tt-nav-link"
-          {% if url_name == 'home' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Stays</a>
-        <a href="{% url 'core:experiences' %}" class="tt-nav-link"
-          {% if url_name == 'experiences' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Guest Experience</a>
-        <a href="{% url 'core:things-to-do' %}" class="tt-nav-link"
-          {% if url_name == 'things-to-do' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Things to do</a>
-        <a href="{% url 'core:cause' %}" class="tt-nav-link"
-          {% if url_name == 'cause' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Travel for a Cause</a>
-        {% if user.is_authenticated %}
-          <a href="{% url 'accounts:folio' %}" class="tt-nav-link"
-            {% if url_name == 'folio' %}style="border-bottom:2px solid var(--accent);padding-bottom:2px;"{% endif %}>Guest folio</a>
-        {% else %}
-          <a href="{% url 'accounts:login-page' %}" class="tt-nav-link">Guest folio</a>
+  <!-- ── Main navigation ── -->
+  <nav class="tt-nav {% if url_name == 'home' %}tt-nav-home{% endif %}" id="ttNav">
+    <div class="tt-nav-inner tt-nav-dual-layout">
+      <!-- LEFT: logo + inline search pill (home only) -->
+      <div class="tt-nav-left-group">
+        <a href="{% url 'core:home' %}" class="tt-logo-split tt-logo-static" style="text-decoration:none;">
+          <img src="{% static 'images/logo-left.png' %}" alt="Temple and Towns Resorts logo" class="tt-logo-left-img">
+          <img src="{% static 'images/logo-half.png' %}" alt="Temple and Towns Resorts" class="tt-logo-half-img">
+        </a>
+        {% if url_name == 'home' %}
+        <a href="{% url 'rooms:search-page' %}" class="tt-nav-pill-inline" style="text-decoration:none;">
+          <div class="cell">
+            <span class="lbl">Where to?</span>
+            <span class="val">Pondicherry</span>
+          </div>
+          <div class="sep"></div>
+          <div class="cell">
+            <span class="lbl">Dates</span>
+            <span class="val">Add dates</span>
+          </div>
+          <div class="search-icon-circle">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </div>
+        </a>
         {% endif %}
-        {% endwith %}
       </div>
-      <div class="tt-nav-right">
-        {% if user.is_authenticated %}
-          <span class="tt-nav-username" style="color:var(--ink);font-weight:500;font-size:14px;">{{ user.full_name }}</span>
-          <button onclick="logout()" class="tt-btn tt-btn-ghost tt-btn-sm">Sign out</button>
-        {% else %}
-          <a href="{% url 'accounts:login-page' %}" class="tt-btn tt-btn-ghost tt-btn-sm">Login</a>
-        {% endif %}
-        <button class="tt-hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Open menu" aria-expanded="false">
-          <span></span><span></span><span></span>
+
+      <!-- CENTER: desktop nav links -->
+      <div class="tt-nav-links">
+        <a href="{% url 'rooms:search-page' %}" class="tt-nav-link{% if url_name == 'search-page' or url_name == 'home' or url_name == 'room-detail-page' %} active{% endif %}">Stays</a>
+        <a href="{% url 'core:things-to-do' %}" class="tt-nav-link{% if url_name == 'things-to-do' %} active{% endif %}">Things to do</a>
+        <a href="{% url 'core:experiences' %}" class="tt-nav-link{% if url_name == 'experiences' %} active{% endif %}">Nature Retreat</a>
+        <a href="{% url 'core:cause' %}" class="tt-nav-link{% if url_name == 'cause' %} active{% endif %}">Travel for Cause</a>
+        <a href="{% url 'core:explore' %}" class="tt-nav-link{% if url_name == 'explore' %} active{% endif %}">Events</a>
+      </div>
+
+      <!-- RIGHT: support + hamburger -->
+      <div class="tt-nav-right-static">
+        <a href="https://wa.me/918553441449" target="_blank" rel="noopener" class="tt-nav-support">
+          <span class="tt-wa-dot">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.6-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5 0-.2 0-.3 0-.5-.1-.1-.6-1.5-.8-2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.1 2.9.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.6-.7 1.9-1.4.2-.6.2-1.2.1-1.4-.1-.1-.3-.2-.5-.3M12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.4 1.3 4.9L2 22l5.3-1.3c1.4.8 3 1.3 4.7 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
+          </span>
+          <span class="text-hide-mobile">Support</span>
+        </a>
+        <button class="tt-hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Toggle menu" aria-expanded="false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
         </button>
       </div>
     </div>
-  </nav>
 
-  <!-- Mobile nav drawer -->
-  <div id="mobileMenu" class="tt-nav-mobile" aria-hidden="true">
-    <div class="tt-nav-mobile-inner">
-      {% with url_name=request.resolver_match.url_name %}
-      <a href="{% url 'core:home' %}" class="tt-nav-mobile-link {% if url_name == 'home' %}active{% endif %}">Stays</a>
-      <a href="{% url 'core:experiences' %}" class="tt-nav-mobile-link {% if url_name == 'experiences' %}active{% endif %}">Guest Experience</a>
-      <a href="{% url 'core:things-to-do' %}" class="tt-nav-mobile-link {% if url_name == 'things-to-do' %}active{% endif %}">Things to do</a>
-      <a href="{% url 'core:cause' %}" class="tt-nav-mobile-link {% if url_name == 'cause' %}active{% endif %}">Travel for a Cause</a>
-      <a href="{% url 'core:explore' %}" class="tt-nav-mobile-link {% if url_name == 'explore' %}active{% endif %}">Explore</a>
+    <!-- Dropdown / mobile menu -->
+    <div class="tt-mobile-menu" id="mobileMenu" style="display:none;">
+      <a href="{% url 'rooms:search-page' %}" class="tt-mobile-link">Stays</a>
+      <a href="{% url 'core:things-to-do' %}" class="tt-mobile-link">Things to do</a>
+      <a href="{% url 'core:experiences' %}" class="tt-mobile-link">Nature Retreat</a>
+      <a href="{% url 'core:cause' %}" class="tt-mobile-link">Travel for Cause</a>
+      <a href="{% url 'core:explore' %}" class="tt-mobile-link">Events</a>
       {% if user.is_authenticated %}
-        <a href="{% url 'accounts:folio' %}" class="tt-nav-mobile-link {% if url_name == 'folio' %}active{% endif %}">Guest folio</a>
-        <div class="tt-nav-mobile-divider"></div>
-        <button onclick="logout()" class="tt-nav-mobile-link" style="background:none;border:none;cursor:pointer;text-align:left;width:100%;color:var(--text-muted);">Sign out</button>
+        <a href="{% url 'accounts:folio' %}" class="tt-mobile-link">Guest folio</a>
+        <span class="tt-mobile-link" role="button" onclick="logout()" style="cursor:pointer;">Sign out</span>
       {% else %}
-        <div class="tt-nav-mobile-divider"></div>
-        <a href="{% url 'accounts:login-page' %}" class="tt-nav-mobile-link">Login / Register</a>
+        <a href="{% url 'accounts:login-page' %}" class="tt-mobile-link">Sign in / Register</a>
       {% endif %}
-      {% endwith %}
+      <a href="{% url 'rooms:search-page' %}" class="tt-mobile-wa">Book Now</a>
     </div>
-  </div>
+  </nav>
 
   <main>
     {% block content %}{% endblock %}
   </main>
 
-  <!-- Footer -->
+  <!-- ── Footer ── -->
   <footer class="tt-footer">
     <div class="tt-page">
       <div class="tt-footer-grid">
         <div>
-          <div style="font-size:20px;font-weight:700;letter-spacing:-.03em;color:var(--ink);margin-bottom:16px;">
-            Temples <em class="tt-italic-soft">&amp;</em> Towns
-          </div>
-          <p style="font-size:14px;color:var(--text-soft);line-height:1.7;max-width:300px;">
-            Curated heritage stays in Pondicherry and Bengaluru, where culture meets modern comfort.
+          <a href="{% url 'core:home' %}" class="tt-logo-split" style="margin-bottom:18px;text-decoration:none;display:inline-flex;">
+            <img src="{% static 'images/logo-left.png' %}" alt="Temple and Towns Resorts logo" class="tt-logo-left-img">
+            <img src="{% static 'images/logo-half.png' %}" alt="Temple and Towns Resorts" class="tt-logo-half-img">
+          </a>
+          <p style="color:var(--text-soft);font-size:14px;max-width:340px;line-height:1.6;margin:0;">
+            Modern, calm, unmistakably Indian. A small, hand-picked collection of stays across temple towns and quiet coastlines — designed to feel premium without feeling heavy.
           </p>
+          <div style="display:flex;gap:16px;margin-top:24px;align-items:center;">
+            <a href="https://www.instagram.com/templeandtownsresorts" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;color:var(--text-muted);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5.5"/><circle cx="18" cy="6" r="1" fill="currentColor" stroke="none"/></svg>
+            </a>
+          </div>
         </div>
         <div>
           <h4>Stays</h4>
           <ul>
-            <li><a href="{% url 'rooms:search-page' %}">Search Rooms</a></li>
-            <li><a href="{% url 'rooms:search-page' %}?city=Pondicherry">Pondicherry</a></li>
-            <li><a href="{% url 'rooms:search-page' %}?city=Bengaluru">Bengaluru</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Explore</h4>
-          <ul>
-            <li><a href="{% url 'core:experiences' %}">Guest Experience</a></li>
+            <li><a href="{% url 'rooms:search-page' %}">Search stays</a></li>
             <li><a href="{% url 'core:things-to-do' %}">Things to do</a></li>
-            <li><a href="{% url 'core:cause' %}">Travel for a Cause</a></li>
+            <li><a href="{% url 'core:cause' %}">Travel for Cause</a></li>
           </ul>
         </div>
         <div>
           <h4>Account</h4>
           <ul>
             {% if user.is_authenticated %}
-              <li><a href="{% url 'accounts:folio' %}">Guest Folio</a></li>
-              <li><a href="{% url 'bookings:my-bookings-page' %}">My Bookings</a></li>
+              <li><a href="{% url 'accounts:folio' %}">Guest folio</a></li>
+              <li><a href="{% url 'bookings:my-bookings-page' %}">My bookings</a></li>
               <li><span role="button" onclick="logout()" style="cursor:pointer;">Sign out</span></li>
             {% else %}
               <li><a href="{% url 'accounts:login-page' %}">Sign in</a></li>
@@ -136,20 +149,18 @@
           </ul>
         </div>
       </div>
-      <div class="tt-footer-bottom">
-        <span>&copy; 2026 Temples &amp; Towns. All rights reserved.</span>
-        <span>Privacy &nbsp;·&nbsp; Terms</span>
-        <span><a href="{% url 'accounts:login-page' %}" style="color:var(--text-muted,#9ca3af);font-size:12px;text-decoration:none;opacity:.6;">Login</a></span>
+      <div class="tt-footer-bottom" style="margin-top:64px;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted);">
+        <span>&copy; 2026 Temple And Towns Resorts LLP · Pondicherry &amp; Near Auroville</span>
+        <span>INR · English</span>
       </div>
     </div>
   </footer>
 
   <!-- WhatsApp FAB -->
-  <a href="https://wa.me/918553441449" class="tt-wa-fab" target="_blank" rel="noopener" aria-label="Contact on WhatsApp">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-    </svg>
+  <a href="https://wa.me/918553441449" class="tt-wa-fab" target="_blank" rel="noopener" aria-label="Chat with support">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.6-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5 0-.2 0-.3 0-.5-.1-.1-.6-1.5-.8-2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.1 2.9.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.6-.7 1.9-1.4.2-.6.2-1.2.1-1.4-.1-.1-.3-.2-.5-.3M12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.4 1.3 4.9L2 22l5.3-1.3c1.4.8 3 1.3 4.7 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
   </a>
+{% endwith %}
 
   <script>
     async function logout() {
@@ -166,23 +177,29 @@
     function toggleMobileMenu() {
       const menu = document.getElementById('mobileMenu');
       const btn  = document.getElementById('hamburgerBtn');
-      const open = menu.classList.toggle('open');
+      const open = menu.style.display !== 'flex';
+      menu.style.display = open ? 'flex' : 'none';
       btn.setAttribute('aria-expanded', open);
-      menu.setAttribute('aria-hidden', !open);
       document.body.style.overflow = open ? 'hidden' : '';
     }
-
-    // Close menu on outside click
     document.addEventListener('click', (e) => {
       const menu = document.getElementById('mobileMenu');
       const btn  = document.getElementById('hamburgerBtn');
-      if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
-        menu.classList.remove('open');
+      if (menu && menu.style.display === 'flex' && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.style.display = 'none';
         btn.setAttribute('aria-expanded', false);
-        menu.setAttribute('aria-hidden', true);
         document.body.style.overflow = '';
       }
     });
+
+    // Nav goes solid after scrolling past the hero (matches approved tt-nav.scrolled)
+    (function () {
+      const nav = document.getElementById('ttNav');
+      if (!nav) return;
+      const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 50);
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
   </script>
   {% block extra_js %}{% endblock %}
 </body>
