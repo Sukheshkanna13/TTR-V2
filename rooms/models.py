@@ -56,6 +56,44 @@ class Property(models.Model):
         return f"{self.name} ({self.city})"
 
 
+class RoomManager(models.Manager):
+    """Manager for Room. Owns the home-page featured-stays selection rule."""
+
+    def featured_for_home(self, min_count=3):
+        """Return the rooms for the home carousel.
+
+        Featured (starred) rooms first, ordered by their property's rating
+        (highest first, nulls last) then newest. If fewer than ``min_count``
+        are featured, fill the remaining slots with the highest-rated
+        non-featured rooms. Only active, available rooms that have at least
+        one image are eligible.
+        """
+        from django.db.models import F
+
+        pool = list(
+            self.get_queryset()
+            .filter(is_active=True, operational_status=Room.STATUS_AVAILABLE)
+            .filter(images__isnull=False)
+            .distinct()
+            .select_related("property")
+            .prefetch_related("images")
+            .order_by(F("property__rating").desc(nulls_last=True), "-created_at")
+        )
+
+        featured = [r for r in pool if r.is_featured]
+        if len(featured) >= min_count:
+            return featured
+
+        result = list(featured)
+        featured_ids = {r.id for r in featured}
+        for room in pool:
+            if len(result) >= min_count:
+                break
+            if room.id not in featured_ids:
+                result.append(room)
+        return result
+
+
 class Room(models.Model):
     """
     Hotel room available for booking.
@@ -66,6 +104,8 @@ class Room(models.Model):
         ("double", "Double"),
         ("deluxe", "Deluxe"),
     ]
+
+    objects = RoomManager()
 
     id = models.UUIDField(
         primary_key=True,
