@@ -37,3 +37,4 @@ media/
 # Celery
 celerybeat-schedule
 celerybeat.pid
+.gstack/

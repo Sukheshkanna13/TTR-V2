@@ -33,7 +33,19 @@ class Property(models.Model):
         help_text="WhatsApp number for notifications"
     )
     is_active = models.BooleanField(default=True)
+    rating = models.DecimalField(
+        max_digits=2, decimal_places=1, default="4.5",
+        help_text="Guest rating out of 5, shown on property cards.",
+    )
+    review_count = models.PositiveIntegerField(
+        default=0, help_text="Number of guest reviews backing the rating.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @builtins.property
+    def rating_pct(self):
+        """Rating as a percentage (0-100) for the split-fill star widget."""
+        return float(self.rating) / 5 * 100
 
     class Meta:
         verbose_name = "property"
