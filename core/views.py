@@ -18,6 +18,18 @@ def home_page(request):
         .order_by('city')
     )
 
+    import datetime
+    from django.utils import timezone
+    today = timezone.localdate()
+    ci, co = today + datetime.timedelta(days=1), today + datetime.timedelta(days=4)
+    hero = {
+        'city': cities[0] if cities else 'Pondicherry',
+        'check_in_iso': ci.isoformat(), 'check_out_iso': co.isoformat(),
+        'check_in_label': ci.strftime('%a, %b ') + str(ci.day),
+        'check_out_label': co.strftime('%a, %b ') + str(co.day),
+        'guests': 2,
+    }
+
     def imgs(folder, nums):
         return [f"images/{folder}/{n}.jpeg" for n in nums]
 
@@ -48,7 +60,7 @@ def home_page(request):
         {'tier': 'Gold', 'range': '2000+ pts', 'perks': '12% off'},
     ]
     return render(request, "pages/index.html", {
-        'cities': cities, 'featured': featured, 'moments': moments,
+        'cities': cities, 'hero': hero, 'featured': featured, 'moments': moments,
         'journeys': journeys, 'tiers': tiers,
     })
 

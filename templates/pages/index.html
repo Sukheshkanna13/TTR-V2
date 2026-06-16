@@ -4,49 +4,51 @@
 
 {% block content %}
 
-<!-- ════════════ HERO ════════════ -->
-<section class="tt-hero-full" style="position:relative;min-height:88vh;display:flex;align-items:flex-end;overflow:hidden;">
-  <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full"
-       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;">
-  <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,22,40,.18) 0%,rgba(10,22,40,.05) 40%,rgba(10,22,40,.55) 100%);z-index:1;"></div>
+<!-- ════════════ HERO (approved home.jsx structure) ════════════ -->
+{% url 'rooms:search-page' as search_url %}
+{% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=2&city='|add:hero.city %}
+<section class="tt-hero-full">
+  <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full">
+  <div class="tt-hero-overlay-white"></div>
 
-  <div class="tt-page" style="position:relative;z-index:2;width:100%;padding-bottom:56px;">
-    <div style="max-width:760px;">
-      <h1 class="tt-display" style="color:#fff;margin:0 0 28px;">
-        Explore stays that feel <span class="tt-italic-soft">modern,</span><br>
-        calm, and unmistakably Indian.
-      </h1>
-    </div>
-
-    <!-- Working search form (hero) -->
-    <form id="searchForm" onsubmit="handleSearch(event)"
-          style="background:#fff;display:flex;flex-wrap:wrap;align-items:flex-end;gap:0;max-width:920px;box-shadow:var(--shadow-lg);">
-      <div style="flex:1.4;min-width:180px;padding:16px 20px;border-right:1px solid var(--line);">
-        <label class="tt-eyebrow" style="display:block;margin-bottom:6px;">Where to</label>
-        <select id="city" style="width:100%;border:none;font-size:15px;color:var(--ink);background:#fff;font-weight:500;outline:none;">
-          <option value="">All locations</option>
-          {% for city in cities %}<option value="{{ city }}">{{ city }}</option>{% endfor %}
-        </select>
+  <!-- Sticky floating search pill -->
+  <div class="tt-hero-sticky-pill">
+    <a href="{{ hero_q }}" class="tt-nav-search-pill" style="text-decoration:none;">
+      <div class="pill-content">
+        <div class="cell">
+          <span class="lbl">Where to?</span>
+          <span class="val">{{ hero.city }}</span>
+        </div>
+        <div class="sep"></div>
+        <div class="cell">
+          <span class="lbl">Check in</span>
+          <span class="val">{{ hero.check_in_label }}</span>
+        </div>
+        <div class="sep"></div>
+        <div class="cell">
+          <span class="lbl">Check out</span>
+          <span class="val">{{ hero.check_out_label }}</span>
+        </div>
       </div>
-      <div style="flex:1;min-width:150px;padding:16px 20px;border-right:1px solid var(--line);">
-        <label class="tt-eyebrow" style="display:block;margin-bottom:6px;">Check in</label>
-        <input type="date" id="check_in" required style="width:100%;border:none;font-size:15px;color:var(--ink);outline:none;">
+      <div class="search-icon-circle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </div>
-      <div style="flex:1;min-width:150px;padding:16px 20px;border-right:1px solid var(--line);">
-        <label class="tt-eyebrow" style="display:block;margin-bottom:6px;">Check out</label>
-        <input type="date" id="check_out" required style="width:100%;border:none;font-size:15px;color:var(--ink);outline:none;">
-      </div>
-      <div style="min-width:120px;padding:16px 20px;border-right:1px solid var(--line);">
-        <label class="tt-eyebrow" style="display:block;margin-bottom:6px;">Guests</label>
-        <input type="number" id="guests" min="1" max="10" value="2"
-               style="width:64px;border:none;font-size:15px;color:var(--ink);outline:none;">
-      </div>
-      <button type="submit" class="tt-btn tt-btn-primary tt-btn-lg" style="margin:0;align-self:stretch;border-radius:0;">
-        Search stays
-      </button>
-    </form>
+    </a>
   </div>
 </section>
+
+<!-- Floating overlay — fixed to bottom-center of viewport, fades on scroll -->
+<div class="tt-hero-float-overlay" id="heroFloat">
+  <h1 class="tt-display tt-text-c tt-hero-float-title">
+    Explore stays that feel <span class="tt-italic-soft">modern,</span><br>
+    calm, and unmistakably Indian.
+  </h1>
+  <a href="{{ hero_q }}" class="tt-btn tt-btn-primary tt-btn-lg tt-hero-float-btn">
+    Find a stay
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+  </a>
+</div>
+{% endwith %}
 
 <!-- ════════════ FEATURED STAYS (carousel cards) ════════════ -->
 <section class="tt-section">
@@ -196,27 +198,19 @@
 
 {% block extra_js %}
 <script>
-  // ── Hero search (preserves existing search contract) ──
-  function handleSearch(e) {
-    e.preventDefault();
-    const city = document.getElementById('city').value.trim();
-    const check_in = document.getElementById('check_in').value;
-    const check_out = document.getElementById('check_out').value;
-    const guests = parseInt(document.getElementById('guests').value) || 2;
-    if (!check_in || !check_out) { alert('Please choose check-in and check-out dates.'); return; }
-    if (new Date(check_out) <= new Date(check_in)) { alert('Check-out must be after check-in.'); return; }
-    const params = new URLSearchParams({ check_in, check_out, guests: String(guests) });
-    if (city) params.set('city', city);
-    window.location.href = "{% url 'rooms:search-page' %}?" + params.toString();
-  }
-  (function defaultDates() {
-    const today = new Date();
-    const cin = new Date(today); cin.setDate(cin.getDate() + 1);
-    const cout = new Date(today); cout.setDate(cout.getDate() + 4);
-    const iso = d => d.toISOString().split('T')[0];
-    const ci = document.getElementById('check_in'), co = document.getElementById('check_out');
-    ci.min = iso(today); co.min = iso(today);
-    ci.value = iso(cin); co.value = iso(cout);
+  // ── Hero floating title: fade out within 150px of scroll (home.jsx) ──
+  (function heroFloat() {
+    const el = document.getElementById('heroFloat');
+    if (!el) return;
+    let raf = null;
+    const update = () => {
+      raf = null;
+      const op = Math.max(0, 1 - (window.scrollY || 0) / 150);
+      el.style.opacity = op;
+      el.style.pointerEvents = op < 0.1 ? 'none' : 'auto';
+    };
+    window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(update); }, { passive: true });
+    update();
   })();
 
   // ── Property image carousels ──
