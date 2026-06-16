@@ -24,8 +24,18 @@ templates reference these tokens, the whole site is re-themed at once. Inline px
 across customer pages (`pages/`, `accounts/`, `bookings/`) were squared too; only
 intentional `border-radius: 50%` circles remain.
 
-**⏳ Phase 2+ — Component/page alignment (in progress):** bring each component up to the
-v2 markup in §9 (carousels, star rating, hero float, etc.), page by page.
+**⏳ Phase 2+ — Net-new v2 components (not yet built):** an audit of `style.css` vs
+templates found the existing customer pages already define/use all their `tt-*` classes
+(the Phase 1 token change re-themed them cleanly). The genuinely missing pieces are the
+v2 *additions*, none of which exist in `style.css` or templates yet:
+> - `.tt-star*` — split-fill star rating (§9.10a)
+> - `.tt-slider*` — property image carousel (§9.10b / §9.11)
+> - `.tt-msb*` — mobile search bar (§9.7)
+> - `.tt-sheet*` — bottom sheet (§9.8)
+> - hero float overlay (§9.5/§9.6), `.tt-moments*` JS carousel (§9.12)
+>
+> These are net-new construction (CSS + markup + JS + in some cases model data such as a
+> room/property `rating`) and should be built page-by-page with visual review.
 
 **Scope note:** admin panels (`templates/superadmin/`, `templates/employeeadmin/`) use a
 separate dark operational theme and are intentionally **out of scope** for this editorial
