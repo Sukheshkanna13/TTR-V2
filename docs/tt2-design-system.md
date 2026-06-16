@@ -37,6 +37,15 @@ v2 *additions*, none of which exist in `style.css` or templates yet:
 > These are net-new construction (CSS + markup + JS + in some cases model data such as a
 > room/property `rating`) and should be built page-by-page with visual review.
 
+**Browser QA (2026-06-16):** desktop home is on-spec (squared, editorial, navy/white).
+**Mobile diverges** — it renders the desktop search form crammed in, not the v2
+Marriott-style 90vh hero + bottom-sheet search (§9.6–9.8). This is the biggest gap.
+Property cards show a single static image (no `.tt-slider` carousel, no `.tt-star`).
+
+**Data ready:** `Property.rating` / `review_count` / `rating_pct` added + seeded, so the
+split-fill star widget can be wired. Note: search-result cards are rendered in JS from the
+search API, so wiring stars there means extending `RoomSerializer` + the JS card builder.
+
 **Scope note:** admin panels (`templates/superadmin/`, `templates/employeeadmin/`) use a
 separate dark operational theme and are intentionally **out of scope** for this editorial
 design system.
