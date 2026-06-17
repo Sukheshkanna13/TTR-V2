@@ -10,7 +10,7 @@ def home_page(request):
     """Render the landing page — search select is DB-driven; showcase content
     (featured cards, moments, journeys, tiers) mirrors the approved design.
     Booking links route into the Django flow (search/property), not external OTAs."""
-    from rooms.models import Property
+    from rooms.models import Property, Room
     cities = list(
         Property.objects.filter(is_active=True)
         .values_list('city', flat=True)
@@ -30,17 +30,7 @@ def home_page(request):
         'guests': 2,
     }
 
-    def imgs(folder, nums):
-        return [f"images/{folder}/{n}.jpeg" for n in nums]
-
-    featured = [
-        {'name': 'White Town 1BHK — 1st Floor', 'area': 'White Town · 100m from beach',
-         'area_short': 'White Town', 'rating': '4.93', 'images': imgs('1F-1BHK', [1, 2, 3, 4, 5])},
-        {'name': 'White Town 1BHK — 2nd Floor', 'area': 'White Town · 100m from beach',
-         'area_short': 'White Town', 'rating': '4.86', 'images': imgs('2F-1BHK', [1, 2, 3, 4, 5])},
-        {'name': 'Nature Retreat', 'area': 'Near Auroville · 1-acre garden & pool',
-         'area_short': 'Near Auroville', 'rating': '4.90', 'images': imgs('Auroville', [1, 2, 3, 4, 5])},
-    ]
+    featured_rooms = Room.objects.featured_for_home()
     moments = [
         {'img': 'images/pottery.png', 'cap': 'Pottery, Near Auroville'},
         {'img': 'images/temple-courtyard.png', 'cap': 'Sandalwood courtyards'},
@@ -60,7 +50,7 @@ def home_page(request):
         {'tier': 'Gold', 'range': '2000+ pts', 'perks': '12% off'},
     ]
     return render(request, "pages/index.html", {
-        'cities': cities, 'hero': hero, 'featured': featured, 'moments': moments,
+        'cities': cities, 'hero': hero, 'featured_rooms': featured_rooms, 'moments': moments,
         'journeys': journeys, 'tiers': tiers,
     })
 

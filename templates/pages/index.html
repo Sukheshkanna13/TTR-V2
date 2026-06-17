@@ -62,12 +62,13 @@
     </div>
 
     <div class="tt-grid-3">
-      {% for c in featured %}
-      <div class="tt-card" onclick="location.href='{% url 'rooms:search-page' %}'">
+      {% for room in featured_rooms %}
+      {% with p=room.property %}
+      <div class="tt-card{% if forloop.counter > 3 %} tt-featured-extra{% endif %}" onclick="location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'">
         <div class="tt-card-media home-carousel" data-idx="0">
           <div class="tt-slider-track">
-            {% for img in c.images %}
-            <img src="{% static img %}" alt="{{ c.name }}" class="tt-slider-img" loading="lazy" draggable="false">
+            {% for img in room.images.all %}
+            <img src="{{ img.image.url }}" alt="{{ room.name }}" class="tt-slider-img" loading="lazy" draggable="false">
             {% endfor %}
           </div>
           <button type="button" class="tt-slider-btn prev" aria-label="Previous" onclick="event.stopPropagation();carPrev(this)">
@@ -77,21 +78,22 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
           <div class="tt-slider-dots">
-            {% for img in c.images %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endfor %}
+            {% for img in room.images.all %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endfor %}
           </div>
           <div class="tt-card-tags">
-            <span class="tt-tag">{{ c.area_short }}</span>
-            <span class="tt-tag tt-tag-dark">&#9733; {{ c.rating }}</span>
+            <span class="tt-tag">{{ room.city }}</span>
+            <span class="tt-tag tt-tag-dark">&#9733; {{ p.rating|default:"4.5" }}</span>
           </div>
         </div>
         <div class="tt-card-body">
           <div class="tt-card-row" style="align-items:center;">
-            <span class="tt-card-name">{{ c.name }}</span>
-            <button type="button" class="tt-btn-card-cta" onclick="event.stopPropagation();location.href='{% url 'rooms:search-page' %}'">Book now</button>
+            <span class="tt-card-name">{{ room.name }}</span>
+            <button type="button" class="tt-btn-card-cta" onclick="event.stopPropagation();location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'">Book now</button>
           </div>
-          <div class="tt-card-area">{{ c.area }}</div>
+          <div class="tt-card-area">{{ p.address|default:p.name|default:room.city }}</div>
         </div>
       </div>
+      {% endwith %}
       {% endfor %}
     </div>
   </div>
