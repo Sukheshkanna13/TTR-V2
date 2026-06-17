@@ -67,9 +67,9 @@
       <div class="tt-card{% if forloop.counter > 3 %} tt-featured-extra{% endif %}" onclick="location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'">
         <div class="tt-card-media home-carousel" data-idx="0">
           <div class="tt-slider-track">
-            {% for img in room.images.all %}
+            {% for img in room.images.all %}{% if img.image %}
             <img src="{{ img.image.url }}" alt="{{ room.name }}" class="tt-slider-img" loading="lazy" draggable="false">
-            {% endfor %}
+            {% endif %}{% endfor %}
           </div>
           <button type="button" class="tt-slider-btn prev" aria-label="Previous" onclick="event.stopPropagation();carPrev(this)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
@@ -78,7 +78,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
           <div class="tt-slider-dots">
-            {% for img in room.images.all %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endfor %}
+            {% for img in room.images.all %}{% if img.image %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endif %}{% endfor %}
           </div>
           <div class="tt-card-tags">
             <span class="tt-tag">{{ room.city }}</span>
