@@ -471,6 +471,16 @@ def room_update(request, room_id):
         _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
         return JsonResponse({'message': f'Room {state}.', 'is_active': room.is_active})
 
+    if action == 'toggle_featured':
+        room.is_featured = not room.is_featured
+        room.save(update_fields=['is_featured'])
+        state = 'featured' if room.is_featured else 'unfeatured'
+        _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
+        return JsonResponse({
+            'message': f'Room {state}.',
+            'is_featured': room.is_featured,
+        })
+
     if action == 'update_details':
         fields_changed = []
         for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description'):

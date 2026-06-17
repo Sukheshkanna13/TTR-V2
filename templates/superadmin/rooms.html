@@ -104,6 +104,9 @@
         <button class="sa-btn sa-btn-sm" onclick="toggleActive('{{ r.id }}', this)">
           {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
         </button>
+        <button class="sa-btn sa-btn-sm" id="feat-btn-{{ r.id }}" onclick="toggleFeatured('{{ r.id }}', this)" title="Feature on home page">
+          {% if r.is_featured %}★ Featured{% else %}☆ Feature{% endif %}
+        </button>
         <a class="sa-btn sa-btn-sm" href="{% url 'superadmin:room-images' r.id %}">📷 {{ r.images.count }}</a>
       </td>
     </tr>
@@ -208,6 +211,12 @@ async function setStatus(roomId, status) {
 
 async function toggleActive(roomId, btn) {
   const data = await roomAction(roomId, {action: 'toggle_active'});
+  if (data.error) { alert(data.error); return; }
+  location.reload();
+}
+
+async function toggleFeatured(roomId, btn) {
+  const data = await roomAction(roomId, {action: 'toggle_featured'});
   if (data.error) { alert(data.error); return; }
   location.reload();
 }
