@@ -5,6 +5,8 @@ Room — stores hotel room details (city, type, price, capacity, amenities).
 Booking — stores confirmed/pending/cancelled bookings with date ranges.
 """
 
+from datetime import date, datetime
+from decimal import Decimal
 import secrets
 import uuid
 
@@ -18,6 +20,12 @@ class Property(models.Model):
     """
     A hotel property (e.g., Pondicherry, Auroville, Bengaluru).
     """
+    objects = models.Manager()
+
+    # Type annotations for static typing / Pyrefly
+    rooms: models.Manager
+    tax_config: "PropertyTaxConfig"
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -45,7 +53,7 @@ class Property(models.Model):
     @builtins.property
     def rating_pct(self):
         """Rating as a percentage (0-100) for the split-fill star widget."""
-        return float(self.rating) / 5 * 100
+        return float(self.rating) / 5 * 100  # type: ignore
 
     class Meta:
         verbose_name = "property"
@@ -106,6 +114,12 @@ class Room(models.Model):
     ]
 
     objects = RoomManager()
+
+    # Type annotations for static typing / Pyrefly
+    rates: models.Manager
+    images: models.Manager
+    bookings: models.Manager
+    ota_blocks: models.Manager
 
     id = models.UUIDField(
         primary_key=True,
@@ -231,6 +245,7 @@ class RoomImage(models.Model):
     Image for a hotel room. Supports multiple images per room
     with one marked as the primary/hero image.
     """
+    objects = models.Manager()
 
     id = models.UUIDField(
         primary_key=True,
@@ -283,6 +298,10 @@ class Booking(models.Model):
         FAILED    → payment was attempted but failed
         CANCELLED → user cancelled after confirmation
     """
+    objects = models.Manager()
+
+    # Type annotations for static typing / Pyrefly
+    payments: models.Manager
 
     STATUS_CHOICES = [
         ("pending", "Pending"),
@@ -409,11 +428,42 @@ class Booking(models.Model):
         return True
 
     def generate_booking_reference(self):
-        """Generate TT-{year}-{pk:05d} reference. Called on booking confirmation."""
+        """Generate a human-readable TT-{year}-{NNNNN} reference (e.g. TT-2026-00001).
+
+        Called on booking confirmation. The number is a per-year sequence derived
+        from the highest existing reference for the current year — the UUID primary
+        key cannot supply a readable sequential number. ``booking_reference`` is
+        unique; on the rare race where two confirmations pick the same number the
+        insert fails and we retry with the next one. Idempotent: returns the
+        existing reference if already set.
+        """
+        from django.db import IntegrityError, transaction
+
         if self.booking_reference:
             return self.booking_reference
+
         year = timezone.now().year
-        self.booking_reference = f"TT-{year}-{self.pk:05d}"
+        prefix = f"TT-{year}-"
+        for _ in range(5):
+            last = (
+                Booking.objects.filter(booking_reference__startswith=prefix)
+                .order_by("-booking_reference")
+                .first()
+            )
+            try:
+                next_seq = int(last.booking_reference.rsplit("-", 1)[1]) + 1
+            except (AttributeError, ValueError):
+                next_seq = 1
+            self.booking_reference = f"{prefix}{next_seq:05d}"
+            try:
+                with transaction.atomic():
+                    self.save(update_fields=["booking_reference"])
+                return self.booking_reference
+            except IntegrityError:
+                self.booking_reference = None
+
+        # Extremely unlikely fallback: guaranteed-unique, non-sequential.
+        self.booking_reference = f"{prefix}{uuid.uuid4().hex[:6].upper()}"
         self.save(update_fields=["booking_reference"])
         return self.booking_reference
 
@@ -435,6 +485,8 @@ class OTABlock(models.Model):
     """
     Represents a room block from an OTA (Online Travel Agency) or a manual block by an admin.
     """
+    objects = models.Manager()
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="ota_blocks")
     start_date = models.DateField()
@@ -461,6 +513,8 @@ class RoomRate(models.Model):
     """
     Dynamic pricing override for a specific room and date range.
     """
+    objects = models.Manager()
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="rates")
     start_date = models.DateField()

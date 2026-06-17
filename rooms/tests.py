@@ -196,3 +196,34 @@ class FeaturedForHomeTest(TestCase):
         self.assertNotIn(inactive.id, result_ids)
         self.assertNotIn(cleaning.id, result_ids)
         self.assertEqual(set(result_ids), {a.id, b.id, c.id})
+
+
+class BookingReferenceTest(TestCase):
+    def setUp(self):
+        self.user = _guest()
+        self.room = _room()
+
+    def _booking(self):
+        today = timezone.now().date()
+        return Booking.objects.create(
+            room=self.room, user=self.user,
+            check_in=today + timedelta(days=1),
+            check_out=today + timedelta(days=3),
+            guests=1, total_price=Decimal('4000'), status='confirmed',
+        )
+
+    def test_reference_has_expected_format(self):
+        ref = self._booking().generate_booking_reference()
+        self.assertEqual(ref, f"TT-{timezone.now().year}-00001")
+
+    def test_reference_is_idempotent(self):
+        b = self._booking()
+        self.assertEqual(b.generate_booking_reference(),
+                         b.generate_booking_reference())
+
+    def test_references_increment_across_bookings(self):
+        year = timezone.now().year
+        self.assertEqual(self._booking().generate_booking_reference(),
+                         f"TT-{year}-00001")
+        self.assertEqual(self._booking().generate_booking_reference(),
+                         f"TT-{year}-00002")
