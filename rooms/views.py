@@ -192,6 +192,13 @@ class SearchRoomsView(APIView):
         num_nights = (check_out - check_in).days
 
         location_label = city or "All locations"
+        if not is_all_properties:
+            try:
+                prop = Property.objects.get(id=property_id)
+                location_label = prop.name
+            except (Property.DoesNotExist, ValueError):
+                pass
+
         if not room_list:
             return Response(
                 {

@@ -141,6 +141,18 @@ class SearchSerializer(serializers.Serializer):
         required=False,
     )
 
+    def validate_property_id(self, value):
+        if not value:
+            return None
+        if str(value).lower() in ["0", "all", "none", ""]:
+            return None
+        import uuid
+        try:
+            uuid.UUID(value)
+        except ValueError:
+            raise serializers.ValidationError("Invalid property ID format.")
+        return value
+
     def validate_check_in(self, value):
         if value < date.today():
             raise serializers.ValidationError("Check-in date cannot be in the past.")

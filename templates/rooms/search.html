@@ -147,7 +147,8 @@
 
   // Read initial search params from URL — apply safe defaults so we never send nulls
   let searchParams = {
-    property_id: urlParams.get('property_id') || urlParams.get('city') || '',
+    property_id: urlParams.get('property_id') || '',
+    city:        urlParams.get('city') || '',
     check_in:    urlParams.get('check_in') || '',
     check_out:   urlParams.get('check_out') || '',
     // guests: parse as int, fall back to 2 if missing/zero/NaN
@@ -281,6 +282,10 @@
       }
 
       document.getElementById('searchTitle').textContent = data.message;
+      const staysCityLabel = document.getElementById('staysCityLabel');
+      if (staysCityLabel) {
+        staysCityLabel.textContent = data.search.city || searchParams.city || 'Pondicherry & Auroville';
+      }
       resultsDiv.innerHTML = '';
 
       if (data.rooms.length === 0) {
