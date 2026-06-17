@@ -3,3 +3,10 @@
 
 # Code review visualisation and analysis
 code-review-graph>=2.3.3
+
+# Static type checking. django-stubs teaches the type checker how Django model
+# fields resolve to Python types (without it, `room.amenities.split()` and
+# `booking.status = "expired"` are flagged as errors). Pyrefly is the checker
+# the editor runs; pinning it here makes headless/CI checks reproducible.
+django-stubs>=6.0.5
+pyrefly>=1.0.0

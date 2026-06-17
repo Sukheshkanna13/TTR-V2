@@ -7,6 +7,7 @@ Booking — stores confirmed/pending/cancelled bookings with date ranges.
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 import secrets
 import uuid
 
@@ -14,6 +15,9 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 import builtins
+
+if TYPE_CHECKING:
+    from superadmin.models import PropertyTaxConfig
 
 
 class Property(models.Model):
@@ -450,9 +454,12 @@ class Booking(models.Model):
                 .order_by("-booking_reference")
                 .first()
             )
-            try:
-                next_seq = int(last.booking_reference.rsplit("-", 1)[1]) + 1
-            except (AttributeError, ValueError):
+            if last and last.booking_reference:
+                try:
+                    next_seq = int(last.booking_reference.rsplit("-", 1)[1]) + 1
+                except ValueError:
+                    next_seq = 1
+            else:
                 next_seq = 1
             self.booking_reference = f"{prefix}{next_seq:05d}"
             try:
@@ -470,8 +477,11 @@ class Booking(models.Model):
     def compute_tax(self):
         """Compute GST from PropertyTaxConfig and store in tax_amount. Returns amount."""
         from decimal import Decimal
+        prop = self.room.property
         try:
-            cfg = self.room.property.tax_config
+            if prop is None:
+                raise ValueError("Room has no property; cannot compute tax.")
+            cfg = prop.tax_config
             nightly_rate = self.total_price / self.num_nights if self.num_nights else self.total_price
             rate = cfg.gst_rate_for(nightly_rate)
             self.tax_amount = (self.total_price * rate / Decimal('100')).quantize(Decimal('0.01'))
