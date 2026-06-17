@@ -103,6 +103,9 @@
         <button class="ea-btn ea-btn-sm" onclick="toggleActive('{{ r.id }}', this)">
           {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
         </button>
+        <button class="ea-btn ea-btn-sm" id="feat-btn-{{ r.id }}" onclick="toggleFeatured('{{ r.id }}', this)" title="Feature on home page">
+          {% if r.is_featured %}★ Featured{% else %}☆ Feature{% endif %}
+        </button>
         <a class="ea-btn ea-btn-sm" href="{% url 'employeeadmin:room-images' r.id %}">📷 {{ r.images.count }}</a>
       </td>
     </tr>
@@ -214,6 +217,12 @@ async function setStatus(roomId, status) {
 
 async function toggleActive(roomId, btn) {
   const data = await roomAction(roomId, {action: 'toggle_active'});
+  if (data.error) { alert(data.error); return; }
+  location.reload();
+}
+
+async function toggleFeatured(roomId, btn) {
+  const data = await roomAction(roomId, {action: 'toggle_featured'});
   if (data.error) { alert(data.error); return; }
   location.reload();
 }

@@ -284,6 +284,14 @@ def room_edit(request, room_id):
         room.save(update_fields=['is_active'])
         return JsonResponse({'message': f'Room {"activated" if room.is_active else "deactivated"}.', 'is_active': room.is_active})
 
+    if action == 'toggle_featured':
+        room.is_featured = not room.is_featured
+        room.save(update_fields=['is_featured'])
+        return JsonResponse({
+            'message': f'Room {"featured" if room.is_featured else "unfeatured"}.',
+            'is_featured': room.is_featured,
+        })
+
     return JsonResponse({'error': 'Unknown action.'}, status=400)
 
 

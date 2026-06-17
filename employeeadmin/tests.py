@@ -175,4 +175,25 @@ class EmployeeRoomCrudTest(TestCase):
         self.room_a.refresh_from_db()
         self.assertFalse(self.room_a.is_active)
 
+    def test_room_edit_toggle_featured(self):
+        url = reverse('employeeadmin:room-edit', args=[self.room_a.id])
+        res = self.client.post(url, data=json.dumps({
+            'action': 'toggle_featured',
+        }), content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()['is_featured'])
+        self.room_a.refresh_from_db()
+        self.assertTrue(self.room_a.is_featured)
 
+    def test_cannot_feature_unassigned_room(self):
+        intruder = Room.objects.create(
+            property=self.prop_b, name='B1', city='Bengaluru',
+            room_type='single', price_per_night=1000, capacity=2,
+        )
+        url = reverse('employeeadmin:room-edit', args=[intruder.id])
+        res = self.client.post(url, data=json.dumps({
+            'action': 'toggle_featured',
+        }), content_type='application/json')
+        self.assertEqual(res.status_code, 403)
+        intruder.refresh_from_db()
+        self.assertFalse(intruder.is_featured)
