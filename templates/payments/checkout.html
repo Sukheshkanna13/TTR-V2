@@ -3,9 +3,9 @@
 {% block title %}Checkout — Temple and Towns Resorts{% endblock %}
 
 {% block content %}
-<div style="min-height:60vh;padding:48px 20px;background:var(--bg-soft);">
+<div style="min-height:60vh;padding:24px 20px 48px;background:var(--bg-soft);">
   <div style="width:100%;max-width:640px;margin:0 auto;">
-    {% include "components/_back_nav.html" with back_url="/rooms/search/" back_label="Back to search" back_warn=True %}
+    {% include "components/_back_nav.html" with back_warn=True %}
 
     <!-- Loading state -->
     <div id="loadingMsg" class="tt-loading" style="padding:60px 0;">
@@ -293,16 +293,16 @@
     window.location.href = '/rooms/search/page/?' + p.toString();
   }
 
-  // Override the back-nav anchor so it navigates with stored dates instead of bare /rooms/search/
+  // Override the global back-to-home button so it prompts to release the room hold before navigating
   document.addEventListener('DOMContentLoaded', () => {
-    const backLink = document.querySelector('a[href="/rooms/search/"]');
+    const backLink = document.getElementById('ttBackHome');
     if (backLink) {
       backLink.href = 'javascript:void(0)';
       backLink.onclick = (e) => {
         e.preventDefault();
         if (!confirm('Navigating away will release your room hold. Continue?')) return;
         releaseHold(false);   // free the room immediately so you can re-book it
-        goBackToSearch();
+        window.location.href = "{% url 'core:home' %}";
       };
     }
   });

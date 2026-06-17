@@ -25,8 +25,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="tt-page" style="padding-top:32px;padding-bottom:96px;">
-  {% include "components/_back_nav.html" with back_url=back_url back_label=back_label %}
+<div class="tt-page" style="padding-top:24px;padding-bottom:96px;">
+  {% include "components/_back_nav.html" %}
 
   <div id="loadingState" class="tt-loading"><div class="tt-spinner"></div><p>Loading room details…</p></div>
 
@@ -37,12 +37,7 @@
   </div>
 
   <div id="mainContent" class="hidden">
-    <!-- Breadcrumb -->
-    <div class="tt-breadcrumb" style="margin-bottom:24px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-muted);">
-      <a href="{% url 'core:home' %}" style="color:var(--text-muted);">Home</a><span>/</span>
-      <a id="bcStays" href="#" style="color:var(--text-muted);">Stays</a><span>/</span>
-      <span id="bcName" style="color:var(--ink);"></span>
-    </div>
+
 
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:24px;">

@@ -3,13 +3,8 @@
 {% block title %}Nature Retreat — Near Auroville | Temple and Towns Resorts{% endblock %}
 
 {% block content %}
-<div class="tt-page" style="padding-top:32px;padding-bottom:96px;">
-
-  <!-- Breadcrumb -->
-  <div class="tt-breadcrumb" style="margin-bottom:24px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-muted);">
-    <a href="{% url 'core:home' %}" style="color:var(--text-muted);">Home</a><span>/</span>
-    <span style="color:var(--ink);">Nature Retreat</span>
-  </div>
+<div class="tt-page" style="padding-top:24px;padding-bottom:96px;">
+  {% include "components/_back_nav.html" %}
 
   <!-- Header -->
   <div style="text-align:center;max-width:720px;margin:0 auto 48px;">

@@ -1,8 +1,7 @@
-<div style="margin-bottom:1.25rem;">
-  <a href="{{ back_url|default:'javascript:history.back()' }}"
-     style="font-size:13px;font-weight:500;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px;"
+<div class="tt-back-home-wrap">
+  <a href="{% url 'core:home' %}" class="tt-back-home" id="ttBackHome"
      {% if back_warn %}onclick="return confirm('Navigating away will release your room hold. Continue?');"{% endif %}>
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    {{ back_label|default:"Go back" }}
+    Back to home
   </a>
 </div>

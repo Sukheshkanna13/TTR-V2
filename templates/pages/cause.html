@@ -3,12 +3,9 @@
 {% block title %}Travel for Cause — Temple and Towns Resorts{% endblock %}
 
 {% block content %}
-<section class="tt-section" style="padding-top:64px;padding-bottom:0;">
+<section class="tt-section" style="padding-top:32px;padding-bottom:0;">
   <div class="tt-page">
-    <div class="tt-breadcrumb" style="margin-bottom:24px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-muted);">
-      <a href="{% url 'core:home' %}" style="color:var(--text-muted);">Home</a><span>/</span>
-      <span style="color:var(--ink);">Travel for Cause</span>
-    </div>
+    {% include "components/_back_nav.html" %}
     <div class="tt-eyebrow">CSR &amp; community</div>
     <h1 class="tt-h1" style="margin:12px 0 0;">Travel that <span class="tt-italic-soft" style="color:var(--accent);font-weight:600;">gives back.</span></h1>
     <p style="max-width:640px;margin-top:24px;font-size:17px;line-height:1.55;color:var(--text-soft);">

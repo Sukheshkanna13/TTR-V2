@@ -14,7 +14,7 @@
   <!-- Sticky floating search pill -->
   <div class="tt-hero-sticky-pill">
     <a href="{{ hero_q }}" class="tt-nav-search-pill" style="text-decoration:none;">
-      <div class="pill-content">
+      <div class="pill-content desktop-pill-content">
         <div class="cell">
           <span class="lbl">Where to?</span>
           <span class="val">{{ hero.city }}</span>
@@ -30,6 +30,13 @@
           <span class="val">{{ hero.check_out_label }}</span>
         </div>
       </div>
+
+      <div class="pill-content mobile-pill-content" style="display:none; justify-content:center; align-items:center; width:100%; text-align:center;">
+        <span style="font-size:14px; font-weight:500; color:var(--ink); display:inline-flex; align-items:center; gap:8px;">
+          Search stays in {{ hero.city }}
+        </span>
+      </div>
+
       <div class="search-icon-circle">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </div>
@@ -40,7 +47,7 @@
 <!-- Floating overlay — fixed to bottom-center of viewport, fades on scroll -->
 <div class="tt-hero-float-overlay" id="heroFloat">
   <h1 class="tt-display tt-text-c tt-hero-float-title">
-    Explore stays that feel <span class="tt-italic-soft">modern,</span><br>
+    Explore stays that feel <span class="tt-italic-soft">modern,</span><br class="hide-mobile">
     calm, and unmistakably Indian.
   </h1>
   <a href="{{ hero_q }}" class="tt-btn tt-btn-primary tt-btn-lg tt-hero-float-btn">

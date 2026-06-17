@@ -3,14 +3,8 @@
 {% block title %}Events — Temple and Towns Resorts Nature Retreat{% endblock %}
 
 {% block content %}
-<div class="tt-page" style="padding-top:56px;">
-  <div class="tt-breadcrumb" style="margin-bottom:0;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-muted);">
-    <a href="{% url 'core:home' %}" style="color:var(--text-muted);">Home</a><span>/</span>
-    <span style="color:var(--ink);">Events</span>
-  </div>
-</div>
-
-<div class="tt-page" style="padding-top:32px;padding-bottom:96px;">
+<div class="tt-page" style="padding-top:24px;padding-bottom:96px;">
+  {% include "components/_back_nav.html" %}
   <div class="tt-eyebrow">Nature Retreat Events</div>
   <h1 class="tt-h1" style="margin:12px 0 0;">Meaningful memories.</h1>
   <p style="color:var(--text-soft);margin-top:12px;font-size:16px;max-width:680px;">

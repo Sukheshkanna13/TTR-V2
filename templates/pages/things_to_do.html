@@ -3,14 +3,8 @@
 {% block title %}Things to do — Temple and Towns Resorts{% endblock %}
 
 {% block content %}
-<div class="tt-page" style="padding-top:56px;">
-  <div class="tt-breadcrumb" style="margin-bottom:0;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-muted);">
-    <a href="{% url 'core:home' %}" style="color:var(--text-muted);">Home</a><span>/</span>
-    <span style="color:var(--ink);">Things to do</span>
-  </div>
-</div>
-
-<div class="tt-page" style="padding-top:32px;padding-bottom:96px;">
+<div class="tt-page" style="padding-top:24px;padding-bottom:96px;">
+  {% include "components/_back_nav.html" %}
   <div class="tt-eyebrow">Things to do</div>
   <h1 class="tt-h1" style="margin:12px 0 0;">Beyond the <span style="color:var(--accent);font-weight:600;">room.</span></h1>
   <p style="color:var(--text-soft);margin-top:12px;font-size:16px;max-width:620px;">A short list, hand-picked by hosts. Book on the spot or save for later.</p>
