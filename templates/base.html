@@ -41,28 +41,12 @@
   <!-- ── Main navigation ── -->
   <nav class="tt-nav {% if url_name == 'home' %}tt-nav-home{% endif %}" id="ttNav">
     <div class="tt-nav-inner tt-nav-dual-layout">
-      <!-- LEFT: logo + inline search pill (home only) -->
+      <!-- LEFT: logo -->
       <div class="tt-nav-left-group">
         <a href="{% url 'core:home' %}" class="tt-logo-split tt-logo-static" style="text-decoration:none;">
           <img src="{% static 'images/logo-left.png' %}" alt="Temple and Towns Resorts logo" class="tt-logo-left-img">
           <img src="{% static 'images/logo-half.png' %}" alt="Temple and Towns Resorts" class="tt-logo-half-img">
         </a>
-        {% if url_name == 'home' %}
-        <a href="{% url 'rooms:search-page' %}" class="tt-nav-pill-inline" style="text-decoration:none;">
-          <div class="cell">
-            <span class="lbl">Where to?</span>
-            <span class="val">Pondicherry</span>
-          </div>
-          <div class="sep"></div>
-          <div class="cell">
-            <span class="lbl">Dates</span>
-            <span class="val">Add dates</span>
-          </div>
-          <div class="search-icon-circle">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          </div>
-        </a>
-        {% endif %}
       </div>
 
       <!-- CENTER: desktop nav links -->
