@@ -96,6 +96,9 @@
       {% endwith %}
       {% endfor %}
     </div>
+    {% if featured_rooms|length > 3 %}
+    <button type="button" class="tt-btn-link tt-featured-more" id="featuredMoreBtn" onclick="featuredShowMore(this)">View more stays &rarr;</button>
+    {% endif %}
   </div>
 </section>
 
@@ -227,6 +230,12 @@
   }
   function carNext(btn) { carGo(btn.closest('.home-carousel'), 1); }
   function carPrev(btn) { carGo(btn.closest('.home-carousel'), -1); }
+  function featuredShowMore(btn) {
+    document.querySelectorAll('.tt-featured-extra').forEach(function (el) {
+      el.classList.add('is-open');
+    });
+    btn.style.display = 'none';
+  }
   document.querySelectorAll('.home-carousel').forEach(media => {
     let sx = 0, dragging = false;
     media.addEventListener('touchstart', e => { sx = e.touches[0].clientX; dragging = true; }, { passive: true });
