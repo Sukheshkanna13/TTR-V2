@@ -175,11 +175,9 @@
     if (!d) return '—';
     return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
   }
-  function getRoomImage(t) {
-    const map = { single:'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80',
-      double:'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=80',
-      deluxe:'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&q=80' };
-    return map[t] || 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80';
+  function placeholderDiv(size) {
+    const s = size === 'thumb' ? 'height:100%;' : 'height:100%;';
+    return `<div style="${s}width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#f8f9fa;color:#bdbdbd;font-size:12px;letter-spacing:.04em;"><svg xmlns="http://www.w3.org/2000/svg" width="${size==='thumb'?20:36}" height="${size==='thumb'?20:36}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8.5 3.5v1M15.5 3.5v1"/></svg>${size!=='thumb'?'<span>No photos yet</span>':''}</div>`;
   }
 
   async function loadRoom() {
@@ -216,15 +214,19 @@
     document.getElementById('starRating').innerHTML = starHTML(room.property_rating);
 
     // Gallery — main + up to 4 thumbs
-    const imgs = (room.images && room.images.length)
-      ? room.images.map(i => i.image_url)
-      : [room.primary_image || getRoomImage(room.room_type)];
-    const main = imgs[0];
-    const thumbs = imgs.slice(1, 5);
-    while (thumbs.length < 4) thumbs.push(imgs[thumbs.length % imgs.length] || main);
-    document.getElementById('galleryGrid').innerHTML =
-      `<div class="main"><img src="${main}" alt="${room.name}"></div>` +
-      thumbs.map(src => `<div class="thumb" style="overflow:hidden;"><img src="${src}" alt="${room.name}"></div>`).join('');
+    if (room.images && room.images.length) {
+      const imgs = room.images.map(i => i.image_url);
+      const main = imgs[0];
+      const thumbs = imgs.slice(1, 5);
+      while (thumbs.length < 4) thumbs.push(imgs[thumbs.length % imgs.length] || main);
+      document.getElementById('galleryGrid').innerHTML =
+        `<div class="main"><img src="${main}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>` +
+        thumbs.map(src => `<div class="thumb" style="overflow:hidden;"><img src="${src}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`).join('');
+    } else {
+      document.getElementById('galleryGrid').innerHTML =
+        `<div class="main">${placeholderDiv('main')}</div>` +
+        Array(4).fill(0).map(() => `<div class="thumb">${placeholderDiv('thumb')}</div>`).join('');
+    }
 
     // Description
     document.getElementById('roomDesc').textContent = room.description ||

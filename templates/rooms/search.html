@@ -39,7 +39,14 @@
     flex: 0 0 290px;
     position: relative;
     overflow: hidden;
-    background: var(--bg-soft);
+    background: #f8f9fa;
+  }
+  .tt-img-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px; background: #f8f9fa; color: #bdbdbd;
+    font-size: 12px; letter-spacing: .04em;
   }
   #results .tt-card-image-wrap img {
     width: 100%;
@@ -260,6 +267,19 @@
     if (propertySelect && searchParams.property_id) {
       propertySelect.value = searchParams.property_id;
     }
+    // Update heading label immediately when destination changes
+    function updateCityLabel() {
+      const lbl = document.getElementById('staysCityLabel');
+      if (!lbl || !propertySelect) return;
+      const opt = propertySelect.options[propertySelect.selectedIndex];
+      if (!opt || !opt.value) { lbl.textContent = 'Pondicherry & Auroville'; return; }
+      const parts = opt.text.split(' — ');
+      lbl.textContent = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    }
+    if (propertySelect) {
+      propertySelect.addEventListener('change', updateCityLabel);
+      updateCityLabel();
+    }
 
     // Dates: use URL params if present, else default tomorrow → day-after
     const ciEl = document.getElementById('check_in');
@@ -296,13 +316,11 @@
     </span>`;
   }
 
-  function getRoomImage(room) {
-    const map = {
-      'single':  'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80',
-      'double':  'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=400&q=80',
-      'deluxe':  'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&q=80',
-    };
-    return map[room.room_type] || 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400&q=80';
+  function roomImageHTML(room) {
+    if (room.primary_image) {
+      return `<img src="${room.primary_image}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+    }
+    return `<div class="tt-img-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8.5 3.5v1M15.5 3.5v1"/></svg><span>No photo yet</span></div>`;
   }
 
   // Render a human-readable error message from the API's errors object
@@ -402,7 +420,6 @@
           ? Number(room.dynamic_total_price)
           : Number(room.price_per_night) * numNights;
 
-        const imgSrc = room.primary_image || getRoomImage(room);
         const card = document.createElement('div');
         card.className = 'tt-card';
         card.onclick = (e) => {
@@ -411,8 +428,7 @@
         };
         card.innerHTML = `
           <div class="tt-card-image-wrap">
-            <img src="${imgSrc}" alt="${room.name}"
-                 onerror="this.style.background='var(--bg-soft)'">
+            ${roomImageHTML(room)}
             <div class="tt-card-tags"><span class="tt-tag">${typeLabel}</span></div>
           </div>
           <div style="flex:1;padding:20px 24px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;">

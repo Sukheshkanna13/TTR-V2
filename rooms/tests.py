@@ -176,15 +176,14 @@ class FeaturedForHomeTest(TestCase):
         self.assertEqual(len(result), 4)
         self.assertEqual({r.id for r in result}, {r.id for r in rooms})
 
-    def test_imageless_featured_room_excluded(self):
+    def test_imageless_room_included(self):
+        # Rooms without images are included; placeholder is shown in the template
         no_img = _frroom(_frprop('NoImg', '5.0'), name='NoImg',
                          featured=True, with_image=False)
-        a = _frroom(_frprop('A', '4.9'), name='A')
-        b = _frroom(_frprop('B', '4.8'), name='B')
-        c = _frroom(_frprop('C', '4.7'), name='C')
+        _frroom(_frprop('A', '4.9'), name='A')
+        _frroom(_frprop('B', '4.8'), name='B')
         result = Room.objects.featured_for_home()
-        self.assertNotIn(no_img.id, [r.id for r in result])
-        self.assertEqual({r.id for r in result}, {a.id, b.id, c.id})
+        self.assertIn(no_img.id, [r.id for r in result])
 
     def test_inactive_and_unavailable_excluded(self):
         inactive = _frroom(_frprop('In', '5.0'), name='In', active=False)

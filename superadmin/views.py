@@ -1,6 +1,6 @@
 import json
 import secrets
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
@@ -694,6 +694,16 @@ def property_update(request, property_id):
             val = data.get(field)
             if val is not None:
                 setattr(prop, field, val.strip() if isinstance(val, str) else val)
+        if 'rating' in data:
+            try:
+                prop.rating = Decimal(str(round(float(data['rating']), 1)))
+            except (ValueError, TypeError, InvalidOperation):
+                return JsonResponse({'error': 'Invalid rating value.'}, status=400)
+        if 'review_count' in data:
+            try:
+                prop.review_count = int(data['review_count'])
+            except (ValueError, TypeError):
+                return JsonResponse({'error': 'Invalid review count.'}, status=400)
         prop.save()
         _log(request, 'PROPERTY_UPDATED', detail=f"property={prop.name}")
         return JsonResponse({'message': 'Property updated.'})

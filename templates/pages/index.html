@@ -73,10 +73,17 @@
       {% with p=room.property %}
       <div class="tt-card{% if forloop.counter > 3 %} tt-featured-extra{% endif %}" onclick="location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'">
         <div class="tt-card-media home-carousel" data-idx="0">
+          {% with imgs=room.images.all %}
           <div class="tt-slider-track">
-            {% for img in room.images.all %}{% if img.image %}
+            {% for img in imgs %}{% if img.image %}
             <img src="{{ img.image.url }}" alt="{{ room.name }}" class="tt-slider-img" loading="lazy" draggable="false">
             {% endif %}{% endfor %}
+            {% if not imgs %}
+            <div class="tt-slider-img tt-no-photo-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#f8f9fa;color:#bdbdbd;font-size:12px;letter-spacing:.04em;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8.5 3.5v1M15.5 3.5v1"/></svg>
+              <span>No photo yet</span>
+            </div>
+            {% endif %}
           </div>
           <button type="button" class="tt-slider-btn prev" aria-label="Previous" onclick="event.stopPropagation();carPrev(this)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
@@ -85,11 +92,18 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
           <div class="tt-slider-dots">
-            {% for img in room.images.all %}{% if img.image %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endif %}{% endfor %}
+            {% for img in imgs %}{% if img.image %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endif %}{% endfor %}
           </div>
+          {% endwith %}
           <div class="tt-card-tags">
             <span class="tt-tag">{{ room.city }}</span>
-            <span class="tt-tag tt-tag-dark">&#9733; {{ p.rating|default:"4.5" }}</span>
+            <span class="tt-tag tt-tag-dark" style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px;">
+              <span style="position:relative;display:inline-flex;line-height:1;color:#64748b;font-size:11px;letter-spacing:1px;">
+                <span>★★★★★</span>
+                <span style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:{{ p.rating_pct|floatformat:0 }}%;">★★★★★</span>
+              </span>
+              <span style="font-size:11px;font-weight:600;">{{ p.rating }}</span>
+            </span>
           </div>
         </div>
         <div class="tt-card-body">

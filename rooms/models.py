@@ -85,8 +85,6 @@ class RoomManager(models.Manager):
         pool = list(
             self.get_queryset()
             .filter(is_active=True, operational_status=Room.STATUS_AVAILABLE)
-            .filter(images__isnull=False)
-            .distinct()
             .select_related("property")
             .prefetch_related("images")
             .order_by(F("property__rating").desc(nulls_last=True), "-created_at")
