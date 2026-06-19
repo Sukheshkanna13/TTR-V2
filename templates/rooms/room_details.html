@@ -206,8 +206,10 @@
     const typeLabel = room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1);
 
     // Breadcrumb + header
-    document.getElementById('bcName').textContent = room.name;
-    document.getElementById('bcStays').href = `${SEARCH_URL}?city=${encodeURIComponent(room.city)}&check_in=${checkIn||''}&check_out=${checkOut||''}&guests=${guests}`;
+    const bcName = document.getElementById('bcName');
+    if (bcName) bcName.textContent = room.name;
+    const bcStays = document.getElementById('bcStays');
+    if (bcStays) bcStays.href = `${SEARCH_URL}?city=${encodeURIComponent(room.city)}&check_in=${checkIn||''}&check_out=${checkOut||''}&guests=${guests}`;
     document.getElementById('hdrArea').textContent = `${typeLabel} · Max ${room.capacity} guests`;
     document.getElementById('roomName').textContent = room.name;
     document.getElementById('hdrCity').textContent = room.city;

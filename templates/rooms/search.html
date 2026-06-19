@@ -82,9 +82,7 @@
   <!-- Stays header (approved search.jsx style) -->
   <div style="margin:8px 0 32px;">
     <div class="tt-eyebrow">Stays</div>
-    <h1 class="tt-h1" style="margin-top:12px;margin-bottom:0;">Find your stay in
-      <span class="tt-italic-soft" style="color:var(--accent);" id="staysCityLabel">Pondicherry &amp; Auroville</span>
-    </h1>
+    <h1 class="tt-h1" id="staysMainHeading" style="margin-top:12px;margin-bottom:0;">Find your stay</h1>
   </div>
 
   <div class="tt-results-layout">
@@ -132,11 +130,11 @@
 
         <div class="tt-field" style="margin-bottom:16px;">
           <label class="tt-field-label">Min price (₹)</label>
-          <input class="tt-input" type="number" id="min_price" name="min_price" placeholder="e.g. 1,000">
+          <input class="tt-input" type="number" id="min_price" name="min_price" placeholder="e.g. 1,000" min="0" step="500">
         </div>
         <div class="tt-field" style="margin-bottom:16px;">
           <label class="tt-field-label">Max price (₹)</label>
-          <input class="tt-input" type="number" id="max_price" name="max_price" placeholder="e.g. 10,000">
+          <input class="tt-input" type="number" id="max_price" name="max_price" placeholder="e.g. 10,000" min="0" step="500">
         </div>
         <div class="tt-field" style="margin-bottom:16px;">
           <label class="tt-field-label">Room type</label>
@@ -269,12 +267,21 @@
     }
     // Update heading label immediately when destination changes
     function updateCityLabel() {
-      const lbl = document.getElementById('staysCityLabel');
-      if (!lbl || !propertySelect) return;
-      const opt = propertySelect.options[propertySelect.selectedIndex];
-      if (!opt || !opt.value) { lbl.textContent = 'Pondicherry & Auroville'; return; }
-      const parts = opt.text.split(' — ');
-      lbl.textContent = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+      const heading = document.getElementById('staysMainHeading');
+      if (!heading) return;
+      
+      let locationText = '';
+      if (propertySelect && propertySelect.value) {
+          const opt = propertySelect.options[propertySelect.selectedIndex];
+          const parts = opt.text.split(' — ');
+          locationText = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+      }
+
+      if (locationText) {
+          heading.innerHTML = `Find your stay in <span class="tt-italic-soft" style="color:var(--accent);">${locationText}</span>`;
+      } else {
+          heading.innerHTML = `Find your stay`;
+      }
     }
     if (propertySelect) {
       propertySelect.addEventListener('change', updateCityLabel);
@@ -386,10 +393,6 @@
       }
 
       document.getElementById('searchTitle').textContent = data.message;
-      const staysCityLabel = document.getElementById('staysCityLabel');
-      if (staysCityLabel) {
-        staysCityLabel.textContent = data.search.city || searchParams.city || 'Pondicherry & Auroville';
-      }
       resultsDiv.innerHTML = '';
 
       if (data.rooms.length === 0) {

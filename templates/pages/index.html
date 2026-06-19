@@ -6,7 +6,7 @@
 
 <!-- ════════════ HERO (approved home.jsx structure) ════════════ -->
 {% url 'rooms:search-page' as search_url %}
-{% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=2&city='|add:hero.city %}
+{% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=2' %}
 <section class="tt-hero-full">
   <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full">
   <div class="tt-hero-overlay-white"></div>
@@ -17,7 +17,7 @@
       <div class="pill-content desktop-pill-content">
         <div class="cell">
           <span class="lbl">Where to?</span>
-          <span class="val">{{ hero.city }}</span>
+          <span class="val">Stay</span>
         </div>
         <div class="sep"></div>
         <div class="cell">
@@ -33,7 +33,7 @@
 
       <div class="pill-content mobile-pill-content" style="display:none; justify-content:center; align-items:center; width:100%; text-align:center;">
         <span style="font-size:14px; font-weight:500; color:var(--ink); display:inline-flex; align-items:center; gap:8px;">
-          Search stays in {{ hero.city }}
+          Search stays
         </span>
       </div>
 
@@ -267,16 +267,24 @@
     });
   });
 
-  // ── Moments carousel: auto-scroll + drag ──
+  // ── Moments carousel: auto-scroll + drag (Seamless loop) ──
   (function moments() {
     const el = document.getElementById('momentsCarousel');
-    if (!el) return;
+    const track = document.getElementById('momentsTrack');
+    if (!el || !track) return;
+
+    // Duplicate children to create a seamless infinite loop
+    track.innerHTML += track.innerHTML;
+
     let raf, paused = false, isDown = false, startX = 0, startScroll = 0;
     const speed = 0.6;
     const step = () => {
       if (!paused) {
         el.scrollLeft += speed;
-        if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) el.scrollLeft = 0;
+        // Reset scroll position exactly halfway through
+        if (el.scrollLeft >= track.scrollWidth / 2) {
+          el.scrollLeft -= track.scrollWidth / 2;
+        }
       }
       raf = requestAnimationFrame(step);
     };
@@ -285,9 +293,20 @@
     el.addEventListener('mouseleave', () => { if (!isDown) paused = false; });
     el.addEventListener('mousedown', e => { isDown = true; paused = true; startX = e.pageX; startScroll = el.scrollLeft; el.style.cursor = 'grabbing'; });
     window.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; paused = false; });
-    el.addEventListener('mousemove', e => { if (!isDown) return; e.preventDefault(); el.scrollLeft = startScroll - (e.pageX - startX); });
+    el.addEventListener('mousemove', e => { 
+      if (!isDown) return; 
+      e.preventDefault(); 
+      el.scrollLeft = startScroll - (e.pageX - startX); 
+      // Handle manual drag wrapping
+      if (el.scrollLeft >= track.scrollWidth / 2) el.scrollLeft -= track.scrollWidth / 2;
+      if (el.scrollLeft <= 0) el.scrollLeft += track.scrollWidth / 2;
+    });
     el.addEventListener('touchstart', e => { paused = true; startX = e.touches[0].pageX; startScroll = el.scrollLeft; }, { passive: true });
-    el.addEventListener('touchmove', e => { el.scrollLeft = startScroll - (e.touches[0].pageX - startX); }, { passive: true });
+    el.addEventListener('touchmove', e => { 
+      el.scrollLeft = startScroll - (e.touches[0].pageX - startX);
+      if (el.scrollLeft >= track.scrollWidth / 2) el.scrollLeft -= track.scrollWidth / 2;
+      if (el.scrollLeft <= 0) el.scrollLeft += track.scrollWidth / 2;
+    }, { passive: true });
     el.addEventListener('touchend', () => paused = false);
   })();
 </script>
