@@ -38,8 +38,6 @@
         <th>City</th>
         <th>Address</th>
         <th>WhatsApp</th>
-        <th>Rating</th>
-        <th>Reviews</th>
         <th>Rooms</th>
         <th>Status</th>
         <th>Actions</th>
@@ -60,12 +58,6 @@
       <td>
         <input class="sa-input sa-input-inline" id="wa-{{ p.id }}" value="{{ p.whatsapp_number }}" style="width:140px;">
       </td>
-      <td>
-        <input class="sa-input sa-input-inline" id="rating-{{ p.id }}" type="number" value="{{ p.rating }}" min="0" max="5" step="0.1" style="width:64px;">
-      </td>
-      <td>
-        <input class="sa-input sa-input-inline" id="reviews-{{ p.id }}" type="number" value="{{ p.review_count }}" min="0" step="1" style="width:72px;">
-      </td>
       <td style="text-align:center;font-weight:600;">{{ p.room_count }}</td>
       <td>
         <span id="status-{{ p.id }}" class="badge {% if p.is_active %}badge-green{% else %}badge-red{% endif %}">
@@ -80,7 +72,7 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="7" style="color:#64748b;padding:24px 12px;">No properties found.</td></tr>
+    <tr><td colspan="5" style="color:#64748b;padding:24px 12px;">No properties found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -120,8 +112,6 @@ async function saveProp(id) {
       city: document.getElementById('city-' + id).value,
       address: document.getElementById('addr-' + id).value,
       whatsapp_number: document.getElementById('wa-' + id).value,
-      rating: parseFloat(document.getElementById('rating-' + id).value),
-      review_count: parseInt(document.getElementById('reviews-' + id).value, 10),
     }),
   });
   const data = await res.json();

@@ -71,6 +71,17 @@
       height: 200px !important;
       width: 100% !important;
     }
+    .mobile-hidden-filters:not(.expanded) {
+      display: none;
+    }
+    #mobileFilterToggle {
+      display: inline-block !important;
+      margin-bottom: 16px;
+      width: 100%;
+    }
+  }
+  #mobileFilterToggle {
+    display: none;
   }
 </style>
 {% endblock %}
@@ -128,30 +139,33 @@
           </div>
         </div>
 
-        <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Min price (₹)</label>
-          <input class="tt-input" type="number" id="min_price" name="min_price" placeholder="e.g. 1,000" min="0" step="500">
-        </div>
-        <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Max price (₹)</label>
-          <input class="tt-input" type="number" id="max_price" name="max_price" placeholder="e.g. 10,000" min="0" step="500">
-        </div>
-        <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Room type</label>
-          <select class="tt-select" id="room_type" name="room_type">
-            <option value="">All types</option>
-            <option value="single">Single</option>
-            <option value="double">Double</option>
-            <option value="deluxe">Deluxe</option>
-          </select>
-        </div>
-        <div class="tt-field" style="margin-bottom:24px;">
-          <label class="tt-field-label">Sort by</label>
-          <select class="tt-select" id="sort" name="sort">
-            <option value="">Recommended</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-          </select>
+        <button type="button" id="mobileFilterToggle" class="tt-btn tt-btn-ghost tt-btn-sm" onclick="toggleMobileFilters()">View More</button>
+        <div id="advancedFilters" class="mobile-hidden-filters">
+          <div class="tt-field" style="margin-bottom:16px;">
+            <label class="tt-field-label">Min price (₹)</label>
+            <input class="tt-input" type="number" id="min_price" name="min_price" placeholder="e.g. 1,000" min="0" step="500">
+          </div>
+          <div class="tt-field" style="margin-bottom:16px;">
+            <label class="tt-field-label">Max price (₹)</label>
+            <input class="tt-input" type="number" id="max_price" name="max_price" placeholder="e.g. 10,000" min="0" step="500">
+          </div>
+          <div class="tt-field" style="margin-bottom:16px;">
+            <label class="tt-field-label">Room type</label>
+            <select class="tt-select" id="room_type" name="room_type">
+              <option value="">All types</option>
+              <option value="single">Single</option>
+              <option value="double">Double</option>
+              <option value="deluxe">Deluxe</option>
+            </select>
+          </div>
+          <div class="tt-field" style="margin-bottom:24px;">
+            <label class="tt-field-label">Sort by</label>
+            <select class="tt-select" id="sort" name="sort">
+              <option value="">Recommended</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+            </select>
+          </div>
         </div>
         <button type="submit" class="tt-btn tt-btn-primary tt-w-full">Apply filters</button>
       </form>
@@ -177,6 +191,17 @@
 
 {% block extra_js %}
 <script>
+  function toggleMobileFilters() {
+    const filters = document.getElementById('advancedFilters');
+    const btn = document.getElementById('mobileFilterToggle');
+    filters.classList.toggle('expanded');
+    if (filters.classList.contains('expanded')) {
+      btn.textContent = 'View Less';
+    } else {
+      btn.textContent = 'View More';
+    }
+  }
+
   const ROOM_DETAIL_URL = "{% url 'rooms:room-detail-page' %}";
   const SEARCH_API_URL  = "{% url 'rooms:search' %}";       // POST endpoint
   const CHECKOUT_URL    = "{% url 'payments:checkout-page' %}";
@@ -310,16 +335,16 @@
     return `${ROOM_DETAIL_URL}?id=${roomId}&check_in=${searchParams.check_in}&check_out=${searchParams.check_out}&guests=${searchParams.guests}`;
   }
 
-  // Split-fill star rating (approved StarRating) — 5 muted stars + clipped ink overlay
+  // Split-fill star rating — Unicode ★ overlay (matches homepage)
   function starHTML(rating) {
     if (rating === null || rating === undefined) return '';
-    const pct = (Number(rating) / 5) * 100;
-    const star = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9 6.7 19.7l1.1-5.9-4.3-4.1 5.9-.8L12 3.5Z"/></svg>';
-    const row = star.repeat(5);
-    return `<span style="position:relative;display:inline-flex;align-items:center;color:var(--line-strong);gap:2px;">
-      <span style="display:flex;gap:2px;">${row}</span>
-      <span style="position:absolute;top:0;left:0;display:flex;gap:2px;overflow:hidden;width:${pct}%;color:var(--ink);">${row}</span>
-      <span style="color:var(--ink);font-weight:600;margin-left:6px;font-size:13px;">${Number(rating).toFixed(2)}</span>
+    const pct = (Number(rating) / 5 * 100).toFixed(0);
+    return `<span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="position:relative;display:inline-flex;line-height:1;color:#64748b;font-size:14px;letter-spacing:1px;">
+        <span>★★★★★</span>
+        <span style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:${pct}%;">★★★★★</span>
+      </span>
+      <span style="color:var(--ink);font-weight:600;font-size:13px;">${Number(rating).toFixed(1)}</span>
     </span>`;
   }
 

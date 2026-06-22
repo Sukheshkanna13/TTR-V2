@@ -5,7 +5,7 @@
 {% block content %}
 <div style="min-height:60vh;padding:24px 20px 48px;background:var(--bg-soft);">
   <div style="width:100%;max-width:640px;margin:0 auto;">
-    {% include "components/_back_nav.html" with back_warn=True %}
+    {% include "components/_back_nav.html" with back_warn=True back_label="Back" %}
 
     <!-- Loading state -->
     <div id="loadingMsg" class="tt-loading" style="padding:60px 0;">
@@ -302,7 +302,7 @@
         e.preventDefault();
         if (!confirm('Navigating away will release your room hold. Continue?')) return;
         releaseHold(false);   // free the room immediately so you can re-book it
-        window.location.href = "{% url 'core:home' %}";
+        goBackToSearch();
       };
     }
   });

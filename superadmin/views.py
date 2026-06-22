@@ -483,13 +483,15 @@ def room_update(request, room_id):
 
     if action == 'update_details':
         fields_changed = []
-        for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description'):
+        for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description', 'rating'):
             val = data.get(field)
             if val is not None:
                 if field == 'price_per_night':
                     val = Decimal(str(val))
                 elif field == 'capacity':
                     val = int(val)
+                elif field == 'rating':
+                    val = Decimal(str(round(float(val), 1))) if val else Decimal("4.5")
                 setattr(room, field, val)
                 fields_changed.append(field)
         prop_id = data.get('property_id')
@@ -694,16 +696,6 @@ def property_update(request, property_id):
             val = data.get(field)
             if val is not None:
                 setattr(prop, field, val.strip() if isinstance(val, str) else val)
-        if 'rating' in data:
-            try:
-                prop.rating = Decimal(str(round(float(data['rating']), 1)))
-            except (ValueError, TypeError, InvalidOperation):
-                return JsonResponse({'error': 'Invalid rating value.'}, status=400)
-        if 'review_count' in data:
-            try:
-                prop.review_count = int(data['review_count'])
-            except (ValueError, TypeError):
-                return JsonResponse({'error': 'Invalid review count.'}, status=400)
         prop.save()
         _log(request, 'PROPERTY_UPDATED', detail=f"property={prop.name}")
         return JsonResponse({'message': 'Property updated.'})
@@ -723,6 +715,7 @@ def room_create(request):
     capacity = request.POST.get('capacity', '2')
     amenities = request.POST.get('amenities', '').strip()
     description = request.POST.get('description', '').strip()
+    rating_str = request.POST.get('rating', '4.5')
 
     if not property_id or not name:
         return JsonResponse({'error': 'Property and room name are required.'}, status=400)
@@ -731,13 +724,14 @@ def room_create(request):
     try:
         price = Decimal(price)
         capacity = int(capacity)
+        rating = Decimal(str(round(float(rating_str), 1)))
     except (ValueError, TypeError):
-        return JsonResponse({'error': 'Invalid price or capacity.'}, status=400)
+        return JsonResponse({'error': 'Invalid numbers provided.'}, status=400)
 
     room = Room.objects.create(
         property=prop, name=name, city=prop.city, room_type=room_type,
         price_per_night=price, capacity=capacity, amenities=amenities,
-        description=description,
+        description=description, rating=rating,
     )
     _log(request, 'ROOM_CREATED', detail=f"room={room.name}, property={prop.name}")
     return JsonResponse({'message': f'Room "{room.name}" created.', 'id': str(room.id)})

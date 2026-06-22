@@ -30,7 +30,7 @@
         <a href="{% url 'rooms:search-page' %}">Trip Planner</a>
         <a href="{% url 'core:retreat' %}">Nature Retreat</a>
         {% if user.is_authenticated %}
-          <a href="{% url 'accounts:folio' %}">Guest folio</a>
+          <a href="{% url 'accounts:folio' %}" title="{{ user.get_short_name }}">{{ user.get_short_name|truncatechars:20 }}</a>
         {% else %}
           <a href="{% url 'accounts:login-page' %}">Sign in</a>
         {% endif %}
@@ -80,7 +80,7 @@
       <a href="{% url 'core:cause' %}" class="tt-mobile-link">Travel for Cause</a>
       <a href="{% url 'core:events' %}" class="tt-mobile-link">Events</a>
       {% if user.is_authenticated %}
-        <a href="{% url 'accounts:folio' %}" class="tt-mobile-link">Guest folio</a>
+        <a href="{% url 'accounts:folio' %}" class="tt-mobile-link" title="{{ user.get_short_name }}">{{ user.get_short_name|truncatechars:20 }}</a>
         <span class="tt-mobile-link" role="button" onclick="logout()" style="cursor:pointer;">Sign out</span>
       {% else %}
         <a href="{% url 'accounts:login-page' %}" class="tt-mobile-link">Sign in / Register</a>
@@ -123,7 +123,7 @@
           <h4>Account</h4>
           <ul>
             {% if user.is_authenticated %}
-              <li><a href="{% url 'accounts:folio' %}">Guest folio</a></li>
+              <li><a href="{% url 'accounts:folio' %}" title="{{ user.get_short_name }}">{{ user.get_short_name|truncatechars:20 }}</a></li>
               <li><a href="{% url 'bookings:my-bookings-page' %}">My bookings</a></li>
               <li><span role="button" onclick="logout()" style="cursor:pointer;">Sign out</span></li>
             {% else %}

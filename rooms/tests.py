@@ -133,18 +133,19 @@ class RoomOperationalStatusTest(TestCase):
             self.assertEqual(Room.objects.get(pk=self.room.pk).operational_status, status)
 
 
-def _frprop(name, rating='4.5'):
+def _frprop(name):
     return Property.objects.create(
-        name=name, city='Pondy', address='addr', is_active=True, rating=rating,
+        name=name, city='Pondy', address='addr', is_active=True,
     )
 
 
 def _frroom(prop, name='R', featured=False, active=True,
-            status='available', with_image=True):
+            status='available', with_image=True, rating=None):
     room = Room.objects.create(
         property=prop, name=name, city='Pondy', room_type='single',
         price_per_night=Decimal('2000'), capacity=2,
         operational_status=status, is_active=active, is_featured=featured,
+        rating=rating or '4.5'
     )
     if with_image:
         RoomImage.objects.create(room=room, image='room_images/x.jpg')
@@ -153,24 +154,24 @@ def _frroom(prop, name='R', featured=False, active=True,
 
 class FeaturedForHomeTest(TestCase):
     def test_no_featured_returns_three_highest_rated(self):
-        a = _frroom(_frprop('A', '4.9'), name='A')
-        b = _frroom(_frprop('B', '4.8'), name='B')
-        c = _frroom(_frprop('C', '4.7'), name='C')
-        _frroom(_frprop('D', '4.6'), name='D')
+        a = _frroom(_frprop('A'), name='A', rating='4.9')
+        b = _frroom(_frprop('B'), name='B', rating='4.8')
+        c = _frroom(_frprop('C'), name='C', rating='4.7')
+        d = _frroom(_frprop('D'), name='D', rating='4.6')
         result = Room.objects.featured_for_home()
         self.assertEqual([r.id for r in result], [a.id, b.id, c.id])
 
     def test_fewer_than_three_featured_fills_to_three(self):
-        low = _frroom(_frprop('Low', '4.0'), name='Low', featured=True)
-        a = _frroom(_frprop('A', '4.9'), name='A')
-        b = _frroom(_frprop('B', '4.8'), name='B')
+        low = _frroom(_frprop('Low'), name='Low', featured=True, rating='4.0')
+        a = _frroom(_frprop('A'), name='A', rating='4.9')
+        b = _frroom(_frprop('B'), name='B', rating='4.8')
         result = Room.objects.featured_for_home()
         self.assertEqual(result[0].id, low.id)          # featured first
         self.assertEqual({r.id for r in result}, {low.id, a.id, b.id})
         self.assertEqual(len(result), 3)
 
     def test_three_or_more_featured_returns_all(self):
-        rooms = [_frroom(_frprop(f'P{i}', '4.5'), name=f'F{i}', featured=True)
+        rooms = [_frroom(_frprop(f'P{i}'), name=f'F{i}', featured=True, rating='4.5')
                  for i in range(4)]
         result = Room.objects.featured_for_home()
         self.assertEqual(len(result), 4)
@@ -178,19 +179,19 @@ class FeaturedForHomeTest(TestCase):
 
     def test_imageless_room_included(self):
         # Rooms without images are included; placeholder is shown in the template
-        no_img = _frroom(_frprop('NoImg', '5.0'), name='NoImg',
-                         featured=True, with_image=False)
-        _frroom(_frprop('A', '4.9'), name='A')
-        _frroom(_frprop('B', '4.8'), name='B')
+        no_img = _frroom(_frprop('NoImg'), name='NoImg',
+                         featured=True, with_image=False, rating='5.0')
+        _frroom(_frprop('A'), name='A', rating='4.9')
+        _frroom(_frprop('B'), name='B', rating='4.8')
         result = Room.objects.featured_for_home()
         self.assertIn(no_img.id, [r.id for r in result])
 
     def test_inactive_and_unavailable_excluded(self):
-        inactive = _frroom(_frprop('In', '5.0'), name='In', active=False)
-        cleaning = _frroom(_frprop('Cl', '5.0'), name='Cl', status='cleaning')
-        a = _frroom(_frprop('A', '4.9'), name='A')
-        b = _frroom(_frprop('B', '4.8'), name='B')
-        c = _frroom(_frprop('C', '4.7'), name='C')
+        inactive = _frroom(_frprop('In'), name='In', active=False, rating='5.0')
+        cleaning = _frroom(_frprop('Cl'), name='Cl', status='cleaning', rating='5.0')
+        a = _frroom(_frprop('A'), name='A', rating='4.9')
+        b = _frroom(_frprop('B'), name='B', rating='4.8')
+        c = _frroom(_frprop('C'), name='C', rating='4.7')
         result_ids = [r.id for r in Room.objects.featured_for_home()]
         self.assertNotIn(inactive.id, result_ids)
         self.assertNotIn(cleaning.id, result_ids)

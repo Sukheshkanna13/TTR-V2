@@ -100,9 +100,9 @@
             <span class="tt-tag tt-tag-dark" style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px;">
               <span style="position:relative;display:inline-flex;line-height:1;color:#64748b;font-size:11px;letter-spacing:1px;">
                 <span>★★★★★</span>
-                <span style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:{{ p.rating_pct|floatformat:0 }}%;">★★★★★</span>
+                <span style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:{{ room.rating_pct|floatformat:0 }}%;">★★★★★</span>
               </span>
-              <span style="font-size:11px;font-weight:600;">{{ p.rating }}</span>
+              <span style="font-size:11px;font-weight:600;">{{ room.rating }}</span>
             </span>
           </div>
         </div>
@@ -195,26 +195,15 @@
 <!-- ════════════ WAYFARER REWARDS ════════════ -->
 <section class="tt-section-sm" style="padding-top:0;">
   <div class="tt-page">
-    <div style="background:var(--bg-soft);color:var(--ink);padding:64px 56px;display:grid;grid-template-columns:1.4fr 1fr;gap:56px;align-items:center;border:1px solid var(--line);">
-      <div>
+    <div style="background:var(--bg-soft);color:var(--ink);padding:64px 56px;text-align:center;border:1px solid var(--line);">
+      <div style="max-width:520px;margin:0 auto;display:flex;flex-direction:column;align-items:center;">
         <div class="tt-eyebrow">Wayfarer rewards</div>
         <h2 class="tt-h2" style="margin-top:14px;margin-bottom:16px;">Stay more, earn more.</h2>
-        <p style="font-size:17px;color:var(--text-soft);line-height:1.55;max-width:480px;margin:0;">
+        <p style="font-size:17px;color:var(--text-soft);line-height:1.55;margin:0 auto;">
           Earn points every night. Unlock early check-ins, room upgrades, and exclusive rates. Our guests earn points from their very first stay.
         </p>
         <a href="{% if user.is_authenticated %}{% url 'accounts:folio' %}{% else %}{% url 'accounts:login-page' %}{% endif %}"
            class="tt-btn tt-btn-primary tt-btn-lg" style="margin-top:32px;">Explore rewards &rarr;</a>
-      </div>
-      <div>
-        {% for t in tiers %}
-        <div style="border-top:1px solid var(--line-strong);padding:20px 0;display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <div style="font-weight:600;font-size:17px;">{{ t.tier }}</div>
-            <div class="tt-muted" style="font-size:13px;margin-top:2px;">{{ t.range }}</div>
-          </div>
-          <div class="tt-muted" style="font-size:13px;">{{ t.perks }}</div>
-        </div>
-        {% endfor %}
       </div>
     </div>
   </div>

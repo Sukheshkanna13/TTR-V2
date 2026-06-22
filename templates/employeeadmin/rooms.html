@@ -40,6 +40,10 @@
       <label class="ea-label">Amenities</label>
       <input class="ea-input" type="text" name="amenities" placeholder="WiFi, AC, TV" style="min-width:200px;">
     </div>
+    <div>
+      <label class="ea-label">Rating (0–5)</label>
+      <input class="ea-input" type="number" name="rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;">
+    </div>
     <button class="ea-btn ea-btn-primary" type="submit">Create Room</button>
   </form>
   <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
@@ -71,6 +75,7 @@
         <th>Type</th>
         <th>Price / Night</th>
         <th>Capacity</th>
+        <th>Rating</th>
         <th>Amenities</th>
         <th>Op. Status</th>
         <th>Active</th>
@@ -85,6 +90,7 @@
       <td>{{ r.get_room_type_display }}</td>
       <td>₹{{ r.price_per_night|floatformat:0 }}</td>
       <td>{{ r.capacity }}</td>
+      <td>{{ r.rating|default:"—" }}</td>
       <td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;color:#99f6e4;">{{ r.amenities|default:"—" }}</td>
       <td>
         <select class="ea-input ea-input-sm" onchange="setStatus('{{ r.id }}', this.value)" style="width:120px;">
@@ -99,7 +105,7 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
-        <button class="ea-btn ea-btn-sm ea-btn-primary" onclick="openEditModal('{{ r.id }}', '{{ r.name|escapejs }}', '{{ r.room_type }}', '{{ r.price_per_night }}', '{{ r.capacity }}', '{{ r.amenities|escapejs }}', '{{ r.description|escapejs }}', '{{ r.property_id }}')">Edit</button>
+        <button class="ea-btn ea-btn-sm ea-btn-primary" onclick="openEditModal('{{ r.id }}', '{{ r.name|escapejs }}', '{{ r.room_type }}', '{{ r.price_per_night }}', '{{ r.capacity }}', '{{ r.amenities|escapejs }}', '{{ r.description|escapejs }}', '{{ r.property_id }}', '{{ r.rating|default_if_none:"" }}')">Edit</button>
         <button class="ea-btn ea-btn-sm" onclick="toggleActive('{{ r.id }}', this)">
           {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
         </button>
@@ -110,7 +116,7 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="9" style="color:#5eead4;padding:24px 12px;opacity:.7;">No rooms found.</td></tr>
+    <tr><td colspan="10" style="color:#5eead4;padding:24px 12px;opacity:.7;">No rooms found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -158,9 +164,15 @@
         <label class="ea-label">Amenities</label>
         <input class="ea-input" type="text" id="edit-amenities" style="width:100%;">
       </div>
-      <div>
-        <label class="ea-label">Description</label>
-        <textarea class="ea-input" id="edit-description" rows="3" style="width:100%;resize:vertical;"></textarea>
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;">
+          <label class="ea-label">Description</label>
+          <textarea class="ea-input" id="edit-description" rows="3" style="width:100%;resize:vertical;"></textarea>
+        </div>
+        <div>
+          <label class="ea-label">Rating (0–5)</label>
+          <input class="ea-input" type="number" id="edit-rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;">
+        </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button type="button" class="ea-btn" onclick="closeEditModal()">Cancel</button>
@@ -228,7 +240,7 @@ async function toggleFeatured(roomId, btn) {
 }
 
 // Edit modal
-function openEditModal(id, name, type, price, capacity, amenities, description, propId) {
+function openEditModal(id, name, type, price, capacity, amenities, description, propId, rating) {
   document.getElementById('edit-room-id').value = id;
   document.getElementById('edit-name').value = name;
   document.getElementById('edit-type').value = type;
@@ -237,6 +249,7 @@ function openEditModal(id, name, type, price, capacity, amenities, description, 
   document.getElementById('edit-amenities').value = amenities;
   document.getElementById('edit-description').value = description;
   document.getElementById('edit-property').value = propId;
+  document.getElementById('edit-rating').value = rating || '';
   document.getElementById('editModal').style.display = 'flex';
 }
 function closeEditModal() {
@@ -255,6 +268,7 @@ document.getElementById('editForm').addEventListener('submit', async e => {
     amenities: document.getElementById('edit-amenities').value,
     description: document.getElementById('edit-description').value,
     property_id: document.getElementById('edit-property').value,
+    rating: document.getElementById('edit-rating').value || null,
   };
   const data = await roomAction(roomId, payload);
   if (data.message) { closeEditModal(); location.reload(); }

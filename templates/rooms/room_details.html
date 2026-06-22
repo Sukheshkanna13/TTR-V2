@@ -162,13 +162,14 @@
 
   function starHTML(rating) {
     if (rating === null || rating === undefined) return '';
-    const pct = (Number(rating) / 5) * 100;
-    const s = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9 6.7 19.7l1.1-5.9-4.3-4.1 5.9-.8L12 3.5Z"/></svg>';
-    const row = s.repeat(5);
-    return `<span style="position:relative;display:inline-flex;align-items:center;color:var(--line-strong);gap:2px;">
-      <span style="display:flex;gap:2px;">${row}</span>
-      <span style="position:absolute;top:0;left:0;display:flex;gap:2px;overflow:hidden;width:${pct}%;color:var(--ink);">${row}</span>
-      <span style="color:var(--ink);font-weight:600;margin-left:6px;font-size:13px;">${Number(rating).toFixed(2)}</span></span>`;
+    const pct = (Number(rating) / 5 * 100).toFixed(0);
+    return `<span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="position:relative;display:inline-flex;line-height:1;color:#64748b;font-size:14px;letter-spacing:1px;">
+        <span>★★★★★</span>
+        <span style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:${pct}%;">★★★★★</span>
+      </span>
+      <span style="color:var(--ink);font-weight:600;font-size:13px;">${Number(rating).toFixed(1)}</span>
+    </span>`;
   }
 
   function fmtDate(d) {

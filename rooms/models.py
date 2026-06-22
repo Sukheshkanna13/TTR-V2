@@ -45,19 +45,7 @@ class Property(models.Model):
         help_text="WhatsApp number for notifications"
     )
     is_active = models.BooleanField(default=True)
-    rating = models.DecimalField(
-        max_digits=2, decimal_places=1, default="4.5",
-        help_text="Guest rating out of 5, shown on property cards.",
-    )
-    review_count = models.PositiveIntegerField(
-        default=0, help_text="Number of guest reviews backing the rating.",
-    )
     created_at = models.DateTimeField(auto_now_add=True)
-
-    @builtins.property
-    def rating_pct(self):
-        """Rating as a percentage (0-100) for the split-fill star widget."""
-        return float(self.rating) / 5 * 100  # type: ignore
 
     class Meta:
         verbose_name = "property"
@@ -87,7 +75,7 @@ class RoomManager(models.Manager):
             .filter(is_active=True, operational_status=Room.STATUS_AVAILABLE)
             .select_related("property")
             .prefetch_related("images")
-            .order_by(F("property__rating").desc(nulls_last=True), "-created_at")
+            .order_by(F("rating").desc(nulls_last=True), "-created_at")
         )
 
         featured = [r for r in pool if r.is_featured]
@@ -194,6 +182,10 @@ class Room(models.Model):
         db_index=True,
         help_text="Show this room in the Featured Stays carousel on the home page.",
     )
+    rating = models.DecimalField(
+        max_digits=2, decimal_places=1, default="4.5",
+        help_text="Room rating out of 5.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -203,6 +195,13 @@ class Room(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.city}) — ₹{self.price_per_night}/night"
+
+    @builtins.property
+    def rating_pct(self):
+        """Rating as a percentage (0-100) for the split-fill star widget."""
+        if self.rating is None:
+            return 0
+        return float(self.rating) / 5 * 100
 
     @builtins.property
     def amenities_list(self):

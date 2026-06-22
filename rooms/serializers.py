@@ -59,8 +59,7 @@ class RoomSerializer(serializers.ModelSerializer):
         ]
 
     def get_property_rating(self, obj):
-        rating = getattr(obj.property, "rating", None)
-        return float(rating) if rating is not None else None
+        return float(obj.rating) if obj.rating is not None else None
 
     def get_property_name(self, obj):
         return getattr(obj.property, "name", "")

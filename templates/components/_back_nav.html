@@ -1,7 +1,7 @@
 <div class="tt-back-home-wrap">
-  <a href="{% url 'core:home' %}" class="tt-back-home" id="ttBackHome"
+  <a href="{% if back_url %}{{ back_url }}{% else %}{% url 'core:home' %}{% endif %}" class="tt-back-home" id="ttBackHome"
      {% if back_warn %}onclick="return confirm('Navigating away will release your room hold. Continue?');"{% endif %}>
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    Back to home
+    {{ back_label|default:"Back to home" }}
   </a>
 </div>
