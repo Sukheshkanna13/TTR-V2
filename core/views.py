@@ -77,7 +77,33 @@ def things_to_do_page(request):
 
 def cause_page(request):
     """Render the Travel for a Cause page."""
-    return render(request, "pages/cause.html")
+    from .models import Cause
+    from rooms.models import Booking
+    from django.db.models import Sum
+
+    causes = Cause.objects.filter(is_active=True).order_by('sort_order', '-created_at')
+    
+    # Calculate impact stats
+    total_raised_decimal = causes.aggregate(total=Sum('raised_amount'))['total'] or 0
+    total_raised_lakhs = round(float(total_raised_decimal) / 100000, 1)
+    if total_raised_lakhs.is_integer():
+        total_raised_str = f"{int(total_raised_lakhs)}L"
+    else:
+        total_raised_str = f"{total_raised_lakhs}L"
+
+    # Dynamic count of completed/confirmed bookings + static offset for mock scalability
+    booking_count = Booking.objects.filter(status__in=('confirmed', 'completed')).count()
+    guests_participated = 800 + booking_count
+    
+    active_programs = causes.count()
+
+    return render(request, "pages/cause.html", {
+        'causes': causes,
+        'total_raised': total_raised_str,
+        'guests_participated': guests_participated,
+        'active_programs': active_programs,
+    })
+
 
 
 def explore_page(request):

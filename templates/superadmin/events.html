@@ -1,0 +1,233 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Events & Attractions{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Events & Attractions Management</h1>
+
+<!-- Filters -->
+<div class="sa-card" style="display:flex;gap:16px;align-items:center;">
+  <span style="font-size:13px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Filters:</span>
+  <div>
+    <label class="sa-label">Category</label>
+    <select class="sa-input" onchange="filterEvents('category', this.value)">
+      <option value="">All Categories</option>
+      {% for val, lbl in category_choices %}
+        <option value="{{ val }}" {% if category_filter == val %}selected{% endif %}>{{ lbl }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="sa-label">City</label>
+    <select class="sa-input" onchange="filterEvents('city', this.value)">
+      <option value="">All Cities</option>
+      <option value="Pondicherry" {% if city_filter == 'Pondicherry' %}selected{% endif %}>Pondicherry</option>
+      <option value="Near Auroville" {% if city_filter == 'Near Auroville' %}selected{% endif %}>Near Auroville</option>
+      <option value="Bengaluru" {% if city_filter == 'Bengaluru' %}selected{% endif %}>Bengaluru</option>
+    </select>
+  </div>
+</div>
+
+<!-- Create Event / Attraction -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Add Event / Attraction</h2>
+  <form id="createEventForm" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:1rem;align-items:flex-end;">
+    <div>
+      <label class="sa-label">Name</label>
+      <input class="sa-input" type="text" name="name" required placeholder="e.g. Clay Art Workshop" style="width:100%;">
+    </div>
+    <div>
+      <label class="sa-label">City</label>
+      <input class="sa-input" type="text" name="city" required placeholder="e.g. Pondicherry" style="width:100%;">
+    </div>
+    <div>
+      <label class="sa-label">Category</label>
+      <select class="sa-input" name="category" style="width:100%;">
+        {% for val, lbl in category_choices %}
+          <option value="{{ val }}">{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="sa-label">Address</label>
+      <input class="sa-input" type="text" name="address" placeholder="e.g. White Town" style="width:100%;">
+    </div>
+    <div>
+      <label class="sa-label">Opening Hours / Timing</label>
+      <input class="sa-input" type="text" name="opening_hrs" placeholder="e.g. Sat 6:00 AM" style="width:100%;">
+    </div>
+    <div style="grid-column: 1 / -1;">
+      <label class="sa-label">Description</label>
+      <textarea class="sa-input" name="description" placeholder="Write description here..." rows="2" style="width:100%;resize:vertical;"></textarea>
+    </div>
+    <div>
+      <button class="sa-btn sa-btn-primary" type="submit">Create</button>
+    </div>
+  </form>
+  <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
+</div>
+
+<!-- Events List -->
+<div class="sa-card">
+  <h2 class="sa-section-title">All Events & Attractions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>City</th>
+        <th>Category</th>
+        <th>Address</th>
+        <th>Timing / Hours</th>
+        <th>Description</th>
+        <th>Order</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for e in events %}
+    <tr id="event-row-{{ e.id }}">
+      <td>
+        <input class="sa-input sa-input-inline" id="name-{{ e.id }}" value="{{ e.name }}" style="width:160px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="city-{{ e.id }}" value="{{ e.city }}" style="width:100px;">
+      </td>
+      <td>
+        <select class="sa-input sa-input-inline" id="category-{{ e.id }}" style="width:110px;">
+          {% for val, lbl in category_choices %}
+            <option value="{{ val }}" {% if e.category == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="address-{{ e.id }}" value="{{ e.address }}" style="width:150px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="timing-{{ e.id }}" value="{{ e.opening_hrs }}" style="width:140px;">
+      </td>
+      <td>
+        <textarea class="sa-input sa-input-inline" id="desc-{{ e.id }}" style="width:180px;height:36px;font-family:inherit;font-size:inherit;">{{ e.description }}</textarea>
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="sort-{{ e.id }}" type="number" value="{{ e.sort_order }}" style="width:50px;text-align:center;">
+      </td>
+      <td>
+        <span id="status-{{ e.id }}" class="badge {% if e.is_visible %}badge-green{% else %}badge-red{% endif %}">
+          {% if e.is_visible %}Visible{% else %}Hidden{% endif %}
+        </span>
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="saveEvent('{{ e.id }}')">Save</button>
+        <a class="sa-btn sa-btn-sm" href="{% url 'superadmin:event-images' e.id %}">Photos ({{ e.photos.count }})</a>
+        <button class="sa-btn sa-btn-sm" onclick="toggleVisible('{{ e.id }}')">
+          {% if e.is_visible %}Hide{% else %}Show{% endif %}
+        </button>
+        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteEvent('{{ e.id }}')">Delete</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="9" style="color:#64748b;padding:24px 12px;">No events or attractions found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+// Filter events by Category/City
+function filterEvents(param, val) {
+  const url = new URL(window.location.href);
+  if (val) {
+    url.searchParams.set(param, val);
+  } else {
+    url.searchParams.delete(param);
+  }
+  window.location.href = url.toString();
+}
+
+// Create Event
+document.getElementById('createEventForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('{% url "superadmin:event-create" %}', {
+    method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
+  });
+  const data = await res.json();
+  const box = document.getElementById('createResult');
+  box.style.display = 'block';
+  if (res.ok) {
+    box.style.background = '#064e3b'; box.style.color = '#6ee7b7';
+    box.textContent = data.message;
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    box.style.background = '#450a0a'; box.style.color = '#fca5a5';
+    box.textContent = data.error;
+  }
+});
+
+// Save Event Details
+async function saveEvent(id) {
+  const res = await fetch(`/super-admin/events/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      action: 'update_details',
+      name: document.getElementById('name-' + id).value,
+      city: document.getElementById('city-' + id).value,
+      category: document.getElementById('category-' + id).value,
+      address: document.getElementById('address-' + id).value,
+      opening_hrs: document.getElementById('timing-' + id).value,
+      description: document.getElementById('desc-' + id).value,
+      sort_order: document.getElementById('sort-' + id).value,
+    }),
+  });
+  const data = await res.json();
+  if (res.ok) alert(data.message);
+  else alert(data.error);
+}
+
+// Toggle Visibility
+async function toggleVisible(id) {
+  const res = await fetch(`/super-admin/events/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'toggle_visible'}),
+  });
+  const data = await res.json();
+  if (res.ok) location.reload();
+  else alert(data.error);
+}
+
+// Delete Event
+async function deleteEvent(id) {
+  if (!confirm('Are you sure you want to permanently delete this event/attraction?')) return;
+  const res = await fetch(`/super-admin/events/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'delete'}),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById('event-row-' + id)?.remove();
+  } else {
+    alert(data.error);
+  }
+}
+</script>
+
+<style>
+.sa-section-title{font-size:16px;font-weight:600;color:#f8fafc;margin-bottom:16px;}
+.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
+.sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-input-inline{background:transparent;border-color:transparent;padding:4px 6px;}
+.sa-input-inline:hover,.sa-input-inline:focus{background:#0f172a;border-color:#334155;}
+.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
+.sa-btn:hover{background:#334155;}
+.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+.sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
+.sa-btn-danger:hover{background:#991b1b;}
+.sa-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
+{% endblock %}

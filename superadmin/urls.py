@@ -35,4 +35,17 @@ urlpatterns = [
     # Guests
     path('guests/', views.guests_list, name='guests'),
     path('guests/<uuid:user_id>/loyalty/', views.loyalty_adjust, name='loyalty-adjust'),
+    # Causes
+    path('causes/', views.causes_list, name='causes'),
+    path('causes/create/', views.cause_create, name='cause-create'),
+    path('causes/<uuid:cause_id>/update/', views.cause_update, name='cause-update'),
+    # Events / Attractions
+    path('events/', views.events_list, name='events'),
+    path('events/create/', views.event_create, name='event-create'),
+    path('events/<uuid:event_id>/update/', views.event_update, name='event-update'),
+    path('events/<uuid:event_id>/images/', views.event_images, name='event-images'),
+    path('events/<uuid:event_id>/images/upload/', views.event_image_upload, name='event-image-upload'),
+    path('events/images/<uuid:image_id>/delete/', views.event_image_delete, name='event-image-delete'),
+    path('events/images/<uuid:image_id>/set-primary/', views.event_image_set_primary, name='event-image-set-primary'),
 ]
+

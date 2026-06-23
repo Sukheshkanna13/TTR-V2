@@ -1,0 +1,220 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Travel for Cause{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Travel for Cause Management</h1>
+
+<!-- Create Cause -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Add Cause</h2>
+  <form id="createCauseForm" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+    <div>
+      <label class="sa-label">Title</label>
+      <input class="sa-input" type="text" name="title" required placeholder="e.g. Sandalwood restoration" style="width:200px;">
+    </div>
+    <div>
+      <label class="sa-label">Location/State</label>
+      <input class="sa-input" type="text" name="location" required placeholder="e.g. KARNATAKA" style="width:120px;">
+    </div>
+    <div>
+      <label class="sa-label">Description</label>
+      <input class="sa-input" type="text" name="description" placeholder="Short summary" style="min-width:250px;">
+    </div>
+    <div>
+      <label class="sa-label">Target Amount (₹)</label>
+      <input class="sa-input" type="number" name="target_amount" required placeholder="1000000" style="width:110px;">
+    </div>
+    <div>
+      <label class="sa-label">Raised Amount (₹)</label>
+      <input class="sa-input" type="number" name="raised_amount" value="0" placeholder="0" style="width:110px;">
+    </div>
+    <div>
+      <label class="sa-label">Image</label>
+      <input class="sa-input" type="file" name="image" accept="image/*" style="padding:4px; width:200px;">
+    </div>
+    <button class="sa-btn sa-btn-primary" type="submit">Create</button>
+  </form>
+  <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
+</div>
+
+<!-- Cause List -->
+<div class="sa-card">
+  <h2 class="sa-section-title">All Causes</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th>Title</th>
+        <th>Location</th>
+        <th>Description</th>
+        <th>Target (₹)</th>
+        <th>Raised (₹)</th>
+        <th>Order</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c in causes %}
+    <tr id="cause-row-{{ c.id }}">
+      <td style="width:70px;">
+        {% if c.image %}
+          <img src="{{ c.image.url }}" alt="{{ c.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+        {% else %}
+          <div style="width:60px;height:40px;background:#334155;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;">No Image</div>
+        {% endif %}
+        <input type="file" id="img-{{ c.id }}" style="display:none;" onchange="uploadImageChange('{{ c.id }}')">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="title-{{ c.id }}" value="{{ c.title }}" style="width:160px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="location-{{ c.id }}" value="{{ c.location }}" style="width:110px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="desc-{{ c.id }}" value="{{ c.description }}" style="width:220px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="target-{{ c.id }}" type="number" value="{{ c.target_amount|floatformat:"0" }}" style="width:90px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="raised-{{ c.id }}" type="number" value="{{ c.raised_amount|floatformat:"0" }}" style="width:90px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="sort-{{ c.id }}" type="number" value="{{ c.sort_order }}" style="width:50px; text-align:center;">
+      </td>
+      <td>
+        <span id="status-{{ c.id }}" class="badge {% if c.is_active %}badge-green{% else %}badge-red{% endif %}">
+          {% if c.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="saveCause('{{ c.id }}')">Save</button>
+        <button class="sa-btn sa-btn-sm" onclick="document.getElementById('img-' + '{{ c.id }}').click()">Image</button>
+        <button class="sa-btn sa-btn-sm" onclick="toggleCause('{{ c.id }}')">
+          {% if c.is_active %}Deactivate{% else %}Activate{% endif %}
+        </button>
+        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteCause('{{ c.id }}')">Delete</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="9" style="color:#64748b;padding:24px 12px;">No causes found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+// Create Cause
+document.getElementById('createCauseForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('{% url "superadmin:cause-create" %}', {
+    method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
+  });
+  const data = await res.json();
+  const box = document.getElementById('createResult');
+  box.style.display = 'block';
+  if (res.ok) {
+    box.style.background = '#064e3b'; box.style.color = '#6ee7b7';
+    box.textContent = data.message;
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    box.style.background = '#450a0a'; box.style.color = '#fca5a5';
+    box.textContent = data.error;
+  }
+});
+
+// Save Cause Details
+async function saveCause(id) {
+  const fd = new FormData();
+  fd.append('action', 'update_details');
+  fd.append('title', document.getElementById('title-' + id).value);
+  fd.append('location', document.getElementById('location-' + id).value);
+  fd.append('description', document.getElementById('desc-' + id).value);
+  fd.append('target_amount', document.getElementById('target-' + id).value);
+  fd.append('raised_amount', document.getElementById('raised-' + id).value);
+  fd.append('sort_order', document.getElementById('sort-' + id).value);
+
+  const res = await fetch(`/super-admin/causes/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+    body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) {
+    alert(data.message);
+    location.reload();
+  } else {
+    alert(data.error);
+  }
+}
+
+// Upload New Image directly from Table
+async function uploadImageChange(id) {
+  const fileInput = document.getElementById('img-' + id);
+  if (!fileInput.files.length) return;
+  
+  const fd = new FormData();
+  fd.append('action', 'update_details');
+  fd.append('image', fileInput.files[0]);
+
+  const res = await fetch(`/super-admin/causes/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+    body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) {
+    location.reload();
+  } else {
+    alert(data.error);
+  }
+}
+
+// Toggle Cause active state
+async function toggleCause(id) {
+  const res = await fetch(`/super-admin/causes/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'toggle_active'}),
+  });
+  const data = await res.json();
+  if (res.ok) location.reload();
+  else alert(data.error);
+}
+
+// Delete Cause
+async function deleteCause(id) {
+  if (!confirm('Are you sure you want to permanently delete this cause?')) return;
+  const res = await fetch(`/super-admin/causes/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'delete'}),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById('cause-row-' + id)?.remove();
+  } else {
+    alert(data.error);
+  }
+}
+</script>
+
+<style>
+.sa-section-title{font-size:16px;font-weight:600;color:#f8fafc;margin-bottom:16px;}
+.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
+.sa-input:focus{outline:none;border-color:#3b82f6;}
+.sa-input-inline{background:transparent;border-color:transparent;padding:4px 6px;}
+.sa-input-inline:hover,.sa-input-inline:focus{background:#0f172a;border-color:#334155;}
+.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
+.sa-btn:hover{background:#334155;}
+.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+.sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
+.sa-btn-danger:hover{background:#991b1b;}
+.sa-btn-sm{padding:4px 10px;font-size:12px;}
+</style>
+{% endblock %}

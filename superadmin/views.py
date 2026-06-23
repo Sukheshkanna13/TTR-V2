@@ -805,3 +805,254 @@ def room_status_board_data(request):
             for r in rooms
         ]
     })
+
+
+# ── Causes ──────────────────────────────────────────────────────────────────
+
+@require_super_admin
+def causes_list(request):
+    from core.models import Cause
+    causes = Cause.objects.all().order_by('sort_order', '-created_at')
+    return render(request, 'superadmin/causes.html', {
+        'causes': causes,
+    })
+
+
+@require_super_admin
+@require_POST
+def cause_create(request):
+    from core.models import Cause
+    title = request.POST.get('title', '').strip()
+    location = request.POST.get('location', '').strip()
+    description = request.POST.get('description', '').strip()
+    target_amount = request.POST.get('target_amount', '0')
+    raised_amount = request.POST.get('raised_amount', '0')
+    image_file = request.FILES.get('image')
+
+    if not title or not location:
+        return JsonResponse({'error': 'Title and Location are required.'}, status=400)
+
+    try:
+        target_amount = Decimal(target_amount)
+        raised_amount = Decimal(raised_amount)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid amounts.'}, status=400)
+
+    cause = Cause.objects.create(
+        title=title, location=location, description=description,
+        target_amount=target_amount, raised_amount=raised_amount,
+        image=image_file,
+    )
+    _log(request, 'CAUSE_CREATED', detail=f"cause={cause.title}")
+    return JsonResponse({'message': f'Cause "{cause.title}" created.', 'id': str(cause.id)})
+
+
+@require_super_admin
+@require_POST
+def cause_update(request, cause_id):
+    from core.models import Cause
+    cause = get_object_or_404(Cause, pk=cause_id)
+    
+    if request.content_type == 'application/json':
+        data = json.loads(request.body)
+        action = data.get('action')
+    else:
+        action = request.POST.get('action')
+        data = request.POST
+
+    if action == 'toggle_active':
+        cause.is_active = not cause.is_active
+        cause.save(update_fields=['is_active'])
+        state = 'activated' if cause.is_active else 'deactivated'
+        _log(request, 'CAUSE_UPDATED', detail=f"cause={cause.title}, {state}")
+        return JsonResponse({'message': f'Cause {state}.', 'is_active': cause.is_active})
+
+    if action == 'delete':
+        title = cause.title
+        if cause.image:
+            cause.image.delete(save=False)
+        cause.delete()
+        _log(request, 'CAUSE_DELETED', detail=f"cause={title}")
+        return JsonResponse({'message': 'Cause deleted.'})
+
+    if action == 'update_details':
+        fields_changed = []
+        
+        title_val = data.get('title')
+        loc_val = data.get('location')
+        desc_val = data.get('description')
+        target_val = data.get('target_amount')
+        raised_val = data.get('raised_amount')
+        sort_val = data.get('sort_order')
+
+        if title_val is not None:
+            cause.title = title_val.strip()
+            fields_changed.append('title')
+        if loc_val is not None:
+            cause.location = loc_val.strip()
+            fields_changed.append('location')
+        if desc_val is not None:
+            cause.description = desc_val.strip()
+            fields_changed.append('description')
+        if target_val is not None:
+            cause.target_amount = Decimal(str(target_val))
+            fields_changed.append('target_amount')
+        if raised_val is not None:
+            cause.raised_amount = Decimal(str(raised_val))
+            fields_changed.append('raised_amount')
+        if sort_val is not None:
+            cause.sort_order = int(sort_val)
+            fields_changed.append('sort_order')
+
+        if request.FILES.get('image'):
+            if cause.image:
+                cause.image.delete(save=False)
+            cause.image = request.FILES['image']
+            fields_changed.append('image')
+
+        if fields_changed:
+            cause.save()
+            _log(request, 'CAUSE_UPDATED', detail=f"cause={cause.title}, fields={fields_changed}")
+        return JsonResponse({'message': 'Cause updated.'})
+
+    return JsonResponse({'error': 'Unknown action.'}, status=400)
+
+
+# ── Events / Attractions ─────────────────────────────────────────────────────
+
+@require_super_admin
+def events_list(request):
+    from core.models import Attraction
+    category_filter = request.GET.get('category', '')
+    city_filter = request.GET.get('city', '')
+    
+    events = Attraction.objects.all().order_by('city', 'sort_order', 'name')
+    if category_filter:
+        events = events.filter(category=category_filter)
+    if city_filter:
+        events = events.filter(city=city_filter)
+
+    return render(request, 'superadmin/events.html', {
+        'events': events,
+        'category_choices': Attraction.CATEGORY_CHOICES,
+        'category_filter': category_filter,
+        'city_filter': city_filter,
+    })
+
+
+@require_super_admin
+@require_POST
+def event_create(request):
+    from core.models import Attraction
+    name = request.POST.get('name', '').strip()
+    city = request.POST.get('city', '').strip()
+    category = request.POST.get('category', 'EVENT').strip()
+    description = request.POST.get('description', '').strip()
+    address = request.POST.get('address', '').strip()
+    opening_hrs = request.POST.get('opening_hrs', '').strip()
+
+    if not name or not city or not category:
+        return JsonResponse({'error': 'Name, City, and Category are required.'}, status=400)
+
+    event = Attraction.objects.create(
+        name=name, city=city, category=category, description=description,
+        address=address, opening_hrs=opening_hrs, created_by=request.user
+    )
+    _log(request, 'EVENT_CREATED', detail=f"event={event.name}")
+    return JsonResponse({'message': f'Event "{event.name}" created.', 'id': str(event.id)})
+
+
+@require_super_admin
+@require_POST
+def event_update(request, event_id):
+    from core.models import Attraction
+    event = get_object_or_404(Attraction, pk=event_id)
+    data = json.loads(request.body)
+    action = data.get('action')
+
+    if action == 'toggle_visible':
+        event.is_visible = not event.is_visible
+        event.save(update_fields=['is_visible'])
+        state = 'visible' if event.is_visible else 'hidden'
+        _log(request, 'EVENT_UPDATED', detail=f"event={event.name}, {state}")
+        return JsonResponse({'message': f'Event is now {state}.', 'is_visible': event.is_visible})
+
+    if action == 'delete':
+        name = event.name
+        event.delete()
+        _log(request, 'EVENT_DELETED', detail=f"event={name}")
+        return JsonResponse({'message': 'Event deleted.'})
+
+    if action == 'update_details':
+        fields_changed = []
+        for field in ('name', 'city', 'category', 'description', 'address', 'opening_hrs', 'sort_order'):
+            val = data.get(field)
+            if val is not None:
+                if field == 'sort_order':
+                    val = int(val)
+                setattr(event, field, val)
+                fields_changed.append(field)
+        if fields_changed:
+            event.save()
+            _log(request, 'EVENT_UPDATED', detail=f"event={event.name}, fields={fields_changed}")
+        return JsonResponse({'message': 'Event updated.'})
+
+    return JsonResponse({'error': 'Unknown action.'}, status=400)
+
+
+@require_super_admin
+def event_images(request, event_id):
+    from core.models import Attraction
+    event = get_object_or_404(Attraction, pk=event_id)
+    images = event.photos.all().order_by('sort_order', '-is_primary')
+    return render(request, 'superadmin/event_images.html', {
+        'event': event,
+        'images': images,
+    })
+
+
+@require_super_admin
+@require_POST
+def event_image_upload(request, event_id):
+    from core.models import Attraction, AttractionPhoto
+    event = get_object_or_404(Attraction, pk=event_id)
+    image_file = request.FILES.get('image')
+    if not image_file:
+        return JsonResponse({'error': 'No image file provided.'}, status=400)
+
+    is_primary = request.POST.get('is_primary') == 'on'
+    sort_order = int(request.POST.get('sort_order', '0'))
+
+    if is_primary:
+        event.photos.filter(is_primary=True).update(is_primary=False)
+
+    img = AttractionPhoto.objects.create(
+        attraction=event, image=image_file, is_primary=is_primary,
+        sort_order=sort_order or event.photos.count(),
+    )
+    _log(request, 'EVENT_IMAGE_UPLOADED', detail=f"event={event.name}, image={img.id}")
+    return JsonResponse({'message': 'Image uploaded.', 'id': str(img.id)})
+
+
+@require_super_admin
+@require_POST
+def event_image_delete(request, image_id):
+    from core.models import AttractionPhoto
+    img = get_object_or_404(AttractionPhoto, pk=image_id)
+    event_name = img.attraction.name
+    img.image.delete(save=False)
+    img.delete()
+    _log(request, 'EVENT_IMAGE_DELETED', detail=f"event={event_name}")
+    return JsonResponse({'message': 'Image deleted.'})
+
+
+@require_super_admin
+@require_POST
+def event_image_set_primary(request, image_id):
+    from core.models import AttractionPhoto
+    img = get_object_or_404(AttractionPhoto, pk=image_id)
+    img.attraction.photos.filter(is_primary=True).update(is_primary=False)
+    img.is_primary = True
+    img.save(update_fields=['is_primary'])
+    return JsonResponse({'message': 'Set as primary image.'})
+

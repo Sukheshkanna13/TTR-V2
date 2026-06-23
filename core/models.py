@@ -62,3 +62,33 @@ class AttractionPhoto(models.Model):
 
     def __str__(self):
         return f"Photo for {self.attraction.name}"
+
+
+class Cause(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200)
+    location = models.CharField(max_length=100)  # e.g. "KARNATAKA", "TAMIL NADU", "PAN-INDIA"
+    description = models.TextField(blank=True, default='')
+    image = models.ImageField(upload_to='causes/', blank=True, null=True)
+    target_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    raised_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    is_active = models.BooleanField(default=True, db_index=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', '-created_at']
+        verbose_name = 'cause'
+        verbose_name_plural = 'causes'
+
+    def __str__(self):
+        return f"{self.title} ({self.location})"
+
+    @property
+    def progress_percentage(self):
+        if self.target_amount <= 0:
+            return 0
+        percentage = (self.raised_amount / self.target_amount) * 100
+        return min(int(percentage), 100)
+

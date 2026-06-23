@@ -43,9 +43,12 @@ tbody tr:hover td{background:rgba(51,65,85,.3);}
     <a href="/super-admin/loyalty-config/" {% if request.resolver_match.url_name == 'loyalty-config' %}class="active"{% endif %}>Loyalty</a>
     <a href="/super-admin/audit-log/" {% if request.resolver_match.url_name == 'audit-log' %}class="active"{% endif %}>Audit</a>
     <a href="/super-admin/guests/" {% if request.resolver_match.url_name == 'guests' %}class="active"{% endif %}>Guests</a>
+    <a href="{% url 'superadmin:causes' %}" {% if request.resolver_match.url_name == 'causes' %}class="active"{% endif %}>Travel for Cause</a>
+    <a href="{% url 'superadmin:events' %}" {% if request.resolver_match.url_name == 'events' %}class="active"{% endif %}>Events</a>
     <a href="/accounts/logout/" style="margin-left:8px;color:#ef4444;">Sign out</a>
   </div>
 </nav>
+
 <div class="sa-main">{% block content %}{% endblock %}</div>
 </body>
 </html>
