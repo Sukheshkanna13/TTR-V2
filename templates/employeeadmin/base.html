@@ -3,43 +3,470 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{% block title %}Staff Portal{% endblock %} — Temples & Towns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* Global resets and typography */
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:system-ui,-apple-system,sans-serif;background:#0f1f1e;color:#e2e8f0;min-height:100vh;}
-.ea-nav{background:#134e4a;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #0d9488;position:sticky;top:0;z-index:10;}
-.ea-brand{font-weight:700;font-size:15px;color:#f0fdfa;letter-spacing:-.02em;}
-.ea-nav-links{display:flex;gap:8px;}
-.ea-nav-links a{color:#99f6e4;text-decoration:none;font-size:13px;padding:6px 12px;border-radius:6px;}
-.ea-nav-links a:hover,.ea-nav-links a.active{background:rgba(13,148,136,.4);color:#f0fdfa;}
-.ea-main{max-width:1100px;margin:0 auto;padding:32px 24px;}
-.ea-page-title{font-size:22px;font-weight:700;color:#f0fdfa;margin-bottom:24px;}
-.ea-card{background:#134e4a;border:1px solid #0d9488;border-radius:10px;padding:24px;margin-bottom:20px;}
-.ea-stats{display:flex;gap:24px;flex-wrap:wrap;}
-.ea-stat{flex:1;min-width:140px;}
-.ea-stat-val{font-size:30px;font-weight:700;color:#f0fdfa;}
-.ea-stat-label{font-size:11px;color:#5eead4;margin-top:4px;text-transform:uppercase;letter-spacing:.06em;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-thead th{text-align:left;padding:10px 12px;border-bottom:1px solid #0d9488;color:#5eead4;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
-tbody td{padding:10px 12px;border-bottom:1px solid rgba(13,148,136,.2);color:#ccfbf1;}
-tbody tr:hover td{background:rgba(13,148,136,.15);}
-.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
-.badge-green{background:#064e3b;color:#6ee7b7;}
-.badge-red{background:#450a0a;color:#fca5a5;}
-.badge-slate{background:#1e293b;color:#93c5fd;}
+body{
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #FAFAF9;
+  color: #1C1917;
+  min-height: 100vh;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* Sidebar Layout */
+.ea-layout {
+  display: flex;
+  min-height: 100vh;
+}
+.ea-sidebar {
+  width: 240px;
+  background-color: #FFFFFF;
+  border-right: 1px solid #E7E5E4;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+}
+.ea-main-wrapper {
+  flex: 1;
+  margin-left: 240px;
+  min-width: 0;
+}
+.ea-sidebar-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #E7E5E4;
+  display: flex;
+  flex-direction: column;
+}
+body .ea-brand {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #1C1917 !important;
+  letter-spacing: -0.02em !important;
+  margin-bottom: 0 !important;
+}
+.ea-role {
+  font-size: 11px;
+  font-weight: 500;
+  color: #78716C;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+.ea-sidebar-body {
+  flex: 1;
+  padding: 16px 12px;
+  overflow-y: auto;
+}
+.ea-nav-group {
+  font-size: 10px;
+  font-weight: 600;
+  color: #A8A29E;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 16px 8px 6px 8px;
+}
+.ea-nav-group:first-child {
+  margin-top: 0;
+}
+.ea-sidebar-body a {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  color: #78716C !important;
+  text-decoration: none !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  margin-bottom: 2px;
+}
+.ea-sidebar-body a:hover {
+  background-color: #F5F5F4 !important;
+  color: #1C1917 !important;
+}
+.ea-sidebar-body a.active {
+  background-color: #F5F5F4 !important;
+  color: #0F766E !important;
+  font-weight: 600 !important;
+}
+.ea-sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid #E7E5E4;
+}
+.ea-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 12px;
+  color: #B91C1C !important;
+  background-color: #FEE2E2 !important;
+  border: 1px solid #FCA5A5 !important;
+  border-radius: 6px;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease;
+}
+.ea-logout-btn:hover {
+  background-color: #FCA5A5 !important;
+  color: #991717 !important;
+}
+
+/* Main Layout content */
+.ea-main{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+body .ea-page-title{
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  color: #1C1917 !important;
+  margin-bottom: 24px !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Cards */
+body .ea-card{
+  background: #FFFFFF !important;
+  border: 1px solid #E7E5E4 !important;
+  border-radius: 8px !important;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  overflow-x: auto !important;
+}
+
+/* Stats */
+body .ea-stats{
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+body .ea-stat{
+  flex: 1;
+  min-width: 140px;
+}
+body .ea-stat-val{
+  font-size: 28px !important;
+  font-weight: 600 !important;
+  color: #1C1917 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+body .ea-stat-label{
+  font-size: 11px !important;
+  color: #78716C !important;
+  margin-top: 4px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 500 !important;
+}
+
+/* Tables */
+table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+thead th{
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #E7E5E4 !important;
+  color: #78716C !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+tbody td{
+  padding: 12px 12px;
+  border-bottom: 1px solid #E7E5E4 !important;
+  color: #1C1917 !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+tbody tr:hover td{
+  background: #F5F5F4 !important;
+}
+
+/* Badges */
+body .badge,
+body .ea-badge{
+  display: inline-block !important;
+  padding: 2px 8px !important;
+  border-radius: 100px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: capitalize !important;
+}
+body .badge-green,
+body .ea-badge-CONFIRMED,
+body .ea-badge-confirmed,
+body .ea-badge-COMPLETED,
+body .ea-badge-completed,
+body .ea-badge-active {
+  background: #DCFCE7 !important;
+  color: #15803D !important;
+  border: 1px solid #BBF7D0 !important;
+}
+body .badge-slate,
+body .ea-badge-EXPIRED,
+body .ea-badge-expired,
+body .ea-badge-held,
+body .ea-badge-HELD {
+  background: #FEF3C7 !important;
+  color: #B45309 !important;
+  border: 1px solid #FDE68A !important;
+}
+body .badge-red,
+body .ea-badge-CANCELLED,
+body .ea-badge-cancelled,
+body .ea-badge-inactive {
+  background: #FEE2E2 !important;
+  color: #B91C1C !important;
+  border: 1px solid #FCA5A5 !important;
+}
+
+/* Form inputs, buttons, and labels globally overriden with higher specificity */
+body .ea-input,
+body select.status-select,
+body .status-select {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E7E5E4 !important;
+  color: #1C1917 !important;
+  font-family: 'Inter', -apple-system, sans-serif !important;
+  font-size: 13px !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  outline: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+body .ea-input:focus,
+body select.status-select:focus,
+body .status-select:focus {
+  border-color: #0F766E !important;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.15) !important;
+}
+body .ea-input-inline {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  padding: 4px 6px !important;
+}
+body .ea-input-inline:hover,
+body .ea-input-inline:focus {
+  background-color: #FAFAF9 !important;
+  border-color: #E7E5E4 !important;
+}
+body .ea-label {
+  display: block !important;
+  font-size: 11px !important;
+  color: #78716C !important;
+  margin-bottom: 4px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .05em !important;
+  font-weight: 500 !important;
+}
+body .ea-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  border: 1px solid #E7E5E4 !important;
+  background-color: #FFFFFF !important;
+  color: #1C1917 !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+  margin-right: 4px !important;
+}
+body .ea-btn:last-child {
+  margin-right: 0 !important;
+}
+body .ea-btn:hover {
+  background-color: #F5F5F4 !important;
+  border-color: #D6D3D1 !important;
+}
+body .ea-btn-primary {
+  background-color: #0F766E !important;
+  border-color: #0F766E !important;
+  color: #FFFFFF !important;
+}
+body .ea-btn-primary:hover {
+  background-color: #0D645D !important;
+  border-color: #0D645D !important;
+}
+body .ea-btn-success {
+  background-color: #15803D !important;
+  border-color: #15803D !important;
+  color: #FFFFFF !important;
+}
+body .ea-btn-success:hover {
+  background-color: #126631 !important;
+  border-color: #126631 !important;
+}
+body .ea-btn-danger {
+  background-color: #B91C1C !important;
+  border-color: #B91C1C !important;
+  color: #FFFFFF !important;
+}
+body .ea-btn-danger:hover {
+  background-color: #991717 !important;
+  border-color: #991717 !important;
+}
+body .ea-btn-sm {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  margin-right: 4px !important;
+}
+body .ea-btn-sm:last-child {
+  margin-right: 0 !important;
+}
+body .ea-section-title {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #1C1917 !important;
+  margin-bottom: 16px !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+}
+body .ea-sub-title {
+  font-size: 13px !important;
+  color: #1C1917 !important;
+  margin-bottom: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .05em !important;
+  font-weight: 600 !important;
+}
+code {
+  font-family: monospace;
+  font-size: 12px;
+  background: #F5F5F4;
+  color: #1C1917;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #E7E5E4;
+}
+
+/* Modals */
+body div[style*="position:fixed;inset:0;"] {
+  background: rgba(28, 25, 23, 0.4) !important;
+}
+body div[style*="position:fixed;inset:0;"] > div {
+  background: #FFFFFF !important;
+  border: 1px solid #E7E5E4 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+}
+body div[style*="position:fixed;inset:0;"] h3 {
+  color: #1C1917 !important;
+  font-weight: 600 !important;
+}
+
+/* Room Status Board overlays */
+body div[style*="position:absolute;inset:0;background:rgba(0,0,0,.5);"] {
+  background: rgba(250, 250, 249, 0.8) !important;
+  color: #78716C !important;
+}
+
+/* Hide number input spinners */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* Responsive sidebar */
+@media (max-width: 1024px) {
+  .ea-layout {
+    flex-direction: column;
+  }
+  .ea-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #E7E5E4;
+  }
+  .ea-main-wrapper {
+    margin-left: 0;
+  }
+  .ea-sidebar-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px 16px;
+  }
+  .ea-nav-group {
+    display: none;
+  }
+  .ea-sidebar-footer {
+    display: none;
+  }
+  body .ea-brand {
+    text-align: center;
+  }
+}
 </style>
 </head>
 <body>
-<nav class="ea-nav">
-  <span class="ea-brand">Temples & Towns · Staff Portal</span>
-  <div class="ea-nav-links">
-    <a href="/admin-portal/dashboard/" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
-    <a href="/admin-portal/bookings/" {% if request.resolver_match.url_name == 'bookings' %}class="active"{% endif %}>Bookings</a>
-    <a href="/admin-portal/rooms/" {% if request.resolver_match.url_name == 'rooms' %}class="active"{% endif %}>Rooms</a>
-    <a href="{% url 'employeeadmin:room-status-board' %}" {% if request.resolver_match.url_name == 'room-status-board' %}class="active"{% endif %}>Status Board</a>
-    <a href="/admin-portal/availability/" {% if request.resolver_match.url_name == 'availability' %}class="active"{% endif %}>Availability</a>
-    <a href="/accounts/logout/" style="margin-left:8px;color:#f87171;">Sign out</a>
+<div class="ea-layout">
+  <aside class="ea-sidebar">
+    <div class="ea-sidebar-header">
+      <span class="ea-brand">Temples & Towns</span>
+      <span class="ea-role">Staff Portal</span>
+    </div>
+    <div class="ea-sidebar-body">
+      <div class="ea-nav-group">Operations</div>
+      <a href="/admin-portal/dashboard/" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+        Dashboard
+      </a>
+      <a href="/admin-portal/bookings/" {% if request.resolver_match.url_name == 'bookings' %}class="active"{% endif %}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        Bookings
+      </a>
+      <a href="{% url 'employeeadmin:room-status-board' %}" {% if request.resolver_match.url_name == 'room-status-board' %}class="active"{% endif %}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+        Status Board
+      </a>
+
+      <div class="ea-nav-group">Inventory & Scheduling</div>
+      <a href="/admin-portal/rooms/" {% if request.resolver_match.url_name == 'rooms' %}class="active"{% endif %}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+        Rooms
+      </a>
+      <a href="/admin-portal/availability/" {% if request.resolver_match.url_name == 'availability' %}class="active"{% endif %}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        Availability
+      </a>
+    </div>
+    <div class="ea-sidebar-footer">
+      <a href="/accounts/logout/" class="ea-logout-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+  
+  <div class="ea-main-wrapper">
+    <div class="ea-main">{% block content %}{% endblock %}</div>
   </div>
-</nav>
-<div class="ea-main">{% block content %}{% endblock %}</div>
+</div>
 </body>
 </html>

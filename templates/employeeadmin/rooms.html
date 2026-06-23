@@ -80,12 +80,12 @@
     <tbody>
     {% for r in rooms %}
     <tr id="row-{{ r.id }}">
-      <td style="font-weight:600;color:#f0fdfa;">{{ r.name }}</td>
+      <td style="font-weight:600;">{{ r.name }}</td>
       <td>{{ r.property.name }}</td>
       <td>{{ r.get_room_type_display }}</td>
       <td>₹{{ r.price_per_night|floatformat:0 }}</td>
       <td>{{ r.capacity }}</td>
-      <td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;color:#99f6e4;">{{ r.amenities|default:"—" }}</td>
+      <td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;">{{ r.amenities|default:"—" }}</td>
       <td>
         <select class="ea-input ea-input-sm" onchange="setStatus('{{ r.id }}', this.value)" style="width:120px;">
           {% for val, label in operational_choices %}
@@ -107,7 +107,7 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="9" style="color:#5eead4;padding:24px 12px;opacity:.7;">No rooms found.</td></tr>
+    <tr><td colspan="9" style="color:#78716C;padding:24px 12px;">No rooms found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -115,8 +115,8 @@
 
 <!-- Edit Room Modal -->
 <div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
-  <div style="background:#134e4a;border:1px solid #0d9488;border-radius:12px;padding:24px;width:500px;max-width:90vw;">
-    <h3 style="color:#f0fdfa;font-size:16px;margin-bottom:16px;">Edit Room</h3>
+  <div style="background:#FFFFFF;border:1px solid #E7E5E4;border-radius:12px;padding:24px;width:500px;max-width:90vw;">
+    <h3 style="color:#1C1917;font-size:16px;margin-bottom:16px;">Edit Room</h3>
     <form id="editForm" style="display:flex;flex-direction:column;gap:12px;">
       <input type="hidden" id="edit-room-id">
       <div style="display:flex;gap:12px;">
@@ -252,17 +252,4 @@ document.getElementById('editForm').addEventListener('submit', async e => {
   else alert(data.error);
 });
 </script>
-
-<style>
-.ea-section-title{font-size:14px;font-weight:600;color:#5eead4;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em;}
-.ea-input{background:#0f1f1e;border:1px solid #0d9488;color:#f0fdfa;padding:6px 10px;border-radius:6px;font-size:13px;}
-.ea-input:focus{outline:none;border-color:#5eead4;}
-.ea-input-sm{padding:2px 6px;font-size:12px;}
-.ea-label{display:block;font-size:11px;color:#5eead4;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;opacity:.8;}
-.ea-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #0d9488;background:#134e4a;color:#ccfbf1;text-decoration:none;}
-.ea-btn:hover{background:#0d9488;}
-.ea-btn-primary{background:#0d9488;border-color:#0d9488;color:#f0fdfa;}
-.ea-btn-primary:hover{background:#0f766e;}
-.ea-btn-sm{padding:4px 10px;font-size:12px;}
-</style>
 {% endblock %}

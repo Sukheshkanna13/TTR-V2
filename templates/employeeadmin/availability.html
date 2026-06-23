@@ -41,12 +41,12 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="4" style="color:#5eead4;padding:16px 12px;">No blocks for this room.</td></tr>
+    <tr><td colspan="4" style="color:#78716C;padding:16px 12px;">No blocks for this room.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 
-  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #0d9488;">
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #E7E5E4;">
     <h3 class="ea-sub-title">Add Block</h3>
     <form id="addBlockForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
       <div>
@@ -82,12 +82,12 @@
       <td>₹{{ rate.price|floatformat:0 }}</td>
     </tr>
     {% empty %}
-    <tr><td colspan="3" style="color:#5eead4;padding:16px 12px;">No seasonal rates configured.</td></tr>
+    <tr><td colspan="3" style="color:#78716C;padding:16px 12px;">No seasonal rates configured.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 
-  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #0d9488;">
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #E7E5E4;">
     <h3 class="ea-sub-title">Add Rate</h3>
     <form id="addRateForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
       <div>
@@ -149,19 +149,4 @@ document.getElementById('addRateForm').addEventListener('submit', async e => {
 {% endif %}
 </script>
 {% endif %}
-
-<style>
-.ea-section-title{font-size:16px;font-weight:600;color:#f0fdfa;margin-bottom:16px;}
-.ea-sub-title{font-size:13px;color:#5eead4;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;}
-.ea-input{background:#0d3d3a;border:1px solid #0d9488;color:#ccfbf1;padding:6px 10px;border-radius:6px;font-size:13px;}
-.ea-input:focus{outline:none;border-color:#14b8a6;}
-.ea-label{display:block;font-size:11px;color:#5eead4;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
-.ea-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #0d9488;background:#134e4a;color:#ccfbf1;text-decoration:none;}
-.ea-btn:hover{background:#0d9488;}
-.ea-btn-primary{background:#0d9488;border-color:#0d9488;color:#f0fdfa;}
-.ea-btn-primary:hover{background:#0f766e;}
-.ea-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
-.ea-btn-danger:hover{background:#991b1b;}
-.ea-btn-sm{padding:4px 10px;font-size:12px;}
-</style>
 {% endblock %}

@@ -39,7 +39,7 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="5" style="color:#5eead4;padding:16px 12px;">No arrivals today.</td></tr>
+    <tr><td colspan="5" style="color:#78716C;padding:16px 12px;">No arrivals today.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -65,7 +65,7 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="5" style="color:#5eead4;padding:16px 12px;">No departures today.</td></tr>
+    <tr><td colspan="5" style="color:#78716C;padding:16px 12px;">No departures today.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -107,13 +107,4 @@ async function completeBooking(id, prefix) {
   }
 }
 </script>
-
-<style>
-.ea-section-title{font-size:13px;font-weight:600;color:#5eead4;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em;}
-.ea-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #0d9488;background:#134e4a;color:#ccfbf1;text-decoration:none;}
-.ea-btn:hover{background:#0d9488;}
-.ea-btn-success{background:#064e3b;border-color:#064e3b;color:#6ee7b7;}
-.ea-btn-success:hover{background:#065f46;}
-.ea-btn-sm{padding:4px 10px;font-size:12px;}
-</style>
 {% endblock %}

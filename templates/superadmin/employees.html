@@ -124,7 +124,7 @@
       <input type="hidden" id="propsUserId">
       <div style="display:flex;flex-direction:column;gap:8px;max-height:250px;overflow-y:auto;margin-bottom:16px;">
         {% for p in properties %}
-        <label style="display:flex;align-items:center;gap:8px;color:#cbd5e1;font-size:13px;cursor:pointer;">
+        <label style="display:flex;align-items:center;gap:8px;color:#1C1917;font-size:13px;cursor:pointer;">
           <input type="checkbox" name="property_ids" value="{{ p.id }}" class="prop-check">
           {{ p.name }}
         </label>
@@ -142,12 +142,12 @@
 <div id="credModal" class="sa-modal-overlay">
   <div class="sa-modal">
     <h3 class="sa-modal-title">Temporary Password</h3>
-    <p style="color:#94a3b8;font-size:13px;margin-bottom:12px;" id="credMessage"></p>
+    <p style="color:#78716C;font-size:13px;margin-bottom:12px;" id="credMessage"></p>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-      <code id="credValue" style="flex:1;background:#0f172a;border:1px solid #334155;color:#6ee7b7;padding:10px 12px;border-radius:8px;font-size:15px;letter-spacing:.5px;user-select:all;"></code>
+      <code id="credValue" style="flex:1;background:#F5F5F4;border:1px solid #E7E5E4;color:#0F766E;padding:10px 12px;border-radius:8px;font-size:15px;letter-spacing:.5px;user-select:all;"></code>
       <button type="button" class="sa-btn sa-btn-primary" id="credCopyBtn" onclick="copyCred()">Copy</button>
     </div>
-    <p style="color:#f59e0b;font-size:12px;margin-bottom:16px;">Copy it now — it will not be shown again.</p>
+    <p style="color:#B45309;font-size:12px;margin-bottom:16px;">Copy it now — it will not be shown again.</p>
     <div style="display:flex;justify-content:flex-end;">
       <button type="button" class="sa-btn" onclick="closeCredModal()">Done</button>
     </div>
@@ -265,28 +265,4 @@ document.getElementById('propsForm').addEventListener('submit', async e => {
   else alert(data.error);
 });
 </script>
-
-<style>
-.sa-section-title{font-size:16px;font-weight:600;color:#f8fafc;margin-bottom:16px;}
-.sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}
-.sa-input:focus{outline:none;border-color:#3b82f6;}
-.sa-input:disabled{opacity:.5;cursor:not-allowed;}
-.sa-input-sm{padding:2px 6px;font-size:12px;}
-.sa-label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
-.sa-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;}
-.sa-btn:hover{background:#334155;}
-.sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
-.sa-btn-primary:hover{background:#1d4ed8;}
-.sa-btn-danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
-.sa-btn-danger:hover{background:#991b1b;}
-.sa-btn-amber{background:#78350f;border-color:#78350f;color:#fcd34d;}
-.sa-btn-amber:hover{background:#92400e;}
-.sa-btn-success{background:#064e3b;border-color:#064e3b;color:#6ee7b7;}
-.sa-btn-success:hover{background:#065f46;}
-.sa-btn-sm{padding:4px 10px;font-size:12px;}
-.badge-amber{background:#78350f;color:#fcd34d;}
-.sa-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;}
-.sa-modal{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;width:440px;max-width:90vw;}
-.sa-modal-title{color:#f8fafc;font-size:16px;margin-bottom:16px;}
-</style>
 {% endblock %}

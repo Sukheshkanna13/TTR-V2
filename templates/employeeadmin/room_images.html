@@ -20,7 +20,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
       <input type="checkbox" name="is_primary" id="isPrimary">
-      <label for="isPrimary" style="font-size:13px;color:#99f6e4;cursor:pointer;">Set as primary</label>
+      <label for="isPrimary" style="font-size:13px;color:#78716C;cursor:pointer;">Set as primary</label>
     </div>
     <button class="ea-btn ea-btn-primary" type="submit">Upload</button>
   </form>
@@ -32,8 +32,8 @@
   {% if images %}
   <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:16px;">
     {% for img in images %}
-    <div id="img-{{ img.id }}" style="border:1px solid #0d9488;border-radius:8px;overflow:hidden;background:#0f1f1e;">
-      <div style="height:160px;overflow:hidden;background:#134e4a;">
+    <div id="img-{{ img.id }}" style="border:1px solid #E7E5E4;border-radius:8px;overflow:hidden;background:#FFFFFF;">
+      <div style="height:160px;overflow:hidden;background:#FAFAF9;">
         <img src="{{ img.image.url }}" alt="{{ img.caption }}"
              style="width:100%;height:100%;object-fit:cover;">
       </div>
@@ -41,7 +41,7 @@
         {% if img.is_primary %}
         <span class="badge badge-green" style="margin-bottom:6px;">★ Primary</span>
         {% endif %}
-        <div style="font-size:12px;color:#99f6e4;margin-bottom:8px;">{{ img.caption|default:"No caption" }}</div>
+        <div style="font-size:12px;color:#78716C;margin-bottom:8px;">{{ img.caption|default:"No caption" }}</div>
         <div style="display:flex;gap:6px;">
           {% if not img.is_primary %}
           <button class="ea-btn ea-btn-sm ea-btn-success" onclick="setPrimary('{{ img.id }}')">Set Primary</button>
@@ -53,7 +53,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <p style="color:#5eead4;font-size:13px;opacity:.7;">No images uploaded yet. Use the form above to add room photos.</p>
+  <p style="color:#78716C;font-size:13px;">No images uploaded yet. Use the form above to add room photos.</p>
   {% endif %}
 </div>
 
@@ -91,20 +91,4 @@ async function setPrimary(imageId) {
   else alert(data.error);
 }
 </script>
-
-<style>
-.ea-section-title{font-size:14px;font-weight:600;color:#5eead4;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em;}
-.ea-input{background:#0f1f1e;border:1px solid #0d9488;color:#f0fdfa;padding:6px 10px;border-radius:6px;font-size:13px;}
-.ea-input:focus{outline:none;border-color:#5eead4;}
-.ea-label{display:block;font-size:11px;color:#5eead4;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;opacity:.8;}
-.ea-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #0d9488;background:#134e4a;color:#ccfbf1;text-decoration:none;}
-.ea-btn:hover{background:#0d9488;}
-.ea-btn-primary{background:#0d9488;border-color:#0d9488;color:#f0fdfa;}
-.ea-btn-primary:hover{background:#0f766e;}
-.ea-btn-success{background:#064e3b;border-color:#064e3b;color:#6ee7b7;}
-.ea-btn-success:hover{background:#065f46;}
-.ea-btn-danger{background:#450a0a;border-color:#450a0a;color:#fca5a5;}
-.ea-btn-danger:hover{background:#7f1d1d;}
-.ea-btn-sm{padding:4px 10px;font-size:12px;}
-</style>
 {% endblock %}

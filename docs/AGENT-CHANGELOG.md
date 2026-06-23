@@ -6,6 +6,32 @@ context without re-deriving it.
 
 ---
 
+## 2026-06-23 — Super Admin Minimalist UI Redesign
+
+### UI/UX Refinement — Dark to Minimal Light Theme Redesign
+
+**Requirement:** Convert the Super Admin portal from a dark/heavy theme to a professional, minimalistic, light-themed dashboard UI (internal operations tool style).
+
+**Changes:**
+- `templates/superadmin/base.html` — Replaced the dark styling system (`#0f172a`, `#1e293b`) and the clumsy wrapping top nav with a highly refined, professional left-hand sidebar navigation layout:
+  - Background: `#FAFAF9` (warm off-white)
+  - Surface/cards: `#FFFFFF` with a `1px` border `#E7E5E4`
+  - Navigation Sidebar: Fixed `240px` sidebar with structured navigation sections ("Operations", "Configuration", and "Content & System") preventing multi-line link wrapping. Integrated a clean logout action at the footer.
+  - Interactive Icons: Added clean, modern inline SVG icons next to each navigation link (e.g., Grid for Dashboard, Calendar for Bookings, Users for Guests, Chart for Analytics).
+  - Typography: Imported and applied Google Font 'Inter' with custom weights, tabular numerals for stats and monetary values, and strict type scaling.
+  - Primary text: `#1C1917`, Secondary text: `#78716C`.
+  - Accent: Muted resort teal `#0F766E` for active navigation, inputs focus, and primary button hover.
+  - State colors: Success (`#15803D`), Warning (`#B45309`), Error (`#B91C1C`) for badges and states.
+  - Target-oriented CSS overrides: Overrode inputs, inline edits, modal sheets, and the Room Status Board overlays across all sub-pages. Added a global style override to hide default browser numeric spin-buttons, enabled horizontal scrolling on cards (`overflow-x: auto`) for wide content, enforced non-wrapping table cells (`white-space: nowrap`) to align columns perfectly with headers, and added clean margin gaps (`margin-right: 4px`) on inline buttons to resolve alignment issues.
+
+- `templates/employeeadmin/base.html` & sub-pages — Reconfigured the Employee Admin (Staff Portal) to mirror the exact same professional, minimal light-themed layout:
+  - Background: `#FAFAF9`, Surfaces: `#FFFFFF`, Borders: `#E7E5E4`, Main Text: `#1C1917`, Secondary Text: `#78716C`, Accent: `#0F766E`.
+  - Left-hand Navigation Sidebar: Introduced a fixed `240px` sidebar layout containing Operations and Inventory groups. Integrated clean SVG icons for Dashboard, Bookings, Status Board, Rooms, and Availability.
+  - Sub-page Style Cleanup: Removed local stylesheet blocks and inline color overrides in `dashboard.html`, `rooms.html`, `room_images.html`, and `availability.html` to ensure perfect, unified style inheritance and card overflow controls.
+  - Room Status Board: Fixed light teal/blue colors (`#5eead4` and `#f0fdfa`) on the status cards (room names, properties, synced text, inactive overlays) to use readable `#1C1917` and `#78716C` colors on the light-themed surfaces.
+
+---
+
 ## 2026-06-15 — Booking hold early-release + My Stays cleanup
 
 Branch: `fix/superadmin-employee-management`

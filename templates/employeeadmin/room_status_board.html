@@ -3,7 +3,7 @@
 {% block content %}
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
   <h1 class="ea-page-title" style="margin:0;">Room Status Board</h1>
-  <span id="board-refresh-ts" style="font-size:11px;color:#5eead4;opacity:.6;"></span>
+  <span id="board-refresh-ts" style="font-size:11px;color:#78716C;"></span>
 </div>
 
 <div id="status-board"
@@ -12,24 +12,24 @@
   <div class="ea-card room-card" id="rc-{{ room.id }}"
        data-status="{{ room.operational_status }}"
        style="padding:1rem;position:relative;">
-    <div style="font-weight:600;font-size:13px;margin-bottom:3px;color:#f0fdfa;">{{ room.name }}</div>
-    <div style="font-size:11px;color:#5eead4;margin-bottom:10px;">{{ room.property.name }}</div>
+    <div style="font-weight:600;font-size:13px;margin-bottom:3px;color:#1C1917;">{{ room.name }}</div>
+    <div style="font-size:11px;color:#78716C;margin-bottom:10px;">{{ room.property.name }}</div>
     <div class="status-badge" style="margin-bottom:10px;">
       <span class="ea-badge ea-badge-{{ room.operational_status }}">{{ room.get_operational_status_display }}</span>
     </div>
     <select class="status-select"
             onchange="updateRoomStatus('{{ room.id }}', this.value, this)"
-            style="width:100%;padding:4px 6px;font-size:12px;border-radius:4px;border:1px solid #0d9488;background:#134e4a;color:#f0fdfa;cursor:pointer;">
+            style="width:100%;padding:4px 6px;font-size:12px;border-radius:4px;border:1px solid #E7E5E4;background:#FFFFFF;color:#1C1917;cursor:pointer;">
       {% for val, label in status_choices %}
       <option value="{{ val }}" {% if room.operational_status == val %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
     {% if not room.is_active %}
-    <div style="position:absolute;inset:0;background:rgba(0,0,0,.5);border-radius:inherit;display:flex;align-items:center;justify-content:center;font-size:11px;color:#5eead4;">Inactive</div>
+    <div style="position:absolute;inset:0;background:rgba(250,250,249,0.8);border-radius:inherit;display:flex;align-items:center;justify-content:center;font-size:11px;color:#78716C;">Inactive</div>
     {% endif %}
   </div>
   {% empty %}
-  <p style="color:#5eead4;opacity:.7;grid-column:1/-1;">No rooms assigned to your properties.</p>
+  <p style="color:#78716C;grid-column:1/-1;">No rooms assigned to your properties.</p>
   {% endfor %}
 </div>
 
