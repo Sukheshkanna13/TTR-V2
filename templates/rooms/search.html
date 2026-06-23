@@ -1,10 +1,101 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Search Results — Temples &amp; Towns{% endblock %}
+{% block title %}Search Results — Temple and Towns Resorts{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Stays layout — fixed rectangular filter panel pinned left, wide results */
+  .tt-results-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+  }
+  .tt-sidebar {
+    border: 1px solid var(--line);
+    background: #fff;
+    padding: 24px;
+    position: sticky;
+    top: 96px;
+  }
+  /* Bigger, editorial room cards (reference search.jsx) */
+  #results .tt-card {
+    height: 220px;
+    min-height: 220px;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    overflow: hidden;
+    cursor: pointer;
+    background: #fff;
+    border: 1px solid var(--line);
+    box-shadow: 0 4px 12px rgba(10, 22, 40, 0.04);
+    transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
+  }
+  #results .tt-card:hover {
+    box-shadow: 0 6px 20px rgba(10, 22, 40, 0.08);
+  }
+  #results .tt-card-image-wrap {
+    flex: 0 0 290px;
+    position: relative;
+    overflow: hidden;
+    background: #f8f9fa;
+  }
+  .tt-img-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px; background: #f8f9fa; color: #bdbdbd;
+    font-size: 12px; letter-spacing: .04em;
+  }
+  #results .tt-card-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .6s var(--ease-spring);
+  }
+  #results .tt-card:hover .tt-card-image-wrap img {
+    transform: scale(1.03);
+  }
+  @media (max-width: 900px) {
+    .tt-results-layout { grid-template-columns: 1fr; gap: 24px; }
+    .tt-sidebar { position: static; }
+    #results .tt-card {
+      flex-direction: column !important;
+      height: auto !important;
+      min-height: 0;
+    }
+    #results .tt-card-image-wrap {
+      flex: 0 0 200px !important;
+      height: 200px !important;
+      width: 100% !important;
+    }
+    .mobile-hidden-filters:not(.expanded) {
+      display: none;
+    }
+    #mobileFilterToggle {
+      display: inline-block !important;
+      margin-bottom: 16px;
+      width: 100%;
+    }
+  }
+  #mobileFilterToggle {
+    display: none;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="tt-page">
-  {% include "components/_back_nav.html" with back_url=back_url back_label=back_label %}
+<div class="tt-page" style="padding-top:24px;padding-bottom:96px;">
+  {% include "components/_back_nav.html" %}
+
+  <!-- Stays header (approved search.jsx style) -->
+  <div style="margin:8px 0 32px;">
+    <div class="tt-eyebrow">Stays</div>
+    <h1 class="tt-h1" id="staysMainHeading" style="margin-top:12px;margin-bottom:0;">Find your stay</h1>
+  </div>
+
   <div class="tt-results-layout">
 
     <!-- Filter sidebar -->
@@ -13,15 +104,25 @@
       <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:20px;">Filter stays</div>
       <form id="filterForm">
 
-        <!-- Property / Destination -->
+        <!-- Where — destination / property -->
         <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Destination</label>
+          <label class="tt-field-label">Where</label>
           <select class="tt-select" id="city_filter" name="property_id">
             <option value="">All Properties</option>
             {% for prop in properties %}
             <option value="{{ prop.id }}">{{ prop.name }}{% if prop.city %} — {{ prop.city }}{% endif %}</option>
             {% endfor %}
           </select>
+        </div>
+
+        <!-- Check-in / Check-out — required for live availability + pricing -->
+        <div class="tt-field" style="margin-bottom:16px;">
+          <label class="tt-field-label">Check-in</label>
+          <input class="tt-input" type="date" id="check_in" name="check_in">
+        </div>
+        <div class="tt-field" style="margin-bottom:16px;">
+          <label class="tt-field-label">Check-out</label>
+          <input class="tt-input" type="date" id="check_out" name="check_out">
         </div>
 
         <!-- Guests — directly affects which rooms appear (capacity filter) -->
@@ -38,30 +139,33 @@
           </div>
         </div>
 
-        <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Min price (₹)</label>
-          <input class="tt-input" type="number" id="min_price" name="min_price" placeholder="e.g. 1,000">
-        </div>
-        <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Max price (₹)</label>
-          <input class="tt-input" type="number" id="max_price" name="max_price" placeholder="e.g. 10,000">
-        </div>
-        <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Room type</label>
-          <select class="tt-select" id="room_type" name="room_type">
-            <option value="">All types</option>
-            <option value="single">Single</option>
-            <option value="double">Double</option>
-            <option value="deluxe">Deluxe</option>
-          </select>
-        </div>
-        <div class="tt-field" style="margin-bottom:24px;">
-          <label class="tt-field-label">Sort by</label>
-          <select class="tt-select" id="sort" name="sort">
-            <option value="">Recommended</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-          </select>
+        <button type="button" id="mobileFilterToggle" class="tt-btn tt-btn-ghost tt-btn-sm" onclick="toggleMobileFilters()">View More</button>
+        <div id="advancedFilters" class="mobile-hidden-filters">
+          <div class="tt-field" style="margin-bottom:16px;">
+            <label class="tt-field-label">Min price (₹)</label>
+            <input class="tt-input" type="number" id="min_price" name="min_price" placeholder="e.g. 1,000" min="0" step="500">
+          </div>
+          <div class="tt-field" style="margin-bottom:16px;">
+            <label class="tt-field-label">Max price (₹)</label>
+            <input class="tt-input" type="number" id="max_price" name="max_price" placeholder="e.g. 10,000" min="0" step="500">
+          </div>
+          <div class="tt-field" style="margin-bottom:16px;">
+            <label class="tt-field-label">Room type</label>
+            <select class="tt-select" id="room_type" name="room_type">
+              <option value="">All types</option>
+              <option value="single">Single</option>
+              <option value="double">Double</option>
+              <option value="deluxe">Deluxe</option>
+            </select>
+          </div>
+          <div class="tt-field" style="margin-bottom:24px;">
+            <label class="tt-field-label">Sort by</label>
+            <select class="tt-select" id="sort" name="sort">
+              <option value="">Recommended</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+            </select>
+          </div>
         </div>
         <button type="submit" class="tt-btn tt-btn-primary tt-w-full">Apply filters</button>
       </form>
@@ -79,18 +183,6 @@
       <!-- Error box: shows human-readable validation errors -->
       <div id="errorBox" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-sm);padding:14px 18px;margin-bottom:20px;font-size:14px;color:#b91c1c;"></div>
       <div id="results" style="display:flex;flex-direction:column;gap:16px;"></div>
-
-      <!-- Suggested Stays — shown when no dates are provided -->
-      <div id="suggested-section" class="hidden" style="margin-top:32px;">
-        <div style="margin-bottom:20px;">
-          <div class="tt-eyebrow" style="margin-bottom:6px;">EXPLORE</div>
-          <h2 class="tt-h3" style="margin:0 0 4px;">Suggested Stays</h2>
-          <p style="font-size:14px;color:var(--text-muted);margin:0;">Enter dates above to check availability and live pricing</p>
-        </div>
-        <div id="suggested-rooms-grid" style="display:flex;flex-direction:column;gap:16px;">
-          <div class="tt-loading"><div class="tt-spinner"></div><p>Loading suggestions…</p></div>
-        </div>
-      </div>
     </main>
 
   </div>
@@ -99,6 +191,17 @@
 
 {% block extra_js %}
 <script>
+  function toggleMobileFilters() {
+    const filters = document.getElementById('advancedFilters');
+    const btn = document.getElementById('mobileFilterToggle');
+    filters.classList.toggle('expanded');
+    if (filters.classList.contains('expanded')) {
+      btn.textContent = 'View Less';
+    } else {
+      btn.textContent = 'View More';
+    }
+  }
+
   const ROOM_DETAIL_URL = "{% url 'rooms:room-detail-page' %}";
   const SEARCH_API_URL  = "{% url 'rooms:search' %}";       // POST endpoint
   const CHECKOUT_URL    = "{% url 'payments:checkout-page' %}";
@@ -109,37 +212,38 @@
 
   // Read initial search params from URL — apply safe defaults so we never send nulls
   let searchParams = {
-    property_id: urlParams.get('property_id') || urlParams.get('city') || '',
+    property_id: urlParams.get('property_id') || '',
+    city:        urlParams.get('city') || '',
     check_in:    urlParams.get('check_in') || '',
     check_out:   urlParams.get('check_out') || '',
     // guests: parse as int, fall back to 2 if missing/zero/NaN
     guests:      Math.max(1, parseInt(urlParams.get('guests')) || 2),
   };
 
+  // ── Date helpers ───────────────────────────────────────────────
+  const toISO   = d => d.toISOString().split('T')[0];
+  const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+
   function stepGuests(delta) {
     const input = document.getElementById('guests');
     const next = Math.min(10, Math.max(1, parseInt(input.value) + delta));
     input.value = next;
     searchParams.guests = next;
+    liveRefetch();
   }
 
-  // Pre-fill sidebar controls from URL params
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('guests').value = searchParams.guests;
-    const propertySelect = document.getElementById('city_filter');
-    if (propertySelect && searchParams.property_id) {
-      propertySelect.value = searchParams.property_id;
-    }
-  });
+  // Merge all current form values (incl. dates) into searchParams
+  function applyFiltersFromForm() {
+    const fd = new FormData(document.getElementById('filterForm'));
 
-  // Filter form: merge new values into searchParams and re-fetch
-  document.getElementById('filterForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
+    // property from select — UUID (or '' for all properties)
+    searchParams.property_id = fd.get('property_id') || '';
 
-    // property from select — sends UUID (or '' for all properties)
-    const cityVal = fd.get('property_id');
-    searchParams.property_id = cityVal || '';
+    // dates from native inputs
+    const ci = fd.get('check_in');
+    const co = fd.get('check_out');
+    if (ci) searchParams.check_in  = ci;
+    if (co) searchParams.check_out = co;
 
     // guests from stepper — must be ≥ 1
     const gVal = parseInt(fd.get('guests'));
@@ -149,7 +253,81 @@
       const v = fd.get(k);
       if (v && v.trim()) searchParams[k] = v; else delete searchParams[k];
     });
+  }
 
+  // Keep check-out strictly after check-in and block past dates.
+  // Returns true when both dates are present and valid.
+  function normaliseDates() {
+    const ciEl = document.getElementById('check_in');
+    const coEl = document.getElementById('check_out');
+    const today = toISO(new Date());
+    ciEl.min = today;
+    if (ciEl.value && ciEl.value < today) ciEl.value = today;
+    if (ciEl.value) {
+      const minCo = toISO(addDays(new Date(ciEl.value), 1));
+      coEl.min = minCo;
+      if (!coEl.value || coEl.value <= ciEl.value) coEl.value = minCo;
+    }
+    return Boolean(ciEl.value && coEl.value && coEl.value > ciEl.value);
+  }
+
+  // Debounced live refetch — fires on any control change
+  let refetchTimer = null;
+  function liveRefetch() {
+    clearTimeout(refetchTimer);
+    refetchTimer = setTimeout(() => {
+      const datesOk = normaliseDates();
+      applyFiltersFromForm();
+      if (datesOk) loadRooms();
+    }, 350);
+  }
+
+  // Pre-fill sidebar controls from URL params (or sensible defaults) and wire live search
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('guests').value = searchParams.guests;
+
+    const propertySelect = document.getElementById('city_filter');
+    if (propertySelect && searchParams.property_id) {
+      propertySelect.value = searchParams.property_id;
+    }
+    // Update heading label immediately when destination changes
+    function updateCityLabel() {
+      const heading = document.getElementById('staysMainHeading');
+      if (!heading) return;
+      
+      let locationText = '';
+      if (propertySelect && propertySelect.value) {
+          const opt = propertySelect.options[propertySelect.selectedIndex];
+          const parts = opt.text.split(' — ');
+          locationText = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+      }
+
+      if (locationText) {
+          heading.innerHTML = `Find your stay in <span class="tt-italic-soft" style="color:var(--accent);">${locationText}</span>`;
+      } else {
+          heading.innerHTML = `Find your stay`;
+      }
+    }
+    if (propertySelect) {
+      propertySelect.addEventListener('change', updateCityLabel);
+      updateCityLabel();
+    }
+
+    // Dates: use URL params if present, else default tomorrow → day-after
+    const ciEl = document.getElementById('check_in');
+    const coEl = document.getElementById('check_out');
+    ciEl.value = searchParams.check_in  || toISO(addDays(new Date(), 1));
+    coEl.value = searchParams.check_out || toISO(addDays(new Date(), 2));
+    normaliseDates();
+    applyFiltersFromForm();
+
+    // Wire live refetch on every control (Apply button also just triggers a refetch)
+    const form = document.getElementById('filterForm');
+    form.addEventListener('change', liveRefetch);
+    form.addEventListener('input',  liveRefetch);
+    form.addEventListener('submit', (e) => { e.preventDefault(); liveRefetch(); });
+
+    // Initial load — dates are always present now, so show results immediately
     loadRooms();
   });
 
@@ -157,13 +335,24 @@
     return `${ROOM_DETAIL_URL}?id=${roomId}&check_in=${searchParams.check_in}&check_out=${searchParams.check_out}&guests=${searchParams.guests}`;
   }
 
-  function getRoomImage(room) {
-    const map = {
-      'single':  'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80',
-      'double':  'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=400&q=80',
-      'deluxe':  'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&q=80',
-    };
-    return map[room.room_type] || 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400&q=80';
+  // Split-fill star rating — Unicode ★ overlay (matches homepage)
+  function starHTML(rating) {
+    if (rating === null || rating === undefined) return '';
+    const pct = (Number(rating) / 5 * 100).toFixed(0);
+    return `<span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="position:relative;display:inline-flex;line-height:1;color:#64748b;font-size:14px;letter-spacing:1px;">
+        <span>★★★★★</span>
+        <span style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:${pct}%;">★★★★★</span>
+      </span>
+      <span style="color:var(--ink);font-weight:600;font-size:13px;">${Number(rating).toFixed(1)}</span>
+    </span>`;
+  }
+
+  function roomImageHTML(room) {
+    if (room.primary_image) {
+      return `<img src="${room.primary_image}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+    }
+    return `<div class="tt-img-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8.5 3.5v1M15.5 3.5v1"/></svg><span>No photo yet</span></div>`;
   }
 
   // Render a human-readable error message from the API's errors object
@@ -188,14 +377,13 @@
 
     // Client-side guard: must have dates before hitting the API
     if (!searchParams.check_in || !searchParams.check_out) {
-      errorBox.innerHTML = '<strong>Dates required.</strong> Please go back and enter check-in and check-out dates.';
+      errorBox.innerHTML = '<strong>Dates required.</strong> Please choose check-in and check-out dates in the panel.';
       errorBox.style.display = 'block';
       resultsDiv.innerHTML = `
         <div class="tt-empty">
           <div class="icon">📅</div>
           <h3>Select your dates</h3>
-          <p>Enter check-in and check-out dates to find available rooms.</p>
-          <a href="{% url 'core:home' %}" class="tt-btn tt-btn-primary tt-btn-sm">Back to search</a>
+          <p>Choose check-in and check-out dates in the search panel to find available rooms.</p>
         </div>`;
       return;
     }
@@ -238,7 +426,7 @@
             <div class="icon">🔍</div>
             <h3>No rooms available</h3>
             <p>${data.message}</p>
-            <a href="{% url 'core:home' %}" class="tt-btn tt-btn-primary tt-btn-sm">Try new dates</a>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">Adjust your dates, destination, or filters in the panel to see more options.</p>
           </div>`;
         return;
       }
@@ -261,43 +449,30 @@
           : Number(room.price_per_night) * numNights;
 
         const card = document.createElement('div');
-        card.className = 'tt-card tt-room-card';
-        card.style.cursor = 'pointer';
+        card.className = 'tt-card';
         card.onclick = (e) => {
-          if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
+          if (e.target.closest('button') || e.target.closest('a')) return;
           window.location.href = detailUrl;
         };
         card.innerHTML = `
-          <div class="tt-room-card-img" style="position:relative;overflow:hidden;">
-            <img src="${getRoomImage(room)}" alt="${room.name}"
-                 style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-md) 0 0 var(--r-md);"
-                 onerror="this.style.background='var(--bg-soft)'">
-            <div style="position:absolute;top:10px;left:10px;">
-              <span class="tt-tag" style="font-size:11px;padding:4px 10px;">${typeLabel}</span>
-            </div>
+          <div class="tt-card-image-wrap">
+            ${roomImageHTML(room)}
+            <div class="tt-card-tags"><span class="tt-tag">${typeLabel}</span></div>
           </div>
-          <div class="tt-room-card-info">
+          <div style="flex:1;padding:20px 24px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;">
             <div>
-              <div class="tt-card-name">${room.name}</div>
-              <div class="tt-card-area" style="margin-top:4px;">
-                ${typeLabel} &middot; Max ${room.capacity} guests &middot; ${room.city}
-              </div>
+              <div class="tt-eyebrow" style="font-size:11px;">${room.city} &middot; Max ${room.capacity} guests</div>
+              <h3 class="tt-h3" style="margin-top:4px;margin-bottom:4px;font-size:20px;line-height:1.2;">${room.name}</h3>
+              <div style="margin-bottom:6px;">${starHTML(room.property_rating)}</div>
+              <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">${amenityChips}${extraChips}</div>
             </div>
-            <p class="tt-card-blurb" style="margin:0;">
-              ${room.description ? room.description.substring(0, 130) + (room.description.length > 130 ? '…' : '') : 'Comfortable room with premium amenities.'}
-            </p>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${amenityChips}${extraChips}</div>
-          </div>
-          <div class="tt-room-card-price">
-            <div>
-              <div class="tt-eyebrow" style="margin-bottom:4px;">From</div>
-              <div class="tt-card-price">₹${Number(room.price_per_night).toLocaleString('en-IN')}</div>
-              <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">per night</div>
-              <div style="font-size:12px;color:var(--text-soft);margin-top:4px;">
-                ${numNights} night${numNights > 1 ? 's' : ''} · Total ₹${totalPrice.toLocaleString('en-IN')}
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);gap:16px;">
+              <div>
+                <div class="tt-card-price" style="font-size:18px;">₹${Number(room.price_per_night).toLocaleString('en-IN')}</div>
+                <div class="tt-muted" style="font-size:11px;margin-top:2px;">per night</div>
               </div>
+              <a href="${detailUrl}" class="tt-btn tt-btn-primary tt-btn-sm">Book now &rarr;</a>
             </div>
-            <a href="${detailUrl}" class="tt-btn tt-btn-primary tt-btn-sm">View details</a>
           </div>`;
         resultsDiv.appendChild(card);
       });
@@ -309,81 +484,8 @@
     }
   }
 
-  // Kick off search on page load — only when both dates are present in the URL
-  if (searchParams.check_in && searchParams.check_out) {
-    loadRooms();
-  } else {
-    // No dates supplied — show idle state + suggested rooms
-    document.getElementById('searchTitle').textContent = 'Find your stay';
-    const suggested = document.getElementById('suggested-section');
-    if (suggested) {
-      suggested.classList.remove('hidden');
-      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-      const dayAfter  = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
-      const toISO = d => d.toISOString().split('T')[0];
-      const fd = new FormData();
-      fd.append('check_in', toISO(tomorrow));
-      fd.append('check_out', toISO(dayAfter));
-      fd.append('guests', '1');
-      fetch(SEARCH_API_URL, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF_TOKEN },
-        credentials: 'include',
-        body: fd,
-      })
-      .then(r => r.json())
-      .then(data => {
-        const grid = document.getElementById('suggested-rooms-grid');
-        if (!grid) return;
-        if (!data.rooms || data.rooms.length === 0) {
-          grid.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">No rooms available right now.</p>';
-          return;
-        }
-        grid.innerHTML = '';
-        data.rooms.forEach(room => {
-          const typeLabel = room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1);
-          const amenityChips = (room.amenities_list || []).slice(0, 4)
-            .map(a => `<span class="tt-chip tt-chip-tonal" style="font-size:12px;padding:5px 10px;">${a}</span>`)
-            .join('');
-          const card = document.createElement('div');
-          card.className = 'tt-card tt-room-card';
-          card.style.cursor = 'pointer';
-          card.onclick = () => { window.location.href = `${ROOM_DETAIL_URL}?id=${room.id}&guests=1`; };
-          card.innerHTML = `
-            <div class="tt-room-card-img" style="position:relative;overflow:hidden;">
-              <img src="${getRoomImage(room)}" alt="${room.name}"
-                   style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-md) 0 0 var(--r-md);"
-                   onerror="this.style.background='var(--bg-soft)'">
-              <div style="position:absolute;top:10px;left:10px;">
-                <span class="tt-tag" style="font-size:11px;padding:4px 10px;">${typeLabel}</span>
-              </div>
-            </div>
-            <div class="tt-room-card-info">
-              <div>
-                <div class="tt-card-name">${room.name}</div>
-                <div class="tt-card-area" style="margin-top:4px;">${typeLabel} &middot; Max ${room.capacity} guests &middot; ${room.city}</div>
-              </div>
-              <p class="tt-card-blurb" style="margin:0;">
-                ${room.description ? room.description.substring(0, 130) + (room.description.length > 130 ? '…' : '') : 'Comfortable room with premium amenities.'}
-              </p>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${amenityChips}</div>
-            </div>
-            <div class="tt-room-card-price">
-              <div>
-                <div class="tt-eyebrow" style="margin-bottom:4px;">From</div>
-                <div class="tt-card-price">₹${Number(room.price_per_night).toLocaleString('en-IN')}</div>
-                <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">per night</div>
-              </div>
-              <a href="${ROOM_DETAIL_URL}?id=${room.id}&guests=1" class="tt-btn tt-btn-primary tt-btn-sm">View details</a>
-            </div>`;
-          grid.appendChild(card);
-        });
-      })
-      .catch(() => {
-        const grid = document.getElementById('suggested-rooms-grid');
-        if (grid) grid.innerHTML = '';
-      });
-    }
-  }
+  // Page-load search is handled in the DOMContentLoaded init above — dates are
+  // always pre-filled (from URL params or tomorrow→day-after defaults), so results
+  // render immediately and stay editable via the live search panel.
 </script>
 {% endblock %}

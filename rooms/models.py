@@ -5,6 +5,9 @@ Room — stores hotel room details (city, type, price, capacity, amenities).
 Booking — stores confirmed/pending/cancelled bookings with date ranges.
 """
 
+from datetime import date, datetime
+from decimal import Decimal
+from typing import TYPE_CHECKING
 import secrets
 import uuid
 
@@ -13,11 +16,20 @@ from django.db import models
 from django.utils import timezone
 import builtins
 
+if TYPE_CHECKING:
+    from superadmin.models import PropertyTaxConfig
+
 
 class Property(models.Model):
     """
     A hotel property (e.g., Pondicherry, Auroville, Bengaluru).
     """
+    objects = models.Manager()
+
+    # Type annotations for static typing / Pyrefly
+    rooms: models.Manager
+    tax_config: "PropertyTaxConfig"
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -33,19 +45,7 @@ class Property(models.Model):
         help_text="WhatsApp number for notifications"
     )
     is_active = models.BooleanField(default=True)
-    rating = models.DecimalField(
-        max_digits=2, decimal_places=1, default="4.5",
-        help_text="Guest rating out of 5, shown on property cards.",
-    )
-    review_count = models.PositiveIntegerField(
-        default=0, help_text="Number of guest reviews backing the rating.",
-    )
     created_at = models.DateTimeField(auto_now_add=True)
-
-    @builtins.property
-    def rating_pct(self):
-        """Rating as a percentage (0-100) for the split-fill star widget."""
-        return float(self.rating) / 5 * 100
 
     class Meta:
         verbose_name = "property"
@@ -54,6 +54,42 @@ class Property(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.city})"
+
+
+class RoomManager(models.Manager):
+    """Manager for Room. Owns the home-page featured-stays selection rule."""
+
+    def featured_for_home(self, min_count=3):
+        """Return the rooms for the home carousel.
+
+        Featured (starred) rooms first, ordered by their property's rating
+        (highest first, nulls last) then newest. If fewer than ``min_count``
+        are featured, fill the remaining slots with the highest-rated
+        non-featured rooms. Only active, available rooms that have at least
+        one image are eligible.
+        """
+        from django.db.models import F
+
+        pool = list(
+            self.get_queryset()
+            .filter(is_active=True, operational_status=Room.STATUS_AVAILABLE)
+            .select_related("property")
+            .prefetch_related("images")
+            .order_by(F("rating").desc(nulls_last=True), "-created_at")
+        )
+
+        featured = [r for r in pool if r.is_featured]
+        if len(featured) >= min_count:
+            return featured
+
+        result = list(featured)
+        featured_ids = {r.id for r in featured}
+        for room in pool:
+            if len(result) >= min_count:
+                break
+            if room.id not in featured_ids:
+                result.append(room)
+        return result
 
 
 class Room(models.Model):
@@ -66,6 +102,14 @@ class Room(models.Model):
         ("double", "Double"),
         ("deluxe", "Deluxe"),
     ]
+
+    objects = RoomManager()
+
+    # Type annotations for static typing / Pyrefly
+    rates: models.Manager
+    images: models.Manager
+    bookings: models.Manager
+    ota_blocks: models.Manager
 
     id = models.UUIDField(
         primary_key=True,
@@ -133,6 +177,15 @@ class Room(models.Model):
         db_index=True,
         help_text="Current operational state of the room.",
     )
+    is_featured = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Show this room in the Featured Stays carousel on the home page.",
+    )
+    rating = models.DecimalField(
+        max_digits=2, decimal_places=1, default="4.5",
+        help_text="Room rating out of 5.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -142,6 +195,13 @@ class Room(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.city}) — ₹{self.price_per_night}/night"
+
+    @builtins.property
+    def rating_pct(self):
+        """Rating as a percentage (0-100) for the split-fill star widget."""
+        if self.rating is None:
+            return 0
+        return float(self.rating) / 5 * 100
 
     @builtins.property
     def amenities_list(self):
@@ -186,6 +246,7 @@ class RoomImage(models.Model):
     Image for a hotel room. Supports multiple images per room
     with one marked as the primary/hero image.
     """
+    objects = models.Manager()
 
     id = models.UUIDField(
         primary_key=True,
@@ -238,6 +299,10 @@ class Booking(models.Model):
         FAILED    → payment was attempted but failed
         CANCELLED → user cancelled after confirmation
     """
+    objects = models.Manager()
+
+    # Type annotations for static typing / Pyrefly
+    payments: models.Manager
 
     STATUS_CHOICES = [
         ("pending", "Pending"),
@@ -364,19 +429,56 @@ class Booking(models.Model):
         return True
 
     def generate_booking_reference(self):
-        """Generate TT-{year}-{pk:05d} reference. Called on booking confirmation."""
+        """Generate a human-readable TT-{year}-{NNNNN} reference (e.g. TT-2026-00001).
+
+        Called on booking confirmation. The number is a per-year sequence derived
+        from the highest existing reference for the current year — the UUID primary
+        key cannot supply a readable sequential number. ``booking_reference`` is
+        unique; on the rare race where two confirmations pick the same number the
+        insert fails and we retry with the next one. Idempotent: returns the
+        existing reference if already set.
+        """
+        from django.db import IntegrityError, transaction
+
         if self.booking_reference:
             return self.booking_reference
+
         year = timezone.now().year
-        self.booking_reference = f"TT-{year}-{self.pk:05d}"
+        prefix = f"TT-{year}-"
+        for _ in range(5):
+            last = (
+                Booking.objects.filter(booking_reference__startswith=prefix)
+                .order_by("-booking_reference")
+                .first()
+            )
+            if last and last.booking_reference:
+                try:
+                    next_seq = int(last.booking_reference.rsplit("-", 1)[1]) + 1
+                except ValueError:
+                    next_seq = 1
+            else:
+                next_seq = 1
+            self.booking_reference = f"{prefix}{next_seq:05d}"
+            try:
+                with transaction.atomic():
+                    self.save(update_fields=["booking_reference"])
+                return self.booking_reference
+            except IntegrityError:
+                self.booking_reference = None
+
+        # Extremely unlikely fallback: guaranteed-unique, non-sequential.
+        self.booking_reference = f"{prefix}{uuid.uuid4().hex[:6].upper()}"
         self.save(update_fields=["booking_reference"])
         return self.booking_reference
 
     def compute_tax(self):
         """Compute GST from PropertyTaxConfig and store in tax_amount. Returns amount."""
         from decimal import Decimal
+        prop = self.room.property
         try:
-            cfg = self.room.property.tax_config
+            if prop is None:
+                raise ValueError("Room has no property; cannot compute tax.")
+            cfg = prop.tax_config
             nightly_rate = self.total_price / self.num_nights if self.num_nights else self.total_price
             rate = cfg.gst_rate_for(nightly_rate)
             self.tax_amount = (self.total_price * rate / Decimal('100')).quantize(Decimal('0.01'))
@@ -390,6 +492,8 @@ class OTABlock(models.Model):
     """
     Represents a room block from an OTA (Online Travel Agency) or a manual block by an admin.
     """
+    objects = models.Manager()
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="ota_blocks")
     start_date = models.DateField()
@@ -416,6 +520,8 @@ class RoomRate(models.Model):
     """
     Dynamic pricing override for a specific room and date range.
     """
+    objects = models.Manager()
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="rates")
     start_date = models.DateField()

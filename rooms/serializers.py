@@ -36,6 +36,8 @@ class RoomSerializer(serializers.ModelSerializer):
     amenities_list = serializers.ReadOnlyField()
     images = RoomImageSerializer(many=True, read_only=True)
     primary_image = serializers.SerializerMethodField()
+    property_rating = serializers.SerializerMethodField()
+    property_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Room
@@ -52,7 +54,15 @@ class RoomSerializer(serializers.ModelSerializer):
             "images",
             "primary_image",
             "dynamic_total_price",
+            "property_rating",
+            "property_name",
         ]
+
+    def get_property_rating(self, obj):
+        return float(obj.rating) if obj.rating is not None else None
+
+    def get_property_name(self, obj):
+        return getattr(obj.property, "name", "")
 
     dynamic_total_price = serializers.SerializerMethodField()
 
@@ -129,6 +139,18 @@ class SearchSerializer(serializers.Serializer):
         choices=[("price_asc", "Price: Low to High"), ("price_desc", "Price: High to Low")],
         required=False,
     )
+
+    def validate_property_id(self, value):
+        if not value:
+            return None
+        if str(value).lower() in ["0", "all", "none", ""]:
+            return None
+        import uuid
+        try:
+            uuid.UUID(value)
+        except ValueError:
+            raise serializers.ValidationError("Invalid property ID format.")
+        return value
 
     def validate_check_in(self, value):
         if value < date.today():

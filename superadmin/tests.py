@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from accounts.models import UserProfile
+from rooms.models import Property, Room
 
 User = get_user_model()
 
@@ -257,3 +258,35 @@ class RoomStatusBoardTest(TestCase):
         self.assertIn('rooms', data)
         self.assertEqual(len(data['rooms']), 1)
         self.assertEqual(data['rooms'][0]['status'], 'available')
+
+
+class SuperAdminFeatureToggleTest(TestCase):
+    def setUp(self):
+        self.admin, _ = _make_super_admin()
+        self.client = Client()
+        self.client.force_login(self.admin)
+        self.prop = Property.objects.create(name='P', city='Pondy', is_active=True)
+        self.room = Room.objects.create(
+            property=self.prop, name='R1', city='Pondy',
+            room_type='single', price_per_night=1000, capacity=2,
+        )
+
+    def test_toggle_featured_flips_flag(self):
+        url = reverse('superadmin:room-update', args=[self.room.id])
+        res = self.client.post(url, data=json.dumps({
+            'action': 'toggle_featured',
+        }), content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()['is_featured'])
+        self.room.refresh_from_db()
+        self.assertTrue(self.room.is_featured)
+
+    def test_toggle_featured_twice_returns_false(self):
+        url = reverse('superadmin:room-update', args=[self.room.id])
+        self.client.post(url, data=json.dumps({'action': 'toggle_featured'}),
+                         content_type='application/json')
+        res = self.client.post(url, data=json.dumps({'action': 'toggle_featured'}),
+                               content_type='application/json')
+        self.assertFalse(res.json()['is_featured'])
+        self.room.refresh_from_db()
+        self.assertFalse(self.room.is_featured)

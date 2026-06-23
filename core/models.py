@@ -14,6 +14,8 @@ class Attraction(models.Model):
         ('EVENT', 'Event'),
     ]
 
+    objects = models.Manager()
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     city = models.CharField(max_length=100, db_index=True)
     name = models.CharField(max_length=200)
@@ -32,6 +34,9 @@ class Attraction(models.Model):
         related_name='attractions_created',
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # Type annotation for Pyrefly / static analysis (reverse ForeignKey relation)
+    photos: models.Manager
 
     class Meta:
         ordering = ['sort_order', 'name']

@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>{% block title %}Temple and Towns Resorts{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,9 +28,9 @@
       </div>
       <div class="tt-utility-right">
         <a href="{% url 'rooms:search-page' %}">Trip Planner</a>
-        <a href="{% url 'core:experiences' %}">Nature Retreat</a>
+        <a href="{% url 'core:retreat' %}">Nature Retreat</a>
         {% if user.is_authenticated %}
-          <a href="{% url 'accounts:folio' %}">Guest folio</a>
+          <a href="{% url 'accounts:folio' %}" title="{{ user.get_short_name }}">{{ user.get_short_name|truncatechars:20 }}</a>
         {% else %}
           <a href="{% url 'accounts:login-page' %}">Sign in</a>
         {% endif %}
@@ -41,37 +41,21 @@
   <!-- ── Main navigation ── -->
   <nav class="tt-nav {% if url_name == 'home' %}tt-nav-home{% endif %}" id="ttNav">
     <div class="tt-nav-inner tt-nav-dual-layout">
-      <!-- LEFT: logo + inline search pill (home only) -->
+      <!-- LEFT: logo -->
       <div class="tt-nav-left-group">
         <a href="{% url 'core:home' %}" class="tt-logo-split tt-logo-static" style="text-decoration:none;">
           <img src="{% static 'images/logo-left.png' %}" alt="Temple and Towns Resorts logo" class="tt-logo-left-img">
           <img src="{% static 'images/logo-half.png' %}" alt="Temple and Towns Resorts" class="tt-logo-half-img">
         </a>
-        {% if url_name == 'home' %}
-        <a href="{% url 'rooms:search-page' %}" class="tt-nav-pill-inline" style="text-decoration:none;">
-          <div class="cell">
-            <span class="lbl">Where to?</span>
-            <span class="val">Pondicherry</span>
-          </div>
-          <div class="sep"></div>
-          <div class="cell">
-            <span class="lbl">Dates</span>
-            <span class="val">Add dates</span>
-          </div>
-          <div class="search-icon-circle">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          </div>
-        </a>
-        {% endif %}
       </div>
 
       <!-- CENTER: desktop nav links -->
       <div class="tt-nav-links">
         <a href="{% url 'rooms:search-page' %}" class="tt-nav-link{% if url_name == 'search-page' or url_name == 'home' or url_name == 'room-detail-page' %} active{% endif %}">Stays</a>
         <a href="{% url 'core:things-to-do' %}" class="tt-nav-link{% if url_name == 'things-to-do' %} active{% endif %}">Things to do</a>
-        <a href="{% url 'core:experiences' %}" class="tt-nav-link{% if url_name == 'experiences' %} active{% endif %}">Nature Retreat</a>
+        <a href="{% url 'core:retreat' %}" class="tt-nav-link{% if url_name == 'retreat' %} active{% endif %}">Nature Retreat</a>
         <a href="{% url 'core:cause' %}" class="tt-nav-link{% if url_name == 'cause' %} active{% endif %}">Travel for Cause</a>
-        <a href="{% url 'core:explore' %}" class="tt-nav-link{% if url_name == 'explore' %} active{% endif %}">Events</a>
+        <a href="{% url 'core:events' %}" class="tt-nav-link{% if url_name == 'events' %} active{% endif %}">Events</a>
       </div>
 
       <!-- RIGHT: support + hamburger -->
@@ -92,11 +76,11 @@
     <div class="tt-mobile-menu" id="mobileMenu" style="display:none;">
       <a href="{% url 'rooms:search-page' %}" class="tt-mobile-link">Stays</a>
       <a href="{% url 'core:things-to-do' %}" class="tt-mobile-link">Things to do</a>
-      <a href="{% url 'core:experiences' %}" class="tt-mobile-link">Nature Retreat</a>
+      <a href="{% url 'core:retreat' %}" class="tt-mobile-link">Nature Retreat</a>
       <a href="{% url 'core:cause' %}" class="tt-mobile-link">Travel for Cause</a>
-      <a href="{% url 'core:explore' %}" class="tt-mobile-link">Events</a>
+      <a href="{% url 'core:events' %}" class="tt-mobile-link">Events</a>
       {% if user.is_authenticated %}
-        <a href="{% url 'accounts:folio' %}" class="tt-mobile-link">Guest folio</a>
+        <a href="{% url 'accounts:folio' %}" class="tt-mobile-link" title="{{ user.get_short_name }}">{{ user.get_short_name|truncatechars:20 }}</a>
         <span class="tt-mobile-link" role="button" onclick="logout()" style="cursor:pointer;">Sign out</span>
       {% else %}
         <a href="{% url 'accounts:login-page' %}" class="tt-mobile-link">Sign in / Register</a>
@@ -139,7 +123,7 @@
           <h4>Account</h4>
           <ul>
             {% if user.is_authenticated %}
-              <li><a href="{% url 'accounts:folio' %}">Guest folio</a></li>
+              <li><a href="{% url 'accounts:folio' %}" title="{{ user.get_short_name }}">{{ user.get_short_name|truncatechars:20 }}</a></li>
               <li><a href="{% url 'bookings:my-bookings-page' %}">My bookings</a></li>
               <li><span role="button" onclick="logout()" style="cursor:pointer;">Sign out</span></li>
             {% else %}

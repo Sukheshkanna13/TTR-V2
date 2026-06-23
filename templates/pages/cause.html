@@ -1,19 +1,18 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Travel for a Cause — Temples & Towns{% endblock %}
+{% block title %}Travel for Cause — Temple and Towns Resorts{% endblock %}
 
 {% block content %}
-<div class="tt-page">
-
-  <!-- Header -->
-  <section class="tt-section-sm" style="max-width:680px;">
-    <div class="tt-eyebrow" style="margin-bottom:16px;">CSR &amp; COMMUNITY</div>
-    <h1 class="tt-h1" style="margin:0 0 24px;">Travel that <em class="tt-italic-soft">gives back.</em></h1>
-    <p class="tt-sub" style="margin:0;">
-      A portion of every booking funds restoration of temple craft, artisan livelihoods,
-      and coastal cleanup near our properties. Choose a cause when you book.
+<section class="tt-section" style="padding-top:32px;padding-bottom:0;">
+  <div class="tt-page">
+    {% include "components/_back_nav.html" %}
+    <div class="tt-eyebrow">CSR &amp; community</div>
+    <h1 class="tt-h1" style="margin:12px 0 0;">Travel that <span class="tt-italic-soft" style="color:var(--accent);font-weight:600;">gives back.</span></h1>
+    <p style="max-width:640px;margin-top:24px;font-size:17px;line-height:1.55;color:var(--text-soft);">
+      A portion of every booking funds restoration of temple craft, artisan livelihoods, and coastal cleanup near our properties. Choose a cause when you book.
     </p>
-  </section>
+  </div>
+</section>
 
   <!-- Cause cards -->
   <section class="tt-section-sm">
@@ -78,7 +77,4 @@
       </div>
     </div>
   </section>
-
-
-</div>
 {% endblock %}

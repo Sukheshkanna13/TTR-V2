@@ -10,7 +10,7 @@ def home_page(request):
     """Render the landing page — search select is DB-driven; showcase content
     (featured cards, moments, journeys, tiers) mirrors the approved design.
     Booking links route into the Django flow (search/property), not external OTAs."""
-    from rooms.models import Property
+    from rooms.models import Property, Room
     cities = list(
         Property.objects.filter(is_active=True)
         .values_list('city', flat=True)
@@ -30,17 +30,7 @@ def home_page(request):
         'guests': 2,
     }
 
-    def imgs(folder, nums):
-        return [f"images/{folder}/{n}.jpeg" for n in nums]
-
-    featured = [
-        {'name': 'White Town 1BHK — 1st Floor', 'area': 'White Town · 100m from beach',
-         'area_short': 'White Town', 'rating': '4.93', 'images': imgs('1F-1BHK', [1, 2, 3, 4, 5])},
-        {'name': 'White Town 1BHK — 2nd Floor', 'area': 'White Town · 100m from beach',
-         'area_short': 'White Town', 'rating': '4.86', 'images': imgs('2F-1BHK', [1, 2, 3, 4, 5])},
-        {'name': 'Nature Retreat', 'area': 'Near Auroville · 1-acre garden & pool',
-         'area_short': 'Near Auroville', 'rating': '4.90', 'images': imgs('Auroville', [1, 2, 3, 4, 5])},
-    ]
+    featured_rooms = Room.objects.featured_for_home()
     moments = [
         {'img': 'images/pottery.png', 'cap': 'Pottery, Near Auroville'},
         {'img': 'images/temple-courtyard.png', 'cap': 'Sandalwood courtyards'},
@@ -60,7 +50,7 @@ def home_page(request):
         {'tier': 'Gold', 'range': '2000+ pts', 'perks': '12% off'},
     ]
     return render(request, "pages/index.html", {
-        'cities': cities, 'hero': hero, 'featured': featured, 'moments': moments,
+        'cities': cities, 'hero': hero, 'featured_rooms': featured_rooms, 'moments': moments,
         'journeys': journeys, 'tiers': tiers,
     })
 
@@ -68,11 +58,6 @@ def home_page(request):
 def experiences_page(request):
     """Render the Guest Experience page."""
     return render(request, "pages/experiences.html")
-
-
-def things_to_do_page(request):
-    """Render the Things to do page."""
-    return render(request, "pages/things_to_do.html")
 
 
 def cause_page(request):
@@ -104,6 +89,67 @@ def cause_page(request):
         'active_programs': active_programs,
     })
 
+
+def things_to_do_page(request):
+    """Things to do — host-curated activities (from ThingsScreen)."""
+    things = [
+        {'cat': 'Outdoor', 'title': 'Cycling the East Coast Road',
+         'desc': 'Half-day ride, cycle and helmet included.', 'price': 'Request to book',
+         'img': 'images/coastal_cycling.png', 'wa': "Hi, I'd like to book the East Coast Road cycling experience."},
+        {'cat': 'Wellness', 'title': 'Abhyanga massage',
+         'desc': 'Sixty minutes of warm-oil bliss.', 'price': 'Request to book',
+         'img': 'images/spa_abhyanga.png', 'wa': "Hi, I'd like to book an Abhyanga massage."},
+        {'cat': 'Crafts', 'title': 'Block-printing class',
+         'desc': 'Take home what you print.', 'price': 'Request to book',
+         'img': 'images/block_printing.png', 'wa': "Hi, I'd like to book a block-printing class."},
+    ]
+    return render(request, "pages/things_to_do.html", {'things': things})
+
+
+def events_page(request):
+    """Events — Nature Retreat events (from EventsScreen)."""
+    events = [
+        {'cat': 'Near Auroville', 'title': 'Experience Local Artisans',
+         'desc': 'Demonstrations and hands-on workshops. Meet local artisans, explore handmade jewellery, weaving and jute crafts. Take home a little piece of Near Auroville.',
+         'img': 'images/Natures-retreat/1.jpeg'},
+        {'cat': 'Near Auroville', 'title': 'Garden Fun for Kids',
+         'desc': 'Let the little hands explore nature through simple gardening and outdoor activities — a joyful way for children to play, learn and enjoy nature.',
+         'img': 'images/Natures-retreat/2.jpeg'},
+        {'cat': 'Near Auroville', 'title': 'Poolside Evenings & Summer Fun',
+         'desc': 'Relax and enjoy refreshing moments by the pool. On special weekends and group stays, cheerful poolside gatherings and summer vibes.',
+         'img': 'images/Natures-retreat/3.jpeg'},
+        {'cat': 'Near Auroville', 'title': 'Robotics & Creative Tech',
+         'desc': 'Beginner-friendly robotics and creative technology sessions for curious young minds, led by our in-house tech enthusiast.',
+         'img': 'images/Auroville/5.jpeg'},
+    ]
+    return render(request, "pages/events.html", {'events': events})
+
+
+def retreat_page(request):
+    """Nature Retreat — showcase page advertising the Near Auroville property."""
+    highlights = [
+        {'icon': 'wifi', 'title': 'High-speed Wi-Fi', 'desc': 'Stay connected throughout the property'},
+        {'icon': 'sun', 'title': 'One Acre Garden', 'desc': 'Lush greenery and peaceful open spaces'},
+        {'icon': 'shield', 'title': 'Swimming Pool', 'desc': 'Refreshing pool for guests of all ages'},
+        {'icon': 'bed', 'title': '12 Rooms', 'desc': 'Comfortable rooms with attached baths'},
+        {'icon': 'lock', 'title': 'Free Parking', 'desc': 'Secure on-site parking available'},
+        {'icon': 'gift', 'title': 'Near Matrimandir', 'desc': '5-7 minutes from the iconic Matrimandir'},
+    ]
+    experiences = [
+        {'title': 'Experience Local Artisans',
+         'desc': 'Discover the charm of local craftsmanship through simple demonstrations and hands-on workshops. Meet local artisans, explore handmade jewellery, weaving and jute crafts.',
+         'img': 'images/Natures-retreat/1.jpeg'},
+        {'title': 'Garden Fun for Kids',
+         'desc': 'Let the little hands explore nature through simple gardening and outdoor activities. A fun and joyful way for children to play, learn and enjoy the beauty of nature.',
+         'img': 'images/Natures-retreat/2.jpeg'},
+        {'title': 'Poolside Evenings & Summer Fun',
+         'desc': 'Relax, unwind and enjoy refreshing moments by the pool. During special weekends and group stays — cheerful poolside gatherings and summer vibes.',
+         'img': 'images/Natures-retreat/3.jpeg'},
+    ]
+    gallery = [f"images/Auroville/{n}.jpeg" for n in range(1, 9)]
+    return render(request, "pages/retreat.html", {
+        'highlights': highlights, 'experiences': experiences, 'gallery': gallery,
+    })
 
 
 def explore_page(request):

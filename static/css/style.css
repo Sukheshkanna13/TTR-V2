@@ -50,6 +50,8 @@ html,
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -250,6 +252,41 @@ img {
   transform: scale(0.97);
 }
 
+/* --- Traditional Back to Home Button --- */
+.tt-back-home-wrap {
+  margin-bottom: 20px;
+  display: block;
+}
+
+.tt-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(10, 22, 40, 0.04); /* Low transparency, subtle gray/navy tint */
+  border: 1px solid var(--line-strong);
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s var(--ease);
+}
+
+.tt-back-home:hover {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  box-shadow: 0 4px 12px rgba(10, 22, 40, 0.08);
+}
+
+.tt-back-home svg {
+  transition: transform 0.2s var(--ease);
+}
+
+.tt-back-home:hover svg {
+  transform: translateX(-3px);
+}
+
 /* ---------- top utility strip ---------- */
 .tt-utility {
   border-bottom: 1px solid var(--line);
@@ -332,7 +369,7 @@ img {
 }
 
 .tt-logo-left-img {
-  height: 52px;
+  height: clamp(38px, 4.5vw, 52px);
   width: auto;
   object-fit: contain;
   mix-blend-mode: multiply;
@@ -340,7 +377,7 @@ img {
 }
 
 .tt-logo-half-img {
-  height: 52px;
+  height: clamp(38px, 4.5vw, 52px);
   width: auto;
   object-fit: contain;
   mix-blend-mode: multiply;
@@ -2358,10 +2395,10 @@ img {
     background: #fff;
     border: 1px solid var(--line-strong);
     border-radius: 0;
-    padding: 6px 14px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    padding: 6px 6px 6px 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     width: 100%;
-    max-width: 360px;
+    max-width: 100%;
     gap: 8px;
     cursor: pointer;
   }
@@ -2385,6 +2422,7 @@ img {
     display: flex;
     align-items: center;
     min-width: 0;
+    gap: 8px;
   }
 
   .tt-nav-search-pill .cell {
@@ -2396,7 +2434,7 @@ img {
   .tt-nav-search-pill .lbl {
     font-size: 9px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     color: var(--text-muted);
     font-weight: 700;
   }
@@ -2412,14 +2450,14 @@ img {
 
   .tt-nav-search-pill .sep {
     width: 1px;
-    height: 18px;
+    height: 20px;
     background: var(--line);
-    margin: 0 8px;
+    margin: 0;
   }
 
   .tt-nav-search-pill .search-icon-circle {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     background: var(--ink);
     color: #fff;
     border-radius: 50%;
@@ -2509,13 +2547,6 @@ img {
     height: 54px; /* Slightly increased mobile logo height */
   }
 
-  .tt-logo-left-img {
-    height: 38px;
-  }
-
-  .tt-logo-half-img {
-    height: 38px;
-  }
 
   .tt-logo-split {
     gap: 3px;
@@ -3377,4 +3408,43 @@ img {
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
+}
+/* Utility: hidden (used by JS show/hide across pages) */
+.hidden { display: none !important; }
+
+/* Utilities restored for auth/checkout/search states */
+.tt-loading { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.tt-spinner { width: 32px; height: 32px; border: 2px solid var(--line-strong); border-top-color: var(--ink);
+  border-radius: 50%; animation: tt-spin .7s linear infinite; margin: 0 auto 16px; }
+.tt-alert { padding: 12px 16px; font-size: 14px; border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; }
+
+/* ── Featured stays: mobile "View more" ─────────────────────────── */
+.tt-featured-more { display: none; margin-top: 24px; }
+@media (max-width: 768px) {
+  .tt-featured-extra { display: none; }
+  .tt-featured-extra.is-open { display: block; }
+  .tt-featured-more { display: inline-flex; }
+}
+
+/* --- Mobile Hero UI/UX helpers --- */
+.desktop-pill-content {
+  display: flex !important;
+}
+.mobile-pill-content {
+  display: none !important;
+}
+.hide-mobile {
+  display: inline !important;
+}
+
+@media (max-width: 768px) {
+  .desktop-pill-content {
+    display: flex !important;
+  }
+  .mobile-pill-content {
+    display: none !important;
+  }
+  .hide-mobile {
+    display: none !important;
+  }
 }

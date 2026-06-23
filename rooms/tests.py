@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 
-from rooms.models import Room, Property, Booking
+from rooms.models import Room, Property, Booking, RoomImage
 
 User = get_user_model()
 
@@ -131,3 +131,99 @@ class RoomOperationalStatusTest(TestCase):
             self.room.full_clean()
             self.room.save()
             self.assertEqual(Room.objects.get(pk=self.room.pk).operational_status, status)
+
+
+def _frprop(name):
+    return Property.objects.create(
+        name=name, city='Pondy', address='addr', is_active=True,
+    )
+
+
+def _frroom(prop, name='R', featured=False, active=True,
+            status='available', with_image=True, rating=None):
+    room = Room.objects.create(
+        property=prop, name=name, city='Pondy', room_type='single',
+        price_per_night=Decimal('2000'), capacity=2,
+        operational_status=status, is_active=active, is_featured=featured,
+        rating=rating or '4.5'
+    )
+    if with_image:
+        RoomImage.objects.create(room=room, image='room_images/x.jpg')
+    return room
+
+
+class FeaturedForHomeTest(TestCase):
+    def test_no_featured_returns_three_highest_rated(self):
+        a = _frroom(_frprop('A'), name='A', rating='4.9')
+        b = _frroom(_frprop('B'), name='B', rating='4.8')
+        c = _frroom(_frprop('C'), name='C', rating='4.7')
+        d = _frroom(_frprop('D'), name='D', rating='4.6')
+        result = Room.objects.featured_for_home()
+        self.assertEqual([r.id for r in result], [a.id, b.id, c.id])
+
+    def test_fewer_than_three_featured_fills_to_three(self):
+        low = _frroom(_frprop('Low'), name='Low', featured=True, rating='4.0')
+        a = _frroom(_frprop('A'), name='A', rating='4.9')
+        b = _frroom(_frprop('B'), name='B', rating='4.8')
+        result = Room.objects.featured_for_home()
+        self.assertEqual(result[0].id, low.id)          # featured first
+        self.assertEqual({r.id for r in result}, {low.id, a.id, b.id})
+        self.assertEqual(len(result), 3)
+
+    def test_three_or_more_featured_returns_all(self):
+        rooms = [_frroom(_frprop(f'P{i}'), name=f'F{i}', featured=True, rating='4.5')
+                 for i in range(4)]
+        result = Room.objects.featured_for_home()
+        self.assertEqual(len(result), 4)
+        self.assertEqual({r.id for r in result}, {r.id for r in rooms})
+
+    def test_imageless_room_included(self):
+        # Rooms without images are included; placeholder is shown in the template
+        no_img = _frroom(_frprop('NoImg'), name='NoImg',
+                         featured=True, with_image=False, rating='5.0')
+        _frroom(_frprop('A'), name='A', rating='4.9')
+        _frroom(_frprop('B'), name='B', rating='4.8')
+        result = Room.objects.featured_for_home()
+        self.assertIn(no_img.id, [r.id for r in result])
+
+    def test_inactive_and_unavailable_excluded(self):
+        inactive = _frroom(_frprop('In'), name='In', active=False, rating='5.0')
+        cleaning = _frroom(_frprop('Cl'), name='Cl', status='cleaning', rating='5.0')
+        a = _frroom(_frprop('A'), name='A', rating='4.9')
+        b = _frroom(_frprop('B'), name='B', rating='4.8')
+        c = _frroom(_frprop('C'), name='C', rating='4.7')
+        result_ids = [r.id for r in Room.objects.featured_for_home()]
+        self.assertNotIn(inactive.id, result_ids)
+        self.assertNotIn(cleaning.id, result_ids)
+        self.assertEqual(set(result_ids), {a.id, b.id, c.id})
+
+
+class BookingReferenceTest(TestCase):
+    def setUp(self):
+        self.user = _guest()
+        self.room = _room()
+
+    def _booking(self):
+        today = timezone.now().date()
+        return Booking.objects.create(
+            room=self.room, user=self.user,
+            check_in=today + timedelta(days=1),
+            check_out=today + timedelta(days=3),
+            guests=1, total_price=Decimal('4000'), status='confirmed',
+        )
+
+    def test_reference_has_expected_format(self):
+        ref = self._booking().generate_booking_reference()
+        self.assertEqual(ref, f"TT-{timezone.now().year}-00001")
+
+    def test_reference_is_idempotent(self):
+        b = self._booking()
+        self.assertEqual(b.generate_booking_reference(),
+                         b.generate_booking_reference())
+
+    def test_references_increment_across_bookings(self):
+        year = timezone.now().year
+        self.assertEqual(self._booking().generate_booking_reference(),
+                         f"TT-{year}-00001")
+        self.assertEqual(self._booking().generate_booking_reference(),
+                         f"TT-{year}-00002")

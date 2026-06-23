@@ -237,10 +237,20 @@ def room_create(request):
     except (ValueError, TypeError):
         return JsonResponse({'error': 'Invalid price or capacity.'}, status=400)
 
+    rating_str = request.POST.get('rating', '').strip()
+    rating_val = None
+    if rating_str:
+        try:
+            rating_val = Decimal(rating_str)
+            if rating_val < 0 or rating_val > 5:
+                return JsonResponse({'error': 'Rating must be between 0 and 5.'}, status=400)
+        except Exception:
+            return JsonResponse({'error': 'Invalid rating.'}, status=400)
+
     room = Room.objects.create(
         property=prop, name=name, city=prop.city, room_type=room_type,
         price_per_night=price, capacity=capacity, amenities=amenities,
-        description=description,
+        description=description, rating=rating_val,
     )
     return JsonResponse({'message': f'Room "{room.name}" created.', 'id': str(room.id)})
 
@@ -267,6 +277,10 @@ def room_edit(request, room_id):
                 elif field == 'capacity':
                     val = int(val)
                 setattr(room, field, val)
+        # Rating: explicit null clears, value sets
+        if 'rating' in data:
+            r = data['rating']
+            room.rating = Decimal(str(r)) if r is not None and str(r).strip() else None
         room.save()
         return JsonResponse({'message': 'Room updated.'})
 
@@ -283,6 +297,14 @@ def room_edit(request, room_id):
         room.is_active = not room.is_active
         room.save(update_fields=['is_active'])
         return JsonResponse({'message': f'Room {"activated" if room.is_active else "deactivated"}.', 'is_active': room.is_active})
+
+    if action == 'toggle_featured':
+        room.is_featured = not room.is_featured
+        room.save(update_fields=['is_featured'])
+        return JsonResponse({
+            'message': f'Room {"featured" if room.is_featured else "unfeatured"}.',
+            'is_featured': room.is_featured,
+        })
 
     return JsonResponse({'error': 'Unknown action.'}, status=400)
 

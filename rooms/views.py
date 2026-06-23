@@ -192,6 +192,13 @@ class SearchRoomsView(APIView):
         num_nights = (check_out - check_in).days
 
         location_label = city or "All locations"
+        if not is_all_properties:
+            try:
+                prop = Property.objects.get(id=property_id)
+                location_label = prop.name
+            except (Property.DoesNotExist, ValueError):
+                pass
+
         if not room_list:
             return Response(
                 {
@@ -898,8 +905,8 @@ def search_page(request):
 def room_detail_page(request):
     """Render the room detail page template."""
     return render(request, "rooms/room_details.html", {
-        'back_url': request.META.get('HTTP_REFERER', '/rooms/search/'),
-        'back_label': 'Back to search results',
+        'back_url': request.META.get('HTTP_REFERER', '/rooms/search/page/'),
+        'back_label': 'Back',
     })
 
 

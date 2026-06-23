@@ -1,6 +1,6 @@
 import json
 import secrets
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
@@ -471,15 +471,27 @@ def room_update(request, room_id):
         _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
         return JsonResponse({'message': f'Room {state}.', 'is_active': room.is_active})
 
+    if action == 'toggle_featured':
+        room.is_featured = not room.is_featured
+        room.save(update_fields=['is_featured'])
+        state = 'featured' if room.is_featured else 'unfeatured'
+        _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
+        return JsonResponse({
+            'message': f'Room {state}.',
+            'is_featured': room.is_featured,
+        })
+
     if action == 'update_details':
         fields_changed = []
-        for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description'):
+        for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description', 'rating'):
             val = data.get(field)
             if val is not None:
                 if field == 'price_per_night':
                     val = Decimal(str(val))
                 elif field == 'capacity':
                     val = int(val)
+                elif field == 'rating':
+                    val = Decimal(str(round(float(val), 1))) if val else Decimal("4.5")
                 setattr(room, field, val)
                 fields_changed.append(field)
         prop_id = data.get('property_id')
@@ -703,6 +715,7 @@ def room_create(request):
     capacity = request.POST.get('capacity', '2')
     amenities = request.POST.get('amenities', '').strip()
     description = request.POST.get('description', '').strip()
+    rating_str = request.POST.get('rating', '4.5')
 
     if not property_id or not name:
         return JsonResponse({'error': 'Property and room name are required.'}, status=400)
@@ -711,13 +724,14 @@ def room_create(request):
     try:
         price = Decimal(price)
         capacity = int(capacity)
+        rating = Decimal(str(round(float(rating_str), 1)))
     except (ValueError, TypeError):
-        return JsonResponse({'error': 'Invalid price or capacity.'}, status=400)
+        return JsonResponse({'error': 'Invalid numbers provided.'}, status=400)
 
     room = Room.objects.create(
         property=prop, name=name, city=prop.city, room_type=room_type,
         price_per_night=price, capacity=capacity, amenities=amenities,
-        description=description,
+        description=description, rating=rating,
     )
     _log(request, 'ROOM_CREATED', detail=f"room={room.name}, property={prop.name}")
     return JsonResponse({'message': f'Room "{room.name}" created.', 'id': str(room.id)})

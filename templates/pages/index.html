@@ -6,7 +6,7 @@
 
 <!-- ════════════ HERO (approved home.jsx structure) ════════════ -->
 {% url 'rooms:search-page' as search_url %}
-{% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=2&city='|add:hero.city %}
+{% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=2' %}
 <section class="tt-hero-full">
   <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full">
   <div class="tt-hero-overlay-white"></div>
@@ -14,10 +14,10 @@
   <!-- Sticky floating search pill -->
   <div class="tt-hero-sticky-pill">
     <a href="{{ hero_q }}" class="tt-nav-search-pill" style="text-decoration:none;">
-      <div class="pill-content">
+      <div class="pill-content desktop-pill-content">
         <div class="cell">
           <span class="lbl">Where to?</span>
-          <span class="val">{{ hero.city }}</span>
+          <span class="val">Stay</span>
         </div>
         <div class="sep"></div>
         <div class="cell">
@@ -30,6 +30,13 @@
           <span class="val">{{ hero.check_out_label }}</span>
         </div>
       </div>
+
+      <div class="pill-content mobile-pill-content" style="display:none; justify-content:center; align-items:center; width:100%; text-align:center;">
+        <span style="font-size:14px; font-weight:500; color:var(--ink); display:inline-flex; align-items:center; gap:8px;">
+          Search stays
+        </span>
+      </div>
+
       <div class="search-icon-circle">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </div>
@@ -40,7 +47,7 @@
 <!-- Floating overlay — fixed to bottom-center of viewport, fades on scroll -->
 <div class="tt-hero-float-overlay" id="heroFloat">
   <h1 class="tt-display tt-text-c tt-hero-float-title">
-    Explore stays that feel <span class="tt-italic-soft">modern,</span><br>
+    Explore stays that feel <span class="tt-italic-soft">modern,</span><br class="hide-mobile">
     calm, and unmistakably Indian.
   </h1>
   <a href="{{ hero_q }}" class="tt-btn tt-btn-primary tt-btn-lg tt-hero-float-btn">
@@ -62,13 +69,21 @@
     </div>
 
     <div class="tt-grid-3">
-      {% for c in featured %}
-      <div class="tt-card" onclick="location.href='{% url 'rooms:search-page' %}'">
+      {% for room in featured_rooms %}
+      {% with p=room.property %}
+      <div class="tt-card{% if forloop.counter > 3 %} tt-featured-extra{% endif %}" onclick="location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'">
         <div class="tt-card-media home-carousel" data-idx="0">
+          {% with imgs=room.images.all %}
           <div class="tt-slider-track">
-            {% for img in c.images %}
-            <img src="{% static img %}" alt="{{ c.name }}" class="tt-slider-img" loading="lazy" draggable="false">
-            {% endfor %}
+            {% for img in imgs %}{% if img.image %}
+            <img src="{{ img.image.url }}" alt="{{ room.name }}" class="tt-slider-img" loading="lazy" draggable="false">
+            {% endif %}{% endfor %}
+            {% if not imgs %}
+            <div class="tt-slider-img tt-no-photo-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#f8f9fa;color:#bdbdbd;font-size:12px;letter-spacing:.04em;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8.5 3.5v1M15.5 3.5v1"/></svg>
+              <span>No photo yet</span>
+            </div>
+            {% endif %}
           </div>
           <button type="button" class="tt-slider-btn prev" aria-label="Previous" onclick="event.stopPropagation();carPrev(this)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
@@ -77,23 +92,34 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
           <div class="tt-slider-dots">
-            {% for img in c.images %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endfor %}
+            {% for img in imgs %}{% if img.image %}<div class="tt-dot {% if forloop.first %}active{% endif %}"></div>{% endif %}{% endfor %}
           </div>
+          {% endwith %}
           <div class="tt-card-tags">
-            <span class="tt-tag">{{ c.area_short }}</span>
-            <span class="tt-tag tt-tag-dark">&#9733; {{ c.rating }}</span>
+            <span class="tt-tag">{{ room.city }}</span>
+            <span class="tt-tag tt-tag-dark" style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px;">
+              <span style="position:relative;display:inline-flex;line-height:1;color:#64748b;font-size:11px;letter-spacing:1px;">
+                <span>★★★★★</span>
+                <span style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:{{ room.rating_pct|floatformat:0 }}%;">★★★★★</span>
+              </span>
+              <span style="font-size:11px;font-weight:600;">{{ room.rating }}</span>
+            </span>
           </div>
         </div>
         <div class="tt-card-body">
           <div class="tt-card-row" style="align-items:center;">
-            <span class="tt-card-name">{{ c.name }}</span>
-            <button type="button" class="tt-btn-card-cta" onclick="event.stopPropagation();location.href='{% url 'rooms:search-page' %}'">Book now</button>
+            <span class="tt-card-name">{{ room.name }}</span>
+            <button type="button" class="tt-btn-card-cta" onclick="event.stopPropagation();location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'">Book now</button>
           </div>
-          <div class="tt-card-area">{{ c.area }}</div>
+          <div class="tt-card-area">{{ p.address|default:p.name|default:room.city }}</div>
         </div>
       </div>
+      {% endwith %}
       {% endfor %}
     </div>
+    {% if featured_rooms|length > 3 %}
+    <button type="button" class="tt-btn-link tt-featured-more" id="featuredMoreBtn" onclick="featuredShowMore(this)">View more stays &rarr;</button>
+    {% endif %}
   </div>
 </section>
 
@@ -169,26 +195,15 @@
 <!-- ════════════ WAYFARER REWARDS ════════════ -->
 <section class="tt-section-sm" style="padding-top:0;">
   <div class="tt-page">
-    <div style="background:var(--bg-soft);color:var(--ink);padding:64px 56px;display:grid;grid-template-columns:1.4fr 1fr;gap:56px;align-items:center;border:1px solid var(--line);">
-      <div>
+    <div style="background:var(--bg-soft);color:var(--ink);padding:64px 56px;text-align:center;border:1px solid var(--line);">
+      <div style="max-width:520px;margin:0 auto;display:flex;flex-direction:column;align-items:center;">
         <div class="tt-eyebrow">Wayfarer rewards</div>
         <h2 class="tt-h2" style="margin-top:14px;margin-bottom:16px;">Stay more, earn more.</h2>
-        <p style="font-size:17px;color:var(--text-soft);line-height:1.55;max-width:480px;margin:0;">
+        <p style="font-size:17px;color:var(--text-soft);line-height:1.55;margin:0 auto;">
           Earn points every night. Unlock early check-ins, room upgrades, and exclusive rates. Our guests earn points from their very first stay.
         </p>
         <a href="{% if user.is_authenticated %}{% url 'accounts:folio' %}{% else %}{% url 'accounts:login-page' %}{% endif %}"
            class="tt-btn tt-btn-primary tt-btn-lg" style="margin-top:32px;">Explore rewards &rarr;</a>
-      </div>
-      <div>
-        {% for t in tiers %}
-        <div style="border-top:1px solid var(--line-strong);padding:20px 0;display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <div style="font-weight:600;font-size:17px;">{{ t.tier }}</div>
-            <div class="tt-muted" style="font-size:13px;margin-top:2px;">{{ t.range }}</div>
-          </div>
-          <div class="tt-muted" style="font-size:13px;">{{ t.perks }}</div>
-        </div>
-        {% endfor %}
       </div>
     </div>
   </div>
@@ -225,6 +240,12 @@
   }
   function carNext(btn) { carGo(btn.closest('.home-carousel'), 1); }
   function carPrev(btn) { carGo(btn.closest('.home-carousel'), -1); }
+  function featuredShowMore(btn) {
+    document.querySelectorAll('.tt-featured-extra').forEach(function (el) {
+      el.classList.add('is-open');
+    });
+    btn.style.display = 'none';
+  }
   document.querySelectorAll('.home-carousel').forEach(media => {
     let sx = 0, dragging = false;
     media.addEventListener('touchstart', e => { sx = e.touches[0].clientX; dragging = true; }, { passive: true });
@@ -235,16 +256,24 @@
     });
   });
 
-  // ── Moments carousel: auto-scroll + drag ──
+  // ── Moments carousel: auto-scroll + drag (Seamless loop) ──
   (function moments() {
     const el = document.getElementById('momentsCarousel');
-    if (!el) return;
+    const track = document.getElementById('momentsTrack');
+    if (!el || !track) return;
+
+    // Duplicate children to create a seamless infinite loop
+    track.innerHTML += track.innerHTML;
+
     let raf, paused = false, isDown = false, startX = 0, startScroll = 0;
     const speed = 0.6;
     const step = () => {
       if (!paused) {
         el.scrollLeft += speed;
-        if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) el.scrollLeft = 0;
+        // Reset scroll position exactly halfway through
+        if (el.scrollLeft >= track.scrollWidth / 2) {
+          el.scrollLeft -= track.scrollWidth / 2;
+        }
       }
       raf = requestAnimationFrame(step);
     };
@@ -253,9 +282,20 @@
     el.addEventListener('mouseleave', () => { if (!isDown) paused = false; });
     el.addEventListener('mousedown', e => { isDown = true; paused = true; startX = e.pageX; startScroll = el.scrollLeft; el.style.cursor = 'grabbing'; });
     window.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; paused = false; });
-    el.addEventListener('mousemove', e => { if (!isDown) return; e.preventDefault(); el.scrollLeft = startScroll - (e.pageX - startX); });
+    el.addEventListener('mousemove', e => { 
+      if (!isDown) return; 
+      e.preventDefault(); 
+      el.scrollLeft = startScroll - (e.pageX - startX); 
+      // Handle manual drag wrapping
+      if (el.scrollLeft >= track.scrollWidth / 2) el.scrollLeft -= track.scrollWidth / 2;
+      if (el.scrollLeft <= 0) el.scrollLeft += track.scrollWidth / 2;
+    });
     el.addEventListener('touchstart', e => { paused = true; startX = e.touches[0].pageX; startScroll = el.scrollLeft; }, { passive: true });
-    el.addEventListener('touchmove', e => { el.scrollLeft = startScroll - (e.touches[0].pageX - startX); }, { passive: true });
+    el.addEventListener('touchmove', e => { 
+      el.scrollLeft = startScroll - (e.touches[0].pageX - startX);
+      if (el.scrollLeft >= track.scrollWidth / 2) el.scrollLeft -= track.scrollWidth / 2;
+      if (el.scrollLeft <= 0) el.scrollLeft += track.scrollWidth / 2;
+    }, { passive: true });
     el.addEventListener('touchend', () => paused = false);
   })();
 </script>
