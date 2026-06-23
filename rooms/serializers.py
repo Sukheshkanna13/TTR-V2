@@ -235,7 +235,6 @@ class BookingSerializer(serializers.ModelSerializer):
             "status",
             "hold_expires_at",
             "is_hold_expired",
-            "razorpay_order_id",
             "booking_reference",
             "created_at",
         ]

@@ -105,20 +105,22 @@
   </div>
   <table class="sa-table">
     <thead>
-      <tr><th>Reference</th><th>Guest</th><th>Room</th><th>Property</th><th>Check-in</th><th>Expires</th><th>Action</th></tr>
+      <tr><th>Reference</th><th>Guest</th><th>Room</th><th>Property</th><th>Check-in</th><th>Status</th><th>Action</th></tr>
     </thead>
     <tbody id="holds-tbody">
     {% for b in pending_holds %}
-    <tr id="hold-{{ b.id }}" data-expires="{{ b.hold_expires_at.isoformat|default:'' }}">
+    <tr id="hold-{{ b.id }}">
       <td><code>{{ b.booking_reference }}</code></td>
       <td>{{ b.user.full_name }}</td>
       <td>{{ b.room.name }}</td>
       <td>{{ b.room.property.name }}</td>
       <td>{{ b.check_in }}</td>
-      <td class="hold-timer" style="font-variant-numeric:tabular-nums;font-weight:600;">{{ b.hold_expires_at|default:"—" }}</td>
-      <td>
+      <td><span class="sa-badge sa-badge-pending">Pending</span></td>
+      <td style="display:flex;gap:4px;">
+        <button class="sa-btn sa-btn-sm sa-btn-success"
+                onclick="confirmBooking('{{ b.id }}', 'hold')">Approve</button>
         <button class="sa-btn sa-btn-sm sa-btn-danger"
-                onclick="cancelBooking('{{ b.id }}', 'hold')">Cancel hold</button>
+                onclick="cancelBooking('{{ b.id }}', 'hold')">Reject</button>
       </td>
     </tr>
     {% empty %}
@@ -157,31 +159,7 @@
 <script>
 const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 
-// ── Hold countdown timers ────────────────────────────────────────────
-function formatCountdown(ms) {
-  if (ms <= 0) return 'Expired';
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
-function tickCountdowns() {
-  document.querySelectorAll('tr[data-expires]').forEach(row => {
-    const raw = row.dataset.expires;
-    if (!raw) return;
-    const cell = row.querySelector('.hold-timer');
-    if (!cell) return;
-    const ms = new Date(raw) - Date.now();
-    cell.textContent = formatCountdown(ms);
-    if (ms <= 120_000) cell.style.color = '#ef4444';
-    else if (ms <= 300_000) cell.style.color = '#f59e0b';
-    else cell.style.color = '';
-    if (ms <= 0) row.style.opacity = '0.4';
-  });
-}
-
-setInterval(tickCountdowns, 1000);
-tickCountdowns();
 
 // ── KPI auto-refresh (every 30 s) ───────────────────────────────────
 function updateKpis(data) {
@@ -205,7 +183,8 @@ function updateKpis(data) {
 function refreshHoldsTable(holds) {
   const tbody = document.getElementById('holds-tbody');
   if (!tbody) return;
-  if (!holds.length) {
+  const hasLocked = tbody.querySelector('tr[data-locked="true"]') !== null;
+  if (!holds.length && !hasLocked) {
     tbody.innerHTML = '<tr id="holds-empty-row"><td colspan="7" style="color:#64748b;padding:16px 12px;">No pending holds.</td></tr>';
     return;
   }
@@ -227,9 +206,13 @@ function refreshHoldsTable(holds) {
       <td>${h.room}</td>
       <td>${h.property}</td>
       <td>${h.check_in}</td>
-      <td class="hold-timer" style="font-variant-numeric:tabular-nums;font-weight:600;"></td>
-      <td><button class="sa-btn sa-btn-sm sa-btn-danger"
-                  onclick="cancelBooking('${h.id}','hold')">Cancel hold</button></td>`;
+      <td><span class="sa-badge sa-badge-pending">Pending</span></td>
+      <td style="display:flex;gap:4px;">
+        <button class="sa-btn sa-btn-sm sa-btn-success"
+                onclick="confirmBooking('${h.id}', 'hold')">Approve</button>
+        <button class="sa-btn sa-btn-sm sa-btn-danger"
+                onclick="cancelBooking('${h.id}','hold')">Reject</button>
+      </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -264,6 +247,25 @@ async function completeBooking(id, prefix) {
   }
 }
 
+async function confirmBooking(id, prefix) {
+  if (!confirm('Approve this hold and confirm the booking?')) return;
+  const res = await fetch(`/super-admin/bookings/${id}/confirm/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) {
+    const row = document.getElementById(prefix + '-' + id);
+    if (row) {
+      row.dataset.locked = "true";
+      row.cells[5].innerHTML = '<span class="sa-badge" style="background:#dcfce7;color:#166534;font-weight:600;">Confirmed</span>';
+      row.cells[6].innerHTML = '<span style="color:#166534;font-size:13px;font-weight:600;">✓ Confirmed</span>';
+    }
+  } else {
+    alert(data.error);
+  }
+}
+
 async function cancelBooking(id, prefix) {
   const reason = prompt('Cancellation reason (optional):');
   if (reason === null) return;
@@ -276,8 +278,12 @@ async function cancelBooking(id, prefix) {
   });
   const data = await res.json();
   if (res.ok) {
-    document.getElementById(prefix + '-' + id)?.remove();
-    alert(data.message);
+    const row = document.getElementById(prefix + '-' + id);
+    if (row) {
+      row.dataset.locked = "true";
+      row.cells[5].innerHTML = '<span class="sa-badge" style="background:#fee2e2;color:#991b1b;font-weight:600;">Rejected</span>';
+      row.cells[6].innerHTML = '<span style="color:#991b1b;font-size:13px;font-weight:600;">✗ Rejected</span>';
+    }
   } else {
     alert(data.error);
   }

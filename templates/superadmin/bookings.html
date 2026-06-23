@@ -73,8 +73,10 @@
         <button class="sa-btn sa-btn-sm sa-btn-danger"
                 onclick="cancelBooking('{{ b.id }}')">Cancel</button>
         {% elif b.status == 'pending' %}
+        <button class="sa-btn sa-btn-sm sa-btn-success"
+                onclick="confirmBooking('{{ b.id }}')">Approve Hold</button>
         <button class="sa-btn sa-btn-sm sa-btn-danger"
-                onclick="cancelBooking('{{ b.id }}')">Cancel hold</button>
+                onclick="cancelBooking('{{ b.id }}')">Reject/Cancel</button>
         {% endif %}
       </td>
     </tr>
@@ -90,7 +92,18 @@ const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 
 async function completeBooking(id) {
   if (!confirm('Mark this booking as completed?')) return;
-  const res = await fetch(`/superadmin/bookings/${id}/complete/`, {
+  const res = await fetch(`/super-admin/bookings/${id}/complete/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) { alert(data.message); location.reload(); }
+  else alert(data.error);
+}
+
+async function confirmBooking(id) {
+  if (!confirm('Approve this hold and confirm the booking?')) return;
+  const res = await fetch(`/super-admin/bookings/${id}/confirm/`, {
     method: 'POST',
     headers: {'X-CSRFToken': csrf},
   });
@@ -104,7 +117,7 @@ async function cancelBooking(id) {
   if (reason === null) return;
   const fd = new FormData();
   fd.append('reason', reason);
-  const res = await fetch(`/superadmin/bookings/${id}/cancel/`, {
+  const res = await fetch(`/super-admin/bookings/${id}/cancel/`, {
     method: 'POST',
     headers: {'X-CSRFToken': csrf},
     body: fd,

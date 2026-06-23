@@ -33,7 +33,6 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("rooms/", include("rooms.urls")),
     path("bookings/", include("rooms.booking_urls")),
-    path("payments/", include("payments.urls")),
     path("admin-api/employees/create/", accounts_views.CreateEmployeeView.as_view(), name="create_employee"),
     path("admin-portal/login/", RedirectView.as_view(url="/accounts/login/page/", permanent=False), name="admin-portal-login"),
     path("admin-portal/", include("employeeadmin.urls")),

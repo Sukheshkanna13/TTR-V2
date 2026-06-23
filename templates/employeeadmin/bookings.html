@@ -4,7 +4,7 @@
 <h1 class="ea-page-title">Bookings</h1>
 <div class="ea-card">
   <table>
-    <thead><tr><th>Ref</th><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>
+    <thead><tr><th>Ref</th><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>
     {% for b in bookings %}
     <tr>
@@ -18,11 +18,52 @@
         {% elif b.status == 'CANCELLED' %}<span class="badge badge-red">{{ b.status }}</span>
         {% else %}<span class="badge badge-slate">{{ b.status }}</span>{% endif %}
       </td>
+      <td>
+        {% if b.status == 'confirmed' %}
+        <button class="ea-btn ea-btn-sm" style="background:#5eead4;color:#0f172a;border-color:#5eead4;"
+                onclick="confirmAction('{{ b.id }}', 'complete')">Complete</button>
+        <button class="ea-btn ea-btn-sm" style="background:#f43f5e;color:#fff;border-color:#f43f5e;"
+                onclick="cancelBooking('{{ b.id }}')">Cancel</button>
+        {% elif b.status == 'pending' %}
+        <button class="ea-btn ea-btn-sm" style="background:#5eead4;color:#0f172a;border-color:#5eead4;"
+                onclick="confirmAction('{{ b.id }}', 'confirm')">Approve</button>
+        <button class="ea-btn ea-btn-sm" style="background:#f43f5e;color:#fff;border-color:#f43f5e;"
+                onclick="cancelBooking('{{ b.id }}')">Reject</button>
+        {% endif %}
+      </td>
     </tr>
     {% empty %}
-    <tr><td colspan="6" style="color:#5eead4;padding:24px 12px;">No bookings found.</td></tr>
+    <tr><td colspan="7" style="color:#5eead4;padding:24px 12px;">No bookings found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+async function confirmAction(id, action) {
+  const msg = action === 'confirm' ? 'Approve this hold?' : 'Mark as completed?';
+  if (!confirm(msg)) return;
+  const res = await fetch(`/admin-portal/bookings/${id}/${action}/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) { alert(data.message); location.reload(); }
+  else alert(data.error);
+}
+
+async function cancelBooking(id) {
+  if (!confirm('Cancel or reject this booking?')) return;
+  const res = await fetch(`/admin-portal/bookings/${id}/cancel/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) { alert(data.message); location.reload(); }
+  else alert(data.error);
+}
+</script>
 {% endblock %}

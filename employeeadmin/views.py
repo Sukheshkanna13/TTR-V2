@@ -191,6 +191,41 @@ def seasonal_rate_create(request):
 
 @require_employee
 @require_POST
+def booking_confirm(request, booking_id):
+    """Confirm a pending hold — scoped to employee's assigned properties."""
+    rooms = _assigned_rooms(request)
+    booking = get_object_or_404(Booking, pk=booking_id, room__in=rooms)
+    if booking.status != 'pending':
+        return JsonResponse({'error': 'Only pending holds can be confirmed.'}, status=400)
+    booking.status = 'confirmed'
+    booking.hold_expires_at = None
+    booking.save(update_fields=['status', 'hold_expires_at'])
+    booking.generate_booking_reference()
+
+    # Trigger confirmation email and invoice
+    from django_q.tasks import async_task
+    async_task('core.utils.send_booking_confirmation_email', booking)
+    async_task('core.utils.send_invoice_email', booking)
+
+    return JsonResponse({'message': 'Booking hold confirmed.'})
+
+
+@require_employee
+@require_POST
+def booking_cancel(request, booking_id):
+    """Cancel a pending or confirmed booking — scoped to employee's assigned properties."""
+    rooms = _assigned_rooms(request)
+    booking = get_object_or_404(Booking, pk=booking_id, room__in=rooms)
+    if booking.status not in ('pending', 'confirmed'):
+        return JsonResponse({'error': 'Only pending or confirmed bookings can be cancelled.'}, status=400)
+    booking.status = 'cancelled'
+    booking.hold_expires_at = None
+    booking.save(update_fields=['status', 'hold_expires_at'])
+    return JsonResponse({'message': 'Booking cancelled.'})
+
+
+@require_employee
+@require_POST
 def booking_complete(request, booking_id):
     """Mark a booking as completed — scoped to employee's assigned properties."""
     rooms = _assigned_rooms(request)

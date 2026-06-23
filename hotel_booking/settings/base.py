@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "core",
     "accounts",
     "rooms",
-    "payments",
     "superadmin",
     "employeeadmin",
     "loyalty",
@@ -247,14 +246,6 @@ HOLD_DURATION_MINUTES = config("HOLD_DURATION_MINUTES", default=10, cast=int)
 
 
 # =============================================================================
-# RAZORPAY CONFIGURATION
-# =============================================================================
-
-RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
-RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
-RAZORPAY_WEBHOOK_SECRET = config("RAZORPAY_WEBHOOK_SECRET", default="")
-
-
 # =============================================================================
 # INTERNATIONALIZATION
 # =============================================================================

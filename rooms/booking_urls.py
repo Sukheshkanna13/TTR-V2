@@ -8,7 +8,7 @@ Routes:
     
     API Endpoints:
         POST /bookings/hold/                — Hold a room
-        POST /bookings/<id>/pay/            — Process payment
+        /bookings/checkout/page/            — Checkout page
         POST /bookings/<id>/cancel/         — Cancel booking
         GET  /bookings/<id>/                — Get booking details
         GET  /bookings/ref/<ref>/confirmation/ — Get confirmation data
@@ -25,10 +25,11 @@ urlpatterns = [
     # Page views
     path("my-bookings/page/", views.my_bookings_page, name="my-bookings-page"),
     path("confirmation/page/", views.confirmation_page, name="confirmation-page"),
+    path("checkout/page/", views.checkout_page, name="checkout-page"),
 
     # API endpoints
     path("hold/", views.HoldRoomView.as_view(), name="hold"),
-    path("<uuid:booking_id>/pay/", views.ProcessPaymentView.as_view(), name="pay"),
+
     path("<uuid:booking_id>/cancel/", views.CancelBookingView.as_view(), name="cancel"),
     path("<uuid:booking_id>/release/", views.ReleaseHoldView.as_view(), name="release"),
     path("<uuid:booking_id>/", views.BookingDetailView.as_view(), name="detail"),

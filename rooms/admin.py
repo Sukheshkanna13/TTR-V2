@@ -113,13 +113,11 @@ class BookingAdmin(admin.ModelAdmin):
         "user__email",
         "user__full_name",
         "room__name",
-        "razorpay_order_id",
     )
     readonly_fields = (
         "id",
         "created_at",
         "hold_expires_at",
-        "razorpay_order_id",
         "booking_reference",
     )
     list_per_page = 25

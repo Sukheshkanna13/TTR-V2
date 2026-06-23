@@ -20,6 +20,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import render
 from django.utils import timezone
+from django_q.tasks import async_task
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -40,8 +41,7 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
         return
 
 from .models import Booking, Room, OTABlock, Property
-from payments.models import Payment
-from payments.utils import refund_razorpay_payment
+
 from .serializers import (
     BookingSerializer,
     HoldRoomSerializer,
@@ -267,8 +267,8 @@ class HoldRoomView(APIView):
 
     1. User must be logged in
     2. Runs availability check (double-booking protection)
-    3. Creates PENDING booking with hold_expires_at = now + 10 min
-    4. Returns booking ID for payment page
+    3. Creates PENDING booking (indefinite hold awaiting admin approval)
+    4. Returns booking ID for checkout page
     """
 
     permission_classes = [IsAuthenticated]
@@ -314,8 +314,8 @@ class HoldRoomView(APIView):
         try:
             with transaction.atomic():
                 now = timezone.now()
-                hold_duration = getattr(settings, 'HOLD_DURATION_MINUTES', 10)
-                hold_expires_at = now + timedelta(minutes=hold_duration)
+                # Indefinite hold waiting for admin approval
+                hold_expires_at = None
 
                 # RECLAIM: if this guest already holds this exact room+dates
                 # (e.g. they hit Back and returned), refresh and reuse that hold
@@ -326,7 +326,6 @@ class HoldRoomView(APIView):
                     status="pending",
                     check_in=check_in,
                     check_out=check_out,
-                    hold_expires_at__gt=now,
                 ).first()
 
                 if existing_hold:
@@ -344,7 +343,7 @@ class HoldRoomView(APIView):
                         check_out__gt=check_in,
                     ).filter(
                         Q(status="confirmed")
-                        | Q(status="pending", hold_expires_at__gt=now)
+                        | Q(status="pending")
                     ).exclude(user=request.user, status="pending")
 
                     # Lock overlapping OTA blocks
@@ -383,152 +382,22 @@ class HoldRoomView(APIView):
             )
 
         logger.info(
-            "Room held: %s held %s (%s to %s) — expires at %s",
+            "Room hold requested: %s held %s (%s to %s) — pending admin approval",
             request.user.email,
             room.name,
             check_in,
             check_out,
-            hold_expires_at,
         )
 
-        # ----------------------------------------------------------------
-        # IMMEDIATELY create Razorpay order — return everything the
-        # frontend needs to open the payment modal in one shot.
-        # ----------------------------------------------------------------
-        payment_details = None
-        try:
-            from payments.models import Payment
-            from payments.utils import create_razorpay_order
-
-            # Reuse the existing order for a reclaimed hold of the same amount,
-            # otherwise create a fresh one.
-            existing_payment = Payment.objects.filter(
-                booking=booking, status="created",
-                amount=booking.total_price,
-            ).first()
-
-            if booking.razorpay_order_id and existing_payment:
-                payment_details = {
-                    "order_id": booking.razorpay_order_id,
-                    "amount": int(booking.total_price * 100),  # paise
-                    "currency": "INR",
-                    "key_id": settings.RAZORPAY_KEY_ID,
-                }
-            else:
-                order = create_razorpay_order(
-                    amount_inr=booking.total_price,
-                    booking_id=booking.id,
-                )
-                booking.razorpay_order_id = order["id"]
-                booking.save(update_fields=["razorpay_order_id"])
-
-                Payment.objects.create(
-                    booking=booking,
-                    razorpay_order_id=order["id"],
-                    amount=booking.total_price,
-                    status="created",
-                )
-
-                payment_details = {
-                    "order_id": order["id"],
-                    "amount": order["amount"],       # paise
-                    "currency": order["currency"],
-                    "key_id": settings.RAZORPAY_KEY_ID,
-                }
-        except Exception as pay_err:
-            logger.error("Razorpay order creation failed for booking %s: %s", booking.id, str(pay_err))
-            # Don't block the hold — frontend can call /payments/create-order/ separately
+        # Trigger background email notification to admins
+        async_task('core.utils.send_hold_notification_email', booking)
 
         response_data = {
-            "message": f"Room held for {hold_duration} minutes. Please complete payment.",
+            "message": "Room hold requested. Please confirm on the next page.",
             "booking": BookingSerializer(booking).data,
         }
-        if payment_details:
-            response_data["payment"] = payment_details
 
         return Response(response_data, status=status.HTTP_201_CREATED)
-
-
-class ProcessPaymentView(APIView):
-    """
-    POST /bookings/<id>/pay/
-
-    DEV/FALLBACK: Quick-confirm a booking without Razorpay.
-    In production, use /payments/create-order/ + /payments/verify/ instead.
-
-    Kept for testing purposes — lets you confirm a booking directly.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, booking_id):
-        if not settings.DEBUG:
-            return Response(
-                {"error": "This endpoint is only available in development mode."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        # Find the booking
-        try:
-            booking = Booking.objects.select_related("room").get(
-                id=booking_id,
-                user=request.user,
-            )
-        except Booking.DoesNotExist:
-            return Response(
-                {"error": "Booking not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        # Only PENDING bookings can be paid for
-        if booking.status != "pending":
-            return Response(
-                {
-                    "error": f"This booking cannot be paid for. Current status: {booking.get_status_display()}.",
-                    "status": booking.status,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Check if hold has expired
-        if booking.expire_if_needed():
-            return Response(
-                {
-                    "error": "Your hold has expired. Please search and book again.",
-                    "code": "HOLD_EXPIRED",
-                    "status": "expired",
-                },
-                status=status.HTTP_410_GONE,
-            )
-
-        # ----------------------------------------------------------------
-        # PAYMENT SIMULATION (Dev/fallback)
-        # In production, use /payments/create-order/ + /payments/verify/
-        # ----------------------------------------------------------------
-        booking.status = "confirmed"
-        booking.hold_expires_at = None
-        booking.save(update_fields=["status", "hold_expires_at"])
-
-        # Generate booking reference
-        booking.generate_booking_reference()
-
-        logger.info(
-            "Booking confirmed (dev): %s paid for %s (%s to %s) — Rs.%s — ref: %s",
-            request.user.email,
-            booking.room.name,
-            booking.check_in,
-            booking.check_out,
-            booking.total_price,
-            booking.booking_reference,
-        )
-
-        return Response(
-            {
-                "message": "Payment successful! Your booking is confirmed.",
-                "booking": BookingSerializer(booking).data,
-            },
-            status=status.HTTP_200_OK,
-        )
 
 
 class CancelBookingView(APIView):
@@ -562,20 +431,10 @@ class CancelBookingView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Process refund if confirmed
+        # Process refund if confirmed (Skipping for manual hold logic since offline)
         refund_message = ""
         if booking.status == "confirmed":
-            payment = Payment.objects.filter(booking=booking, status="captured").first()
-            if payment and payment.razorpay_payment_id:
-                refund = refund_razorpay_payment(payment.razorpay_payment_id)
-                if refund:
-                    payment.refund_id = refund.get("id")
-                    payment.refund_status = refund.get("status")
-                    payment.status = "refunded"
-                    payment.save()
-                    refund_message = " Refund has been initiated."
-                else:
-                    refund_message = " Cancellation successful, but automatic refund failed. Please contact support."
+            refund_message = " Admin will be notified to process offline refund."
 
         booking.status = "cancelled"
         booking.hold_expires_at = None
@@ -688,17 +547,7 @@ class ConfirmationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Get payment ID if available
-        payment_id = None
-        try:
-            from payments.models import Payment
-            payment = Payment.objects.filter(
-                booking=booking, status="captured"
-            ).first()
-            if payment:
-                payment_id = payment.razorpay_payment_id
-        except Exception:
-            pass
+        # Offline payment logic (Admin approves hold)
 
         return Response(
             {
@@ -713,7 +562,7 @@ class ConfirmationView(APIView):
                     "guests": booking.guests,
                     "num_nights": booking.num_nights,
                     "total_paid": str(booking.total_price),
-                    "payment_id": payment_id or "N/A",
+                    "payment_status": "Manual Offline",
                     "email_sent_to": booking.user.email,
                 },
             },
@@ -918,3 +767,8 @@ def my_bookings_page(request):
 def confirmation_page(request):
     """Render the booking confirmation page template."""
     return render(request, "bookings/confirmation.html")
+
+
+def checkout_page(request):
+    """Render the checkout page template."""
+    return render(request, "payments/checkout.html")

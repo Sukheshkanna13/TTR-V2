@@ -16,6 +16,7 @@ urlpatterns = [
     path('audit-log/', views.audit_log, name='audit-log'),
     path('bookings/', views.bookings_list, name='bookings'),
     path('bookings/<uuid:booking_id>/cancel/', views.booking_cancel, name='booking-cancel'),
+    path('bookings/<uuid:booking_id>/confirm/', views.booking_confirm, name='booking-confirm'),
     path('bookings/<uuid:booking_id>/complete/', views.booking_complete, name='booking-complete'),
     # Properties
     path('properties/', views.properties_list, name='properties'),

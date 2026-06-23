@@ -65,10 +65,6 @@ LOGGING = {
             "level": "INFO",
             "propagate": True,
         },
-        "payments": {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            "propagate": True,
         },
     },
 }

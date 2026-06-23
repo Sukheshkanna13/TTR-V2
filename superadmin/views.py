@@ -577,6 +577,29 @@ def booking_cancel(request, booking_id):
 
 @require_super_admin
 @require_POST
+def booking_confirm(request, booking_id):
+    booking = get_object_or_404(Booking, pk=booking_id)
+    if booking.status != 'pending':
+        return JsonResponse({'error': 'Only pending holds can be confirmed.'}, status=400)
+    
+    booking.status = 'confirmed'
+    booking.hold_expires_at = None
+    booking.save(update_fields=['status', 'hold_expires_at'])
+    booking.generate_booking_reference()
+
+    _log(request, 'BOOKING_CONFIRMED', target_user=booking.user,
+         detail=f"booking={booking.booking_reference}")
+    
+    # Trigger confirmation email and invoice
+    from django_q.tasks import async_task
+    async_task('core.utils.send_booking_confirmation_email', booking)
+    async_task('core.utils.send_invoice_email', booking)
+    
+    return JsonResponse({'message': 'Booking hold approved and confirmed.'})
+
+
+@require_super_admin
+@require_POST
 def booking_complete(request, booking_id):
     booking = get_object_or_404(Booking, pk=booking_id)
     if booking.status != 'confirmed':

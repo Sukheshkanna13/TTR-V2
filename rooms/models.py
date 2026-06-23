@@ -302,7 +302,6 @@ class Booking(models.Model):
     objects = models.Manager()
 
     # Type annotations for static typing / Pyrefly
-    payments: models.Manager
 
     STATUS_CHOICES = [
         ("pending", "Pending"),
@@ -352,12 +351,7 @@ class Booking(models.Model):
         blank=True,
         help_text="When the hold expires if payment is not completed.",
     )
-    razorpay_order_id = models.CharField(
-        max_length=100,
-        null=True,
-        blank=True,
-        help_text="Razorpay order ID for this booking.",
-    )
+
     booking_reference = models.CharField(
         max_length=20,
         null=True,
