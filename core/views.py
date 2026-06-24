@@ -107,10 +107,13 @@ def things_to_do_page(request):
 
 
 def events_page(request):
-    """Events — database-driven Attractions of category EVENT."""
+    """Events — database-driven Attractions of all categories."""
     from .models import Attraction
-    events = Attraction.objects.filter(category='EVENT', is_visible=True).prefetch_related('photos').order_by('sort_order', '-created_at')
-    return render(request, "pages/events.html", {'events': events})
+    events = Attraction.objects.filter(is_visible=True).prefetch_related('photos').order_by('sort_order', '-created_at')
+    return render(request, "pages/events.html", {
+        'events': events,
+        'categories': Attraction.CATEGORY_CHOICES,
+    })
 
 
 def retreat_page(request):

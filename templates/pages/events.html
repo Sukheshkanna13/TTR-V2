@@ -11,9 +11,23 @@
     At Temple And Towns Resorts Nature Retreat — enjoy simple, thoughtfully curated experiences that connect you with nature, local culture and the peaceful spirit of Near Auroville. 🪷
   </p>
 
-  <div class="tt-grid-3" style="margin-top:48px;">
+  <!-- Category filter tabs -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:32px;margin-bottom:16px;">
+    <button class="filter-btn" onclick="filterCategory('all', this)"
+       style="padding:6px 16px;border-radius:0;font-size:13px;font-weight:500;cursor:pointer;border:none;background:var(--ink);color:#fff;font-family:inherit;">
+      All
+    </button>
+    {% for key, label in categories %}
+    <button class="filter-btn" onclick="filterCategory('{{ key }}', this)"
+       style="padding:6px 16px;border-radius:0;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--line);color:var(--ink);background:#fff;font-family:inherit;">
+      {{ label }}
+    </button>
+    {% endfor %}
+  </div>
+
+  <div class="tt-grid-3" style="margin-top:24px;">
     {% for ev in events %}
-    <div class="tt-card" {% if ev.whatsapp_link %}onclick="window.open('{{ ev.whatsapp_link }}', '_blank')" style="cursor:pointer;"{% endif %}>
+    <div class="tt-card event-card" data-category="{{ ev.category }}" {% if ev.whatsapp_link %}onclick="window.open('{{ ev.whatsapp_link }}', '_blank')" style="cursor:pointer;"{% endif %}>
       <div class="tt-card-media" style="aspect-ratio:4/3;overflow:hidden;">
         {% with photo=ev.primary_photo %}
         {% if photo %}
@@ -26,7 +40,7 @@
         {% endwith %}
       </div>
       <div class="tt-card-body">
-        <div class="tt-eyebrow" style="font-size:11px;">{{ ev.city }}</div>
+        <div class="tt-eyebrow" style="font-size:11px;">{{ ev.get_category_display }} &bull; {{ ev.city }}</div>
         <h3 class="tt-h3" style="margin-top:6px;margin-bottom:8px;">{{ ev.name }}</h3>
         <p class="tt-muted" style="font-size:14px;margin:0;line-height:1.55;">{{ ev.description }}</p>
         {% if ev.opening_hrs %}
@@ -51,6 +65,48 @@
       <p style="color:var(--text-muted);">Check back soon — our team is setting up new initiatives.</p>
     </div>
     {% endfor %}
+
+    <!-- Dynamic empty state placeholder -->
+    <div id="no-events-placeholder" style="display:none;grid-column:span 3;text-align:center;padding:4rem 2rem;border:1px dashed var(--line);border-radius:var(--r-lg);">
+      <p style="font-size:18px;color:var(--text-soft);font-style:italic;margin-bottom:8px;">
+        No active events in this category yet.
+      </p>
+      <p style="color:var(--text-muted);">Check back soon — our team is setting up new initiatives.</p>
+    </div>
   </div>
 </div>
+
+<script>
+function filterCategory(category, btn) {
+  // Update active button styling
+  const buttons = document.querySelectorAll('.filter-btn');
+  buttons.forEach(b => {
+    b.style.background = '#fff';
+    b.style.color = 'var(--ink)';
+    b.style.border = '1px solid var(--line)';
+  });
+  
+  btn.style.background = 'var(--ink)';
+  btn.style.color = '#fff';
+  btn.style.border = 'none';
+
+  // Filter cards
+  let visibleCount = 0;
+  const cards = document.querySelectorAll('.event-card');
+  cards.forEach(card => {
+    if (category === 'all' || card.dataset.category.toUpperCase() === category.toUpperCase()) {
+      card.style.display = 'block';
+      visibleCount++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  // Toggle placeholder if 0 visible cards
+  const placeholder = document.getElementById('no-events-placeholder');
+  if (placeholder) {
+    placeholder.style.display = (visibleCount === 0) ? 'block' : 'none';
+  }
+}
+</script>
 {% endblock %}
