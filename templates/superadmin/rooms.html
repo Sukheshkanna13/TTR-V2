@@ -114,6 +114,7 @@
           {% if r.is_featured %}★ Featured{% else %}☆ Feature{% endif %}
         </button>
         <a class="sa-btn sa-btn-sm" href="{% url 'superadmin:room-images' r.id %}">📷 {{ r.images.count }}</a>
+        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteRoom('{{ r.id }}', '{{ r.name|escapejs }}')">Delete</button>
       </td>
     </tr>
     {% empty %}
@@ -233,6 +234,23 @@ async function toggleFeatured(roomId, btn) {
   location.reload();
 }
 
+async function deleteRoom(roomId, roomName) {
+  if (!confirm(`Are you sure you want to permanently delete room "${roomName}"? This action cannot be undone.`)) {
+    return;
+  }
+  const res = await fetch(`/super-admin/rooms/${roomId}/delete/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+  });
+  const data = await res.json();
+  if (res.ok) {
+    alert(data.message);
+    location.reload();
+  } else {
+    alert(data.error || 'Failed to delete room');
+  }
+}
+
 // Edit modal
 function openEditModal(id, name, type, price, capacity, amenities, description, propId, rating) {
   document.getElementById('edit-room-id').value = id;
@@ -280,6 +298,8 @@ document.getElementById('editForm').addEventListener('submit', async e => {
 .sa-btn:hover{background:#334155;}
 .sa-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;}
 .sa-btn-primary:hover{background:#1d4ed8;}
+.sa-btn-danger{background:#dc2626;border-color:#dc2626;color:#fff;}
+.sa-btn-danger:hover{background:#b91c1c;}
 .sa-btn-sm{padding:4px 10px;font-size:12px;}
 </style>
 {% endblock %}

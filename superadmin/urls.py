@@ -27,6 +27,7 @@ urlpatterns = [
     path('rooms/status-board/data/', views.room_status_board_data, name='room-status-board-data'),
     path('rooms/create/', views.room_create, name='room-create'),
     path('rooms/<uuid:room_id>/update/', views.room_update, name='room-update'),
+    path('rooms/<uuid:room_id>/delete/', views.room_delete, name='room-delete'),
     # Room Images
     path('rooms/<uuid:room_id>/images/', views.room_images, name='room-images'),
     path('rooms/<uuid:room_id>/images/upload/', views.room_image_upload, name='room-image-upload'),

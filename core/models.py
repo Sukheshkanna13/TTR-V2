@@ -23,6 +23,12 @@ class Attraction(models.Model):
     description = models.TextField(blank=True, default='')
     address = models.CharField(max_length=300, blank=True, default='')
     opening_hrs = models.CharField(max_length=200, blank=True, default='')
+    whatsapp_link = models.URLField(
+        max_length=2000,
+        blank=True,
+        default='',
+        help_text="WhatsApp chat or group link for redirections."
+    )
     notes = models.TextField(blank=True, default='')
     is_visible = models.BooleanField(default=True, db_index=True)
     sort_order = models.PositiveSmallIntegerField(default=0)

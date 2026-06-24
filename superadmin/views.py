@@ -506,6 +506,22 @@ def room_update(request, room_id):
     return JsonResponse({'error': 'Unknown action.'}, status=400)
 
 
+@require_super_admin
+@require_POST
+def room_delete(request, room_id):
+    room = get_object_or_404(Room, pk=room_id)
+    if room.bookings.exists():
+        return JsonResponse(
+            {'error': 'This room has booking history and cannot be deleted. Deactivate it instead.'},
+            status=400
+        )
+    room_name = room.name
+    property_name = room.property.name if room.property else 'Unknown Property'
+    room.delete()
+    _log(request, 'ROOM_DELETED', detail=f"room={room_name}, property={property_name}")
+    return JsonResponse({'message': f'Room "{room_name}" successfully deleted.'})
+
+
 # ── Audit Log ──────────────────────────────────────────────────────────────────
 
 @require_super_admin
@@ -964,13 +980,15 @@ def event_create(request):
     description = request.POST.get('description', '').strip()
     address = request.POST.get('address', '').strip()
     opening_hrs = request.POST.get('opening_hrs', '').strip()
+    whatsapp_link = request.POST.get('whatsapp_link', '').strip()
 
     if not name or not city or not category:
         return JsonResponse({'error': 'Name, City, and Category are required.'}, status=400)
 
     event = Attraction.objects.create(
         name=name, city=city, category=category, description=description,
-        address=address, opening_hrs=opening_hrs, created_by=request.user
+        address=address, opening_hrs=opening_hrs, whatsapp_link=whatsapp_link,
+        created_by=request.user
     )
     _log(request, 'EVENT_CREATED', detail=f"event={event.name}")
     return JsonResponse({'message': f'Event "{event.name}" created.', 'id': str(event.id)})
@@ -999,7 +1017,7 @@ def event_update(request, event_id):
 
     if action == 'update_details':
         fields_changed = []
-        for field in ('name', 'city', 'category', 'description', 'address', 'opening_hrs', 'sort_order'):
+        for field in ('name', 'city', 'category', 'description', 'address', 'opening_hrs', 'sort_order', 'whatsapp_link'):
             val = data.get(field)
             if val is not None:
                 if field == 'sort_order':

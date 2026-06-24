@@ -238,7 +238,7 @@ def room_create(request):
         return JsonResponse({'error': 'Invalid price or capacity.'}, status=400)
 
     rating_str = request.POST.get('rating', '').strip()
-    rating_val = None
+    rating_val = Decimal("4.5")
     if rating_str:
         try:
             rating_val = Decimal(rating_str)
@@ -280,7 +280,7 @@ def room_edit(request, room_id):
         # Rating: explicit null clears, value sets
         if 'rating' in data:
             r = data['rating']
-            room.rating = Decimal(str(r)) if r is not None and str(r).strip() else None
+            room.rating = Decimal(str(r)) if r is not None and str(r).strip() else Decimal("4.5")
         room.save()
         return JsonResponse({'message': 'Room updated.'})
 

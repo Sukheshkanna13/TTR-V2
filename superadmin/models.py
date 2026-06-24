@@ -19,6 +19,7 @@ class AuditLog(models.Model):
         ('PROPERTY_UPDATED', 'Property Updated'),
         ('ROOM_CREATED', 'Room Created'),
         ('ROOM_UPDATED', 'Room Updated'),
+        ('ROOM_DELETED', 'Room Deleted'),
         ('ROOM_STATUS_UPDATED', 'Room Status Updated'),
         ('ROOM_IMAGE_UPLOADED', 'Room Image Uploaded'),
         ('ROOM_IMAGE_DELETED', 'Room Image Deleted'),

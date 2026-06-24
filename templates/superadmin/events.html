@@ -54,6 +54,10 @@
       <label class="sa-label">Opening Hours / Timing</label>
       <input class="sa-input" type="text" name="opening_hrs" placeholder="e.g. Sat 6:00 AM" style="width:100%;">
     </div>
+    <div>
+      <label class="sa-label">Link</label>
+      <input class="sa-input" type="url" name="whatsapp_link" placeholder="e.g. https://..." style="width:100%;">
+    </div>
     <div style="grid-column: 1 / -1;">
       <label class="sa-label">Description</label>
       <textarea class="sa-input" name="description" placeholder="Write description here..." rows="2" style="width:100%;resize:vertical;"></textarea>
@@ -76,6 +80,7 @@
         <th>Category</th>
         <th>Address</th>
         <th>Timing / Hours</th>
+        <th>Link</th>
         <th>Description</th>
         <th>Order</th>
         <th>Status</th>
@@ -105,6 +110,9 @@
         <input class="sa-input sa-input-inline" id="timing-{{ e.id }}" value="{{ e.opening_hrs }}" style="width:140px;">
       </td>
       <td>
+        <input class="sa-input sa-input-inline" id="whatsapp-{{ e.id }}" value="{{ e.whatsapp_link|default:'' }}" style="width:150px;" placeholder="https://...">
+      </td>
+      <td>
         <textarea class="sa-input sa-input-inline" id="desc-{{ e.id }}" style="width:180px;height:36px;font-family:inherit;font-size:inherit;">{{ e.description }}</textarea>
       </td>
       <td>
@@ -125,7 +133,7 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="9" style="color:#64748b;padding:24px 12px;">No events or attractions found.</td></tr>
+    <tr><td colspan="10" style="color:#64748b;padding:24px 12px;">No events or attractions found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -177,6 +185,7 @@ async function saveEvent(id) {
       category: document.getElementById('category-' + id).value,
       address: document.getElementById('address-' + id).value,
       opening_hrs: document.getElementById('timing-' + id).value,
+      whatsapp_link: document.getElementById('whatsapp-' + id).value,
       description: document.getElementById('desc-' + id).value,
       sort_order: document.getElementById('sort-' + id).value,
     }),

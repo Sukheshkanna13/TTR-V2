@@ -13,19 +13,42 @@
 
   <div class="tt-grid-3" style="margin-top:48px;">
     {% for ev in events %}
-    <div class="tt-card">
+    <div class="tt-card" {% if ev.whatsapp_link %}onclick="window.open('{{ ev.whatsapp_link }}', '_blank')" style="cursor:pointer;"{% endif %}>
       <div class="tt-card-media" style="aspect-ratio:4/3;overflow:hidden;">
-        <img src="{% static ev.img %}" alt="{{ ev.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+        {% with photo=ev.primary_photo %}
+        {% if photo %}
+        <img src="{{ photo.image.url }}" alt="{{ ev.name }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+        {% else %}
+        <div style="width:100%;height:100%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--line-strong)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        {% endif %}
+        {% endwith %}
       </div>
       <div class="tt-card-body">
-        <div class="tt-eyebrow" style="font-size:11px;">{{ ev.cat }}</div>
-        <h3 class="tt-h3" style="margin-top:6px;margin-bottom:8px;">{{ ev.title }}</h3>
-        <p class="tt-muted" style="font-size:14px;margin:0;line-height:1.55;">{{ ev.desc }}</p>
-        <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-weight:600;">Request to book</span>
-          <a href="https://wa.me/918553441449?text={{ ev.title|urlencode }}" target="_blank" rel="noopener" class="tt-btn-link" style="font-size:13px;">Book &rarr;</a>
+        <div class="tt-eyebrow" style="font-size:11px;">{{ ev.city }}</div>
+        <h3 class="tt-h3" style="margin-top:6px;margin-bottom:8px;">{{ ev.name }}</h3>
+        <p class="tt-muted" style="font-size:14px;margin:0;line-height:1.55;">{{ ev.description }}</p>
+        {% if ev.opening_hrs %}
+        <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:5px;margin-top:8px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          {{ ev.opening_hrs }}
         </div>
+        {% endif %}
+        {% if ev.whatsapp_link %}
+        <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;" onclick="event.stopPropagation();">
+          <span style="font-weight:600;">Request to book</span>
+          <a href="{{ ev.whatsapp_link }}" target="_blank" rel="noopener" class="tt-btn-link" style="font-size:13px;">Book &rarr;</a>
+        </div>
+        {% endif %}
       </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:span 3;text-align:center;padding:4rem 2rem;border:1px dashed var(--line);border-radius:var(--r-lg);">
+      <p style="font-size:18px;color:var(--text-soft);font-style:italic;margin-bottom:8px;">
+        No active events listed yet.
+      </p>
+      <p style="color:var(--text-muted);">Check back soon — our team is setting up new initiatives.</p>
     </div>
     {% endfor %}
   </div>
