@@ -858,6 +858,7 @@ def cause_create(request):
     target_amount = request.POST.get('target_amount', '0')
     raised_amount = request.POST.get('raised_amount', '0')
     image_file = request.FILES.get('image')
+    whatsapp_link = request.POST.get('whatsapp_link', '').strip()
 
     if not title or not location:
         return JsonResponse({'error': 'Title and Location are required.'}, status=400)
@@ -871,7 +872,7 @@ def cause_create(request):
     cause = Cause.objects.create(
         title=title, location=location, description=description,
         target_amount=target_amount, raised_amount=raised_amount,
-        image=image_file,
+        image=image_file, whatsapp_link=whatsapp_link,
     )
     _log(request, 'CAUSE_CREATED', detail=f"cause={cause.title}")
     return JsonResponse({'message': f'Cause "{cause.title}" created.', 'id': str(cause.id)})
@@ -933,6 +934,11 @@ def cause_update(request, cause_id):
         if sort_val is not None:
             cause.sort_order = int(sort_val)
             fields_changed.append('sort_order')
+        
+        whatsapp_link_val = data.get('whatsapp_link')
+        if whatsapp_link_val is not None:
+            cause.whatsapp_link = whatsapp_link_val.strip()
+            fields_changed.append('whatsapp_link')
 
         if request.FILES.get('image'):
             if cause.image:
@@ -1087,4 +1093,115 @@ def event_image_set_primary(request, image_id):
     img.is_primary = True
     img.save(update_fields=['is_primary'])
     return JsonResponse({'message': 'Set as primary image.'})
+
+
+# ── Activities (Things to Do) ───────────────────────────────────────────────
+
+@require_super_admin
+def activities_list(request):
+    from core.models import Activity
+    activities = Activity.objects.all().order_by('sort_order', '-created_at')
+    return render(request, 'superadmin/activities.html', {
+        'activities': activities,
+    })
+
+
+@require_super_admin
+@require_POST
+def activity_create(request):
+    from core.models import Activity
+    title = request.POST.get('title', '').strip()
+    category = request.POST.get('category', '').strip()
+    description = request.POST.get('description', '').strip()
+    price = request.POST.get('price', 'Request to book').strip() or 'Request to book'
+    image_file = request.FILES.get('image')
+    whatsapp_link = request.POST.get('whatsapp_link', '').strip()
+    whatsapp_message = request.POST.get('whatsapp_message', '').strip()
+
+    if not title or not category:
+        return JsonResponse({'error': 'Title and Category are required.'}, status=400)
+
+    activity = Activity.objects.create(
+        title=title, category=category, description=description,
+        price=price, image=image_file, whatsapp_link=whatsapp_link,
+        whatsapp_message=whatsapp_message,
+    )
+    _log(request, 'ACTIVITY_CREATED', detail=f"activity={activity.title}")
+    return JsonResponse({'message': f'Activity "{activity.title}" created.', 'id': str(activity.id)})
+
+
+@require_super_admin
+@require_POST
+def activity_update(request, activity_id):
+    from core.models import Activity
+    activity = get_object_or_404(Activity, pk=activity_id)
+
+    if request.content_type == 'application/json':
+        data = json.loads(request.body)
+        action = data.get('action')
+    else:
+        action = request.POST.get('action')
+        data = request.POST
+
+    if action == 'toggle_active':
+        activity.is_active = not activity.is_active
+        activity.save(update_fields=['is_active'])
+        state = 'activated' if activity.is_active else 'deactivated'
+        _log(request, 'ACTIVITY_UPDATED', detail=f"activity={activity.title}, {state}")
+        return JsonResponse({'message': f'Activity {state}.', 'is_active': activity.is_active})
+
+    if action == 'delete':
+        title = activity.title
+        if activity.image:
+            activity.image.delete(save=False)
+        activity.delete()
+        _log(request, 'ACTIVITY_DELETED', detail=f"activity={title}")
+        return JsonResponse({'message': 'Activity deleted.'})
+
+    if action == 'update_details':
+        fields_changed = []
+
+        title_val = data.get('title')
+        cat_val = data.get('category')
+        desc_val = data.get('description')
+        price_val = data.get('price')
+        sort_val = data.get('sort_order')
+        whatsapp_link_val = data.get('whatsapp_link')
+        whatsapp_message_val = data.get('whatsapp_message')
+
+        if title_val is not None:
+            activity.title = title_val.strip()
+            fields_changed.append('title')
+        if cat_val is not None:
+            activity.category = cat_val.strip()
+            fields_changed.append('category')
+        if desc_val is not None:
+            activity.description = desc_val.strip()
+            fields_changed.append('description')
+        if price_val is not None:
+            activity.price = price_val.strip() or 'Request to book'
+            fields_changed.append('price')
+        if sort_val is not None:
+            activity.sort_order = int(sort_val)
+            fields_changed.append('sort_order')
+        if whatsapp_link_val is not None:
+            activity.whatsapp_link = whatsapp_link_val.strip()
+            fields_changed.append('whatsapp_link')
+        if whatsapp_message_val is not None:
+            activity.whatsapp_message = whatsapp_message_val.strip()
+            fields_changed.append('whatsapp_message')
+
+        if request.FILES.get('image'):
+            if activity.image:
+                activity.image.delete(save=False)
+            activity.image = request.FILES['image']
+            fields_changed.append('image')
+
+        if fields_changed:
+            activity.save()
+            _log(request, 'ACTIVITY_UPDATED', detail=f"activity={activity.title}, fields={fields_changed}")
+        return JsonResponse({'message': 'Activity updated.'})
+
+    return JsonResponse({'error': 'Unknown action.'}, status=400)
+
 

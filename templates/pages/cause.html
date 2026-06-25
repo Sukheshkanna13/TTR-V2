@@ -19,7 +19,7 @@
     <div class="tt-page">
       <div class="tt-grid-3" style="gap:24px;">
         {% for cause in causes %}
-        <div class="tt-card" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);display:flex;flex-direction:column;height:100%;">
+        <div class="tt-card" {% if cause.whatsapp_link %}onclick="window.open('{{ cause.whatsapp_link }}', '_blank')" style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);display:flex;flex-direction:column;height:100%;cursor:pointer;"{% else %}style="background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);display:flex;flex-direction:column;height:100%;"{% endif %}>
           <div style="width:100%;aspect-ratio:16/10;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--line);">
             {% if cause.image %}
             <img src="{{ cause.image.url }}" alt="{{ cause.title }}"

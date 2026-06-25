@@ -11,19 +11,44 @@
 
   <div class="tt-grid-3" style="margin-top:48px;">
     {% for it in things %}
-    <div class="tt-card">
+    <div class="tt-card" {% if it.whatsapp_link %}onclick="window.open('{{ it.whatsapp_link }}', '_blank')" style="cursor:pointer;"{% endif %}>
       <div class="tt-card-media" style="aspect-ratio:4/3;overflow:hidden;">
-        <img src="{% static it.img %}" alt="{{ it.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+        {% if it.image %}
+          <img src="{{ it.image.url }}" alt="{{ it.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+        {% else %}
+          {% if "cycling" in it.title|lower %}
+            <img src="{% static 'images/coastal_cycling.png' %}" alt="{{ it.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+          {% elif "massage" in it.title|lower %}
+            <img src="{% static 'images/spa_abhyanga.png' %}" alt="{{ it.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+          {% elif "printing" in it.title|lower %}
+            <img src="{% static 'images/block_printing.png' %}" alt="{{ it.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+          {% else %}
+            <div style="width:100%;height:100%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--line-strong)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+          {% endif %}
+        {% endif %}
       </div>
       <div class="tt-card-body">
-        <div class="tt-eyebrow" style="font-size:11px;">{{ it.cat }}</div>
+        <div class="tt-eyebrow" style="font-size:11px;">{{ it.category }}</div>
         <h3 class="tt-h3" style="margin-top:6px;margin-bottom:8px;">{{ it.title }}</h3>
-        <p class="tt-muted" style="font-size:14px;margin:0;">{{ it.desc }}</p>
-        <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
+        <p class="tt-muted" style="font-size:14px;margin:0;line-height:1.55;">{{ it.description }}</p>
+        <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;" onclick="event.stopPropagation();">
           <span style="font-weight:600;">{{ it.price }}</span>
-          <a href="https://wa.me/918553441449?text={{ it.wa|urlencode }}" target="_blank" rel="noopener" class="tt-btn-link" style="font-size:13px;">Book &rarr;</a>
+          {% if it.whatsapp_link %}
+            <a href="{{ it.whatsapp_link }}" target="_blank" rel="noopener" class="tt-btn-link" style="font-size:13px;">Book &rarr;</a>
+          {% else %}
+            <a href="https://wa.me/918553441449?text={% if it.whatsapp_message %}{{ it.whatsapp_message|urlencode }}{% else %}Hi, I'd like to book the {{ it.title|urlencode }} experience.{% endif %}" target="_blank" rel="noopener" class="tt-btn-link" style="font-size:13px;">Book &rarr;</a>
+          {% endif %}
         </div>
       </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:span 3;text-align:center;padding:4rem 2rem;border:1px dashed var(--line);border-radius:var(--r-lg);">
+      <p style="font-size:18px;color:var(--text-soft);font-style:italic;margin-bottom:8px;">
+        No activities listed yet.
+      </p>
+      <p style="color:var(--text-muted);">Check back soon — our team is setting up new local experiences.</p>
     </div>
     {% endfor %}
   </div>

@@ -1,7 +1,7 @@
 import os
 from decimal import Decimal
 from django.core.management.base import BaseCommand
-from core.models import Cause, Attraction
+from core.models import Cause, Attraction, Activity
 
 
 class Command(BaseCommand):
@@ -81,3 +81,38 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Successfully seeded sample attractions/events."))
         else:
             self.stdout.write(self.style.WARNING("Attractions/Events already exist. Skipping Attraction seeding."))
+
+        # 3. Seed Activities (Things to Do) if none exist
+        if not Activity.objects.exists():
+            activities_data = [
+                {
+                    "category": "Outdoor",
+                    "title": "Cycling the East Coast Road",
+                    "description": "Half-day ride, cycle and helmet included.",
+                    "price": "Request to book",
+                    "whatsapp_message": "Hi, I'd like to book the East Coast Road cycling experience.",
+                    "sort_order": 1,
+                },
+                {
+                    "category": "Wellness",
+                    "title": "Abhyanga massage",
+                    "description": "Sixty minutes of warm-oil bliss.",
+                    "price": "Request to book",
+                    "whatsapp_message": "Hi, I'd like to book an Abhyanga massage.",
+                    "sort_order": 2,
+                },
+                {
+                    "category": "Crafts",
+                    "title": "Block-printing class",
+                    "description": "Take home what you print.",
+                    "price": "Request to book",
+                    "whatsapp_message": "Hi, I'd like to book a block-printing class.",
+                    "sort_order": 3,
+                }
+            ]
+            for actdata in activities_data:
+                Activity.objects.create(**actdata)
+            self.stdout.write(self.style.SUCCESS("Successfully seeded sample activities (Things to Do)."))
+        else:
+            self.stdout.write(self.style.WARNING("Activities already exist. Skipping Activity seeding."))
+
