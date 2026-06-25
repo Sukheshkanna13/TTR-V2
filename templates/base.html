@@ -23,10 +23,16 @@
     .tt-profile-dropdown.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
     .tt-profile-dropdown a, .tt-profile-dropdown span {
       display: block; padding: 6px 12px; color: var(--text); font-size: 13px; text-align: center;
-      text-decoration: none; cursor: pointer; transition: background 0.15s ease;
+      text-decoration: none; cursor: pointer; transition: all 0.2s ease;
     }
-    .tt-profile-dropdown a:hover, .tt-profile-dropdown span:hover { background: var(--bg-soft); color: var(--ink); }
+    .tt-profile-dropdown a:hover, .tt-profile-dropdown span:hover { background: var(--bg-soft); color: var(--ink); transform: translateY(-2px); }
     .tt-utility { position: relative; z-index: 105; }
+    .tt-mobile-only { display: none !important; }
+    @media (max-width: 768px) {
+      .tt-mobile-only { display: inline-flex !important; }
+      .tt-mobile-dropdown { left: auto !important; right: -12px !important; transform: translateY(4px) !important; }
+      .tt-profile-wrapper:hover .tt-mobile-dropdown, .tt-mobile-dropdown.show { transform: translateY(0) !important; }
+    }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
@@ -50,17 +56,17 @@
         <a href="{% url 'rooms:search-page' %}">Trip Planner</a>
         <a href="{% url 'core:retreat' %}">Nature Retreat</a>
         
-        <div class="tt-profile-wrapper" id="profileDropdownWrapper">
-          <div class="tt-profile-trigger" id="profileTriggerBtn">
+        <div class="tt-profile-wrapper">
+          <div class="tt-profile-trigger">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             {% if user.is_authenticated %}
               <span>{{ user.first_name|default:user.get_short_name|truncatechars:15 }}</span>
             {% endif %}
           </div>
-          <div class="tt-profile-dropdown" id="profileDropdownMenu">
+          <div class="tt-profile-dropdown">
             {% if user.is_authenticated %}
               <a href="{% url 'accounts:folio' %}">Profile</a>
-              <a href="{% url 'bookings:my-bookings-page' %}">My Bookings</a>
+
               <span onclick="logout()">Log Out</span>
             {% else %}
               <a href="{% url 'accounts:login-page' %}">Log In</a>
@@ -92,7 +98,23 @@
       </div>
 
       <!-- RIGHT: support + hamburger -->
-      <div class="tt-nav-right-static">
+      <div class="tt-nav-right-static" style="display:flex; align-items:center; gap:12px;">
+        
+        <!-- Mobile Profile Icon -->
+        <div class="tt-profile-wrapper tt-mobile-only" style="margin: 0; padding: 4px; display: none;">
+          <div class="tt-profile-trigger" style="color:var(--ink);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="tt-profile-dropdown tt-mobile-dropdown">
+            {% if user.is_authenticated %}
+              <a href="{% url 'accounts:folio' %}">Profile</a>
+              <span onclick="logout()">Log Out</span>
+            {% else %}
+              <a href="{% url 'accounts:login-page' %}">Log In</a>
+            {% endif %}
+          </div>
+        </div>
+
         <button class="tt-hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Toggle menu" aria-expanded="false">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
         </button>
@@ -106,11 +128,7 @@
       <a href="{% url 'core:retreat' %}" class="tt-mobile-link">Nature Retreat</a>
       <a href="{% url 'core:cause' %}" class="tt-mobile-link">Travel for Cause</a>
       <a href="{% url 'core:events' %}" class="tt-mobile-link">Events</a>
-      {% if user.is_authenticated %}
-        <a href="{% url 'accounts:folio' %}" class="tt-mobile-link" title="{{ user.get_short_name }}">{{ user.get_short_name|truncatechars:20 }}</a>
-      {% else %}
-        <a href="{% url 'accounts:login-page' %}" class="tt-mobile-link">Sign in / Register</a>
-      {% endif %}
+
       <a href="{% url 'rooms:search-page' %}" class="tt-mobile-wa">Book Now</a>
     </div>
   </nav>
@@ -150,7 +168,7 @@
           <ul>
             {% if user.is_authenticated %}
               <li><a href="{% url 'accounts:folio' %}" title="{{ user.get_short_name }}">{{ user.get_short_name|truncatechars:20 }}</a></li>
-              <li><a href="{% url 'bookings:my-bookings-page' %}">My bookings</a></li>
+
             {% else %}
               <li><a href="{% url 'accounts:login-page' %}">Sign in</a></li>
               <li><a href="{% url 'accounts:register-page' %}">Create account</a></li>
@@ -184,22 +202,22 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const wrapper = document.getElementById('profileDropdownWrapper');
-      const trigger = document.getElementById('profileTriggerBtn');
-      const menu = document.getElementById('profileDropdownMenu');
-
-      if(trigger && menu) {
-        trigger.addEventListener('click', (e) => {
-          e.stopPropagation();
-          menu.classList.toggle('show');
-        });
-
-        document.addEventListener('click', (e) => {
-          if (wrapper && !wrapper.contains(e.target)) {
-            menu.classList.remove('show');
-          }
-        });
-      }
+      const wrappers = document.querySelectorAll('.tt-profile-wrapper');
+      wrappers.forEach(wrapper => {
+        const trigger = wrapper.querySelector('.tt-profile-trigger');
+        const menu = wrapper.querySelector('.tt-profile-dropdown');
+        if (trigger && menu) {
+          trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.classList.toggle('show');
+          });
+          document.addEventListener('click', (e) => {
+            if (!wrapper.contains(e.target)) {
+              menu.classList.remove('show');
+            }
+          });
+        }
+      });
     });
 
     function toggleMobileMenu() {

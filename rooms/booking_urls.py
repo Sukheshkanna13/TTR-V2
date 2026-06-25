@@ -23,7 +23,7 @@ app_name = "bookings"
 
 urlpatterns = [
     # Page views
-    path("my-bookings/page/", views.my_bookings_page, name="my-bookings-page"),
+
     path("confirmation/page/", views.confirmation_page, name="confirmation-page"),
 
     # API endpoints
