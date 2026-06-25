@@ -56,6 +56,10 @@
 
     <!-- Gallery -->
     <div class="tt-property-gallery" id="galleryGrid"></div>
+    <div id="expandedGallery" class="hidden" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"></div>
+    <div id="galleryActionContainer" style="text-align:right;margin-top:12px;display:none;">
+      <button onclick="toggleGallery()" id="toggleGalleryBtn" style="background:#fff;border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;padding:8px 16px;border-radius:0;transition:background 0.2s;">Show all photos</button>
+    </div>
 
     <!-- Two-column layout -->
     <div class="tt-property-layout">
@@ -104,7 +108,7 @@
               <span id="sidebarPrice" style="font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--ink);"></span>
               <span class="tt-muted" style="font-size:14px;">/ night</span>
             </div>
-            <button onclick="toggleDateEdit()" id="editDatesBtn" style="background:#fff;border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border-radius:6px;text-decoration:none;transition:background 0.2s;">Edit dates</button>
+            <button onclick="toggleDateEdit()" id="editDatesBtn" style="background:#fff;border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border-radius:0;text-decoration:none;transition:background 0.2s;">Edit dates</button>
           </div>
           <div style="margin-top:20px;border:1px solid var(--line);">
             <div id="dateDisplayView" style="display:grid;grid-template-columns:1fr 1fr;">
@@ -128,7 +132,7 @@
                   <label class="tt-field-label" for="editCheckout">Check out</label>
                   <input type="date" id="editCheckout" class="tt-input" style="padding:8px;font-size:14px;">
                 </div>
-                <button onclick="checkAvailability()" id="updateDatesBtn" style="border: 1px solid var(--line); background: #fff; width: 100%; margin-top: 4px; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; color: var(--ink); font-size: 14px; transition: background 0.2s;">Update</button>
+                <button onclick="checkAvailability()" id="updateDatesBtn" style="border: 1px solid var(--line); background: #fff; width: 100%; margin-top: 4px; padding: 10px; border-radius: 0; font-weight: 600; cursor: pointer; color: var(--ink); font-size: 14px; transition: background 0.2s;">Update</button>
               </div>
             </div>
             
@@ -234,19 +238,36 @@
     document.getElementById('hdrCity').textContent = room.city;
     document.getElementById('starRating').innerHTML = starHTML(room.property_rating);
 
-    // Gallery — main + up to 4 thumbs
+    // Gallery — main + up to 4 thumbs, plus extra photos
+    const expandedGallery = document.getElementById('expandedGallery');
+    const actionContainer = document.getElementById('galleryActionContainer');
+    
     if (room.images && room.images.length) {
       const imgs = room.images.map(i => i.image_url);
       const main = imgs[0];
       const thumbs = imgs.slice(1, 5);
+      const extras = imgs.slice(5);
+      
       while (thumbs.length < 4) thumbs.push(imgs[thumbs.length % imgs.length] || main);
       document.getElementById('galleryGrid').innerHTML =
         `<div class="main"><img src="${main}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>` +
         thumbs.map(src => `<div class="thumb" style="overflow:hidden;"><img src="${src}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`).join('');
+        
+      if (extras.length > 0) {
+        expandedGallery.innerHTML = extras.map(src => 
+          `<div style="aspect-ratio:4/3;overflow:hidden;"><img src="${src}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
+        ).join('');
+        actionContainer.style.display = 'block';
+      } else {
+        expandedGallery.innerHTML = '';
+        actionContainer.style.display = 'none';
+      }
     } else {
       document.getElementById('galleryGrid').innerHTML =
         `<div class="main">${placeholderDiv('main')}</div>` +
         Array(4).fill(0).map(() => `<div class="thumb">${placeholderDiv('thumb')}</div>`).join('');
+      expandedGallery.innerHTML = '';
+      actionContainer.style.display = 'none';
     }
 
     // Description
@@ -379,6 +400,20 @@
     } finally {
       btn.disabled = false;
       btn.textContent = 'Update';
+    }
+  }
+
+  function toggleGallery() {
+    const expanded = document.getElementById('expandedGallery');
+    const btn = document.getElementById('toggleGalleryBtn');
+    if (expanded.classList.contains('hidden')) {
+      expanded.classList.remove('hidden');
+      btn.textContent = 'Hide photos';
+    } else {
+      expanded.classList.add('hidden');
+      btn.textContent = 'Show all photos';
+      // Smoothly scroll back to the main gallery when hiding
+      document.getElementById('galleryGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 
