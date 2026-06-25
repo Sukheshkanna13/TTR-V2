@@ -963,9 +963,6 @@ def room_detail_page(request):
     })
 
 
-def my_bookings_page(request):
-    """Render the my bookings page template."""
-    return render(request, "bookings/my_bookings.html")
 
 
 def confirmation_page(request):
