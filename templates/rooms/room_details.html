@@ -99,12 +99,15 @@
       <!-- Right sidebar -->
       <div class="tt-property-sidebar">
         <div class="tt-summary">
-          <div style="display:flex;align-items:baseline;gap:8px;">
-            <span id="sidebarPrice" style="font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--ink);"></span>
-            <span class="tt-muted" style="font-size:14px;">/ night</span>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
+            <div>
+              <span id="sidebarPrice" style="font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--ink);"></span>
+              <span class="tt-muted" style="font-size:14px;">/ night</span>
+            </div>
+            <button onclick="toggleDateEdit()" id="editDatesBtn" style="background:#fff;border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border-radius:6px;text-decoration:none;transition:background 0.2s;">Edit dates</button>
           </div>
           <div style="margin-top:20px;border:1px solid var(--line);">
-            <div style="display:grid;grid-template-columns:1fr 1fr;">
+            <div id="dateDisplayView" style="display:grid;grid-template-columns:1fr 1fr;">
               <div style="padding:14px;border-right:1px solid var(--line);">
                 <div class="tt-muted" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;">Check in</div>
                 <div id="sidebarCheckin" style="font-size:14px;font-weight:500;margin-top:4px;"></div>
@@ -114,6 +117,21 @@
                 <div id="sidebarCheckout" style="font-size:14px;font-weight:500;margin-top:4px;"></div>
               </div>
             </div>
+            
+            <div id="dateEditView" class="hidden" style="padding:14px;background:var(--bg-soft);">
+              <div style="display:flex;flex-direction:column;gap:12px;">
+                <div class="tt-field">
+                  <label class="tt-field-label" for="editCheckin">Check in</label>
+                  <input type="date" id="editCheckin" class="tt-input" style="padding:8px;font-size:14px;">
+                </div>
+                <div class="tt-field">
+                  <label class="tt-field-label" for="editCheckout">Check out</label>
+                  <input type="date" id="editCheckout" class="tt-input" style="padding:8px;font-size:14px;">
+                </div>
+                <button onclick="checkAvailability()" id="updateDatesBtn" style="border: 1px solid var(--line); background: #fff; width: 100%; margin-top: 4px; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; color: var(--ink); font-size: 14px; transition: background 0.2s;">Update</button>
+              </div>
+            </div>
+            
             <div style="padding:14px;border-top:1px solid var(--line);">
               <div class="tt-muted" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;">Guests</div>
               <div id="sidebarGuests" style="font-size:14px;font-weight:500;margin-top:4px;"></div>
@@ -155,8 +173,8 @@
 
   const params  = new URLSearchParams(window.location.search);
   const roomId  = params.get('id');
-  const checkIn = params.get('check_in');
-  const checkOut= params.get('check_out');
+  let checkIn = params.get('check_in');
+  let checkOut= params.get('check_out');
   const guests  = params.get('guests') || '1';
   let roomData  = null;
 
@@ -266,7 +284,7 @@
         credentials: 'include',
         body: JSON.stringify({ room_id: roomId, check_in: checkIn, check_out: checkOut, guests: parseInt(guests) })
       });
-      if (res.status === 401 || res.status === 403) { alert('Please sign in to book a room.'); window.location.href = LOGIN_URL; return; }
+      if (res.status === 401 || res.status === 403) { alert('Please sign in to book a room.'); window.location.href = LOGIN_URL + '?next=' + encodeURIComponent(window.location.pathname + window.location.search); return; }
       const data = await res.json();
       if (res.ok) {
         window.location.href = `${CHECKOUT_URL}?booking_id=${data.booking.id}`;
@@ -279,6 +297,88 @@
       errorBox.textContent = 'Network error. Please try again.';
       errorBox.classList.remove('hidden');
       btns.forEach(b => { b.disabled = false; b.innerHTML = 'Hold this room &rarr;'; });
+    }
+  }
+
+  function toggleDateEdit() {
+    const display = document.getElementById('dateDisplayView');
+    const edit = document.getElementById('dateEditView');
+    if (edit.classList.contains('hidden')) {
+      document.getElementById('editCheckin').value = checkIn || '';
+      document.getElementById('editCheckout').value = checkOut || '';
+      display.classList.add('hidden');
+      edit.classList.remove('hidden');
+      document.getElementById('editDatesBtn').textContent = 'Cancel';
+      document.getElementById('bookErrorBox').classList.add('hidden');
+    } else {
+      display.classList.remove('hidden');
+      edit.classList.add('hidden');
+      document.getElementById('editDatesBtn').textContent = 'Edit dates';
+    }
+  }
+
+  async function checkAvailability() {
+    const newIn = document.getElementById('editCheckin').value;
+    const newOut = document.getElementById('editCheckout').value;
+    const errorBox = document.getElementById('bookErrorBox');
+    const btn = document.getElementById('updateDatesBtn');
+    
+    if (!newIn || !newOut) {
+      errorBox.textContent = 'Please select both dates.';
+      errorBox.classList.remove('hidden');
+      return;
+    }
+    
+    if (newIn >= newOut) {
+      errorBox.textContent = 'Check-out must be after check-in.';
+      errorBox.classList.remove('hidden');
+      return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    errorBox.classList.add('hidden');
+    
+    try {
+      const res = await fetch(`${ROOM_API_BASE}${roomId}/check-availability/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ check_in: newIn, check_out: newOut })
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.available) {
+        // Update local variables
+        checkIn = newIn;
+        checkOut = newOut;
+        
+        // Update URL query params without reloading
+        const url = new URL(window.location);
+        url.searchParams.set('check_in', checkIn);
+        url.searchParams.set('check_out', checkOut);
+        window.history.replaceState({}, '', url);
+        
+        // Re-render UI and toggle back
+        renderRoom();
+        toggleDateEdit();
+        
+        // Ensure book buttons are enabled
+        const btns = ['sidebarBookBtn','stickyBookBtn'].map(id => document.getElementById(id)).filter(Boolean);
+        btns.forEach(b => { b.disabled = false; b.innerHTML = 'Hold this room &rarr;'; });
+      } else {
+        errorBox.textContent = data.error || 'Room not available for these dates.';
+        errorBox.classList.remove('hidden');
+        
+        // Disable book buttons
+        const btns = ['sidebarBookBtn','stickyBookBtn'].map(id => document.getElementById(id)).filter(Boolean);
+        btns.forEach(b => { b.disabled = true; b.innerHTML = 'Unavailable'; });
+      }
+    } catch {
+      errorBox.textContent = 'Network error. Please try again.';
+      errorBox.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Update';
     }
   }
 

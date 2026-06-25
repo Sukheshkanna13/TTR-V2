@@ -25,4 +25,5 @@ urlpatterns = [
     # API endpoints
     path("search/", views.SearchRoomsView.as_view(), name="search"),
     path("<uuid:room_id>/", views.RoomDetailView.as_view(), name="detail"),
+    path("<uuid:room_id>/check-availability/", views.CheckRoomAvailabilityView.as_view(), name="check-availability"),
 ]

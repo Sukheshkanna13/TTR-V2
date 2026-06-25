@@ -39,7 +39,7 @@
 
       <p style="text-align:center;font-size:14px;color:var(--text-soft);margin:0;">
         Don't have an account?
-        <a href="{% url 'accounts:register-page' %}" style="color:var(--ink);font-weight:600;text-decoration:none;border-bottom:1px solid var(--ink);">Create one</a>
+        <a id="registerLink" href="{% url 'accounts:register-page' %}" style="color:var(--ink);font-weight:600;text-decoration:none;border-bottom:1px solid var(--ink);">Create one</a>
       </p>
 
     </div>
@@ -92,5 +92,12 @@
       loginBtn.textContent = 'Sign in';
     }
   }
+
+  // Forward ?next= to the register link so new users return to the same page
+  (function() {
+    const next = new URLSearchParams(window.location.search).get('next');
+    const regLink = document.getElementById('registerLink');
+    if (next && regLink) regLink.href += '?next=' + encodeURIComponent(next);
+  })();
 </script>
 {% endblock %}

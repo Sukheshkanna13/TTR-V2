@@ -26,6 +26,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from accounts.permissions import IsEmployee
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import serializers
 
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -253,6 +254,58 @@ class RoomDetailView(APIView):
             {"room": RoomSerializer(room, context={"request": request}).data},
             status=status.HTTP_200_OK,
         )
+
+
+class CheckRoomAvailabilitySerializer(serializers.Serializer):
+    check_in = serializers.DateField()
+    check_out = serializers.DateField()
+
+    def validate(self, data):
+        check_in = data.get("check_in")
+        check_out = data.get("check_out")
+
+        if check_in and check_in < timezone.now().date():
+            raise serializers.ValidationError("Check-in date cannot be in the past.")
+        if check_in and check_out and check_in >= check_out:
+            raise serializers.ValidationError("Check-out date must be after check-in date.")
+
+        return data
+
+
+class CheckRoomAvailabilityView(APIView):
+    """
+    POST /rooms/<room_id>/check-availability/
+    
+    Checks if a specific room is available for the given dates.
+    Returns: {"available": bool, "error": str (if unavailable)}
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, room_id):
+        serializer = CheckRoomAvailabilitySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            room = Room.objects.get(id=room_id, is_active=True, operational_status="available")
+        except Room.DoesNotExist:
+            return Response(
+                {"error": "Room not found or no longer available.", "available": False},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        check_in = serializer.validated_data["check_in"]
+        check_out = serializer.validated_data["check_out"]
+
+        unavailable_ids = get_unavailable_room_ids(check_in, check_out)
+        
+        if room.id in unavailable_ids:
+            return Response(
+                {"available": False, "error": "This room is already booked for these dates."},
+                status=status.HTTP_200_OK,
+            )
+
+        return Response({"available": True}, status=status.HTTP_200_OK)
 
 
 # =========================================================================

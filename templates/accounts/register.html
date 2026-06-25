@@ -252,7 +252,8 @@
       });
       const data = await res.json();
       if (res.ok) {
-        window.location.href = "{% url 'core:home' %}";
+        const nextUrl = new URLSearchParams(window.location.search).get('next');
+        window.location.href = nextUrl || "{% url 'core:home' %}";
       } else {
         let msg = data.error || 'Something went wrong.';
         if (data.errors) { msg = Object.values(data.errors).flat().join(' '); }

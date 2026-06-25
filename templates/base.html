@@ -184,6 +184,18 @@
       window.addEventListener('scroll', onScroll, { passive: true });
       onScroll();
     })();
+
+    // Deep-link: append ?next=currentPage to all sign-in links so users
+    // return to the same page after logging in.
+    (function () {
+      const loginBase = "{% url 'accounts:login-page' %}";
+      const here = window.location.pathname + window.location.search;
+      // Don't append next if we're already on the login/register page
+      if (here.startsWith(loginBase)) return;
+      document.querySelectorAll('a[href="' + loginBase + '"]').forEach(a => {
+        a.href = loginBase + '?next=' + encodeURIComponent(here);
+      });
+    })();
   </script>
   {% block extra_js %}{% endblock %}
 </body>
