@@ -20,12 +20,17 @@
      PAGE HEADER
      ============================================================ -->
 <section class="tt-section-sm" style="border-bottom:1px solid var(--line);padding-bottom:2.5rem;margin-bottom:0;">
-  <div class="tt-page">
-    <p class="tt-eyebrow" style="margin-bottom:0.75rem;">MY STAYS</p>
-    <h1 class="tt-h1" style="margin-bottom:0.25rem;">
-      Welcome back, <em class="tt-italic-soft">{{ user.full_name }}</em>
-    </h1>
-    <p class="tt-sub tt-muted" style="margin-top:0.5rem;">Your confirmed stays, rewards, and account — all in one place.</p>
+  <div class="tt-page" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <p class="tt-eyebrow" style="margin-bottom:0.75rem;">MY STAYS</p>
+      <h1 class="tt-h1" style="margin-bottom:0.25rem;">
+        Welcome back, <em class="tt-italic-soft">{{ user.full_name }}</em>
+      </h1>
+      <p class="tt-sub tt-muted" style="margin-top:0.5rem;margin-bottom:0;">Your confirmed stays, rewards, and account — all in one place.</p>
+    </div>
+    <div>
+      <button onclick="logout()" style="background:#fff;border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;padding:8px 16px;border-radius:0;transition:background 0.2s;">Sign out</button>
+    </div>
   </div>
 </section>
 
