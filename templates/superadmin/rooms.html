@@ -37,9 +37,10 @@
       <label class="sa-label">Capacity</label>
       <input class="sa-input" type="number" name="capacity" value="2" min="1" style="width:80px;">
     </div>
-    <div>
+    <div style="position:relative;">
       <label class="sa-label">Amenities</label>
-      <input class="sa-input" type="text" name="amenities" placeholder="WiFi, AC, TV" style="min-width:200px;">
+      <input type="hidden" name="amenities" id="create-amenities-hidden" value="">
+      <div id="create-amenities-dropdown" class="custom-multiselect-container"></div>
     </div>
     <div>
       <label class="sa-label">Rating (0–5)</label>
@@ -162,9 +163,10 @@
           </select>
         </div>
       </div>
-      <div>
+      <div style="position:relative;">
         <label class="sa-label">Amenities</label>
-        <input class="sa-input" type="text" id="edit-amenities" style="width:100%;">
+        <input type="hidden" id="edit-amenities" style="width:100%;">
+        <div id="edit-amenities-dropdown" class="custom-multiselect-container"></div>
       </div>
       <div style="display:flex;gap:12px;">
         <div style="flex:1;">
@@ -252,6 +254,107 @@ async function deleteRoom(roomId, roomName) {
 }
 
 // Edit modal
+const defaultAmenities = ['WiFi', 'AC', 'TV', 'Board Games', 'Geyser', 'Room Service', 'Mini Bar', 'Balcony', 'Coffee Maker', 'Safe'];
+
+function setupAmenitiesDropdown(containerId, hiddenInputId, initialValue = '') {
+  const container = document.getElementById(containerId);
+  const hiddenInput = document.getElementById(hiddenInputId);
+  if (!container || !hiddenInput) return;
+
+  container.innerHTML = `
+    <div class="multiselect-select-box" style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:13px; color:#e2e8f0; cursor:pointer; min-height:34px; min-width:200px;">
+      <span class="selected-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">Select amenities</span>
+      <span style="font-size:10px; color:#64748b;">▼</span>
+    </div>
+    <div class="multiselect-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:#1e293b; border:1px solid #334155; border-radius:6px; margin-top:4px; padding:8px; z-index:1000; max-height:220px; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); width:100%;">
+      <div class="options-container" style="display:flex; flex-direction:column; gap:6px;"></div>
+      <div style="display:flex; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid #334155;">
+        <input type="text" class="custom-amenity-input" placeholder="Custom..." style="flex:1; background:#0f172a; border:1px solid #334155; color:#e2e8f0; font-size:12px; padding:4px 6px; border-radius:4px; outline:none;">
+        <button type="button" class="add-custom-btn sa-btn sa-btn-sm" style="padding:4px 8px !important; font-size:11px !important; margin-right:0 !important;">Add</button>
+      </div>
+    </div>
+  `;
+
+  const selectBox = container.querySelector('.multiselect-select-box');
+  const dropdown = container.querySelector('.multiselect-dropdown');
+  const optionsContainer = container.querySelector('.options-container');
+  const customInput = container.querySelector('.custom-amenity-input');
+  const addBtn = container.querySelector('.add-custom-btn');
+  const selectedText = container.querySelector('.selected-text');
+
+  selectBox.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.multiselect-dropdown').forEach(d => {
+      if (d !== dropdown) d.style.display = 'none';
+    });
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+  });
+
+  document.addEventListener('click', () => {
+    dropdown.style.display = 'none';
+  });
+  dropdown.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  const currentOptions = new Set(defaultAmenities);
+  const selectedItems = new Set(
+    initialValue.split(',')
+      .map(x => x.trim())
+      .filter(x => x.length > 0)
+  );
+
+  selectedItems.forEach(item => {
+    if (!currentOptions.has(item)) {
+      currentOptions.add(item);
+    }
+  });
+
+  function updateHiddenValue() {
+    const checked = Array.from(optionsContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    hiddenInput.value = checked.join(', ');
+    if (checked.length === 0) {
+      selectedText.textContent = 'Select amenities';
+    } else {
+      selectedText.textContent = checked.join(', ');
+    }
+  }
+
+  function renderOptions() {
+    optionsContainer.innerHTML = '';
+    currentOptions.forEach(opt => {
+      const isChecked = selectedItems.has(opt) ? 'checked' : '';
+      const itemDiv = document.createElement('label');
+      itemDiv.style.cssText = 'display:flex; align-items:center; gap:8px; color:#e2e8f0; font-size:13px; cursor:pointer; user-select:none;';
+      itemDiv.innerHTML = `
+        <input type="checkbox" value="${opt}" ${isChecked} style="cursor:pointer;">
+        <span>${opt}</span>
+      `;
+      itemDiv.querySelector('input').addEventListener('change', updateHiddenValue);
+      optionsContainer.appendChild(itemDiv);
+    });
+    updateHiddenValue();
+  }
+
+  addBtn.addEventListener('click', () => {
+    const val = customInput.value.trim();
+    if (val && !currentOptions.has(val)) {
+      currentOptions.add(val);
+      selectedItems.add(val);
+      customInput.value = '';
+      renderOptions();
+    }
+  });
+  customInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addBtn.click();
+    }
+  });
+
+  renderOptions();
+}
+
 function openEditModal(id, name, type, price, capacity, amenities, description, propId, rating) {
   document.getElementById('edit-room-id').value = id;
   document.getElementById('edit-name').value = name;
@@ -259,6 +362,7 @@ function openEditModal(id, name, type, price, capacity, amenities, description, 
   document.getElementById('edit-price').value = price;
   document.getElementById('edit-capacity').value = capacity;
   document.getElementById('edit-amenities').value = amenities;
+  setupAmenitiesDropdown('edit-amenities-dropdown', 'edit-amenities', amenities);
   document.getElementById('edit-description').value = description;
   document.getElementById('edit-property').value = propId;
   document.getElementById('edit-rating').value = rating || '';
@@ -286,6 +390,9 @@ document.getElementById('editForm').addEventListener('submit', async e => {
   if (data.message) { closeEditModal(); location.reload(); }
   else alert(data.error);
 });
+
+// Setup dropdown for creating room on load
+setupAmenitiesDropdown('create-amenities-dropdown', 'create-amenities-hidden', '');
 </script>
 
 <style>

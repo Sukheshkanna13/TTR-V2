@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Attraction, AttractionPhoto, Cause
+from .models import Attraction, AttractionPhoto, Cause, Activity
+
 
 
 class AttractionPhotoInline(admin.TabularInline):
@@ -20,4 +21,12 @@ class CauseAdmin(admin.ModelAdmin):
     list_display = ['title', 'location', 'target_amount', 'raised_amount', 'is_active', 'sort_order']
     list_filter = ['location', 'is_active']
     search_fields = ['title', 'location', 'description']
+
+
+@admin.register(Activity)
+class ActivityAdmin(admin.ModelAdmin):
+    list_display = ['title', 'category', 'price', 'is_active', 'sort_order']
+    list_filter = ['category', 'is_active']
+    search_fields = ['title', 'category', 'description']
+
 

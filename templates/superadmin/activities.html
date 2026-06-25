@@ -1,0 +1,222 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Things to Do{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Things to Do Management</h1>
+
+<!-- Create Activity -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Add Activity</h2>
+  <form id="createActivityForm" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+    <div>
+      <label class="sa-label">Title</label>
+      <input class="sa-input" type="text" name="title" required placeholder="e.g. Guided Nature Walk" style="width:200px;">
+    </div>
+    <div>
+      <label class="sa-label">Category</label>
+      <input class="sa-input" type="text" name="category" required placeholder="e.g. Outdoor" style="width:120px;">
+    </div>
+    <div>
+      <label class="sa-label">Description</label>
+      <input class="sa-input" type="text" name="description" placeholder="Short summary" style="min-width:250px;">
+    </div>
+    <div>
+      <label class="sa-label">Price / Action label</label>
+      <input class="sa-input" type="text" name="price" value="Request to book" placeholder="Request to book" style="width:130px;">
+    </div>
+    <div>
+      <label class="sa-label">Image</label>
+      <input class="sa-input" type="file" name="image" accept="image/*" style="padding:4px; width:200px;">
+    </div>
+    <div>
+      <label class="sa-label">Link</label>
+      <input class="sa-input" type="url" name="whatsapp_link" placeholder="Custom URL (e.g. https://...)" style="width:180px;">
+    </div>
+    <div>
+      <label class="sa-label">WhatsApp Text</label>
+      <input class="sa-input" type="text" name="whatsapp_message" placeholder="Prefilled chat message" style="width:180px;">
+    </div>
+    <button class="sa-btn sa-btn-primary" type="submit">Create</button>
+  </form>
+  <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
+</div>
+
+<!-- Activities List -->
+<div class="sa-card">
+  <h2 class="sa-section-title">All Activities</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Price Label</th>
+        <th>Link</th>
+        <th>WhatsApp Text</th>
+        <th>Order</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for a in activities %}
+    <tr id="activity-row-{{ a.id }}">
+      <td style="width:70px;">
+        {% if a.image %}
+          <img src="{{ a.image.url }}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+        {% else %}
+          {% load static %}
+          {% if "cycling" in a.title|lower %}
+            <img src="{% static 'images/coastal_cycling.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+          {% elif "massage" in a.title|lower %}
+            <img src="{% static 'images/spa_abhyanga.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+          {% elif "printing" in a.title|lower %}
+            <img src="{% static 'images/block_printing.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+          {% else %}
+            <div style="width:60px;height:40px;background:#334155;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;">No Image</div>
+          {% endif %}
+        {% endif %}
+        <input type="file" id="img-{{ a.id }}" style="display:none;" onchange="uploadImageChange('{{ a.id }}')">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="title-{{ a.id }}" value="{{ a.title }}" style="width:150px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="category-{{ a.id }}" value="{{ a.category }}" style="width:100px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="desc-{{ a.id }}" value="{{ a.description }}" style="width:200px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="price-{{ a.id }}" value="{{ a.price }}" style="width:120px;">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="whatsapp-{{ a.id }}" value="{{ a.whatsapp_link|default:'' }}" style="width:150px;" placeholder="https://...">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="message-{{ a.id }}" value="{{ a.whatsapp_message|default:'' }}" style="width:150px;" placeholder="Prefilled text">
+      </td>
+      <td>
+        <input class="sa-input sa-input-inline" id="sort-{{ a.id }}" type="number" value="{{ a.sort_order }}" style="width:50px; text-align:center;">
+      </td>
+      <td>
+        <span id="status-{{ a.id }}" class="badge {% if a.is_active %}badge-green{% else %}badge-red{% endif %}">
+          {% if a.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="saveActivity('{{ a.id }}')">Save</button>
+        <button class="sa-btn sa-btn-sm" onclick="document.getElementById('img-' + '{{ a.id }}').click()">Image</button>
+        <button class="sa-btn sa-btn-sm" onclick="toggleActivity('{{ a.id }}')">
+          {% if a.is_active %}Deactivate{% else %}Activate{% endif %}
+        </button>
+        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteActivity('{{ a.id }}')">Delete</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="10" style="color:#64748b;padding:24px 12px;">No activities found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+// Create Activity
+document.getElementById('createActivityForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('{% url "superadmin:activity-create" %}', {
+    method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd,
+  });
+  const data = await res.json();
+  const box = document.getElementById('createResult');
+  box.style.display = 'block';
+  if (res.ok) {
+    box.style.background = '#064e3b'; box.style.color = '#6ee7b7';
+    box.textContent = data.message;
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    box.style.background = '#450a0a'; box.style.color = '#fca5a5';
+    box.textContent = data.error;
+  }
+});
+
+// Save Activity Details
+async function saveActivity(id) {
+  const fd = new FormData();
+  fd.append('action', 'update_details');
+  fd.append('title', document.getElementById('title-' + id).value);
+  fd.append('category', document.getElementById('category-' + id).value);
+  fd.append('description', document.getElementById('desc-' + id).value);
+  fd.append('price', document.getElementById('price-' + id).value);
+  fd.append('whatsapp_link', document.getElementById('whatsapp-' + id).value);
+  fd.append('whatsapp_message', document.getElementById('message-' + id).value);
+  fd.append('sort_order', document.getElementById('sort-' + id).value);
+
+  const res = await fetch(`/super-admin/activities/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+    body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) {
+    alert(data.message);
+    location.reload();
+  } else {
+    alert(data.error);
+  }
+}
+
+// Upload New Image directly from Table
+async function uploadImageChange(id) {
+  const fileInput = document.getElementById('img-' + id);
+  if (!fileInput.files.length) return;
+  
+  const fd = new FormData();
+  fd.append('action', 'update_details');
+  fd.append('image', fileInput.files[0]);
+
+  const res = await fetch(`/super-admin/activities/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf},
+    body: fd,
+  });
+  const data = await res.json();
+  if (res.ok) {
+    location.reload();
+  } else {
+    alert(data.error);
+  }
+}
+
+// Toggle Activity active state
+async function toggleActivity(id) {
+  const res = await fetch(`/super-admin/activities/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'toggle_active'}),
+  });
+  const data = await res.json();
+  if (res.ok) location.reload();
+  else alert(data.error);
+}
+
+// Delete Activity
+async function deleteActivity(id) {
+  if (!confirm('Are you sure you want to permanently delete this activity?')) return;
+  const res = await fetch(`/super-admin/activities/${id}/update/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'delete'}),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById('activity-row-' + id)?.remove();
+  } else {
+    alert(data.error);
+  }
+}
+</script>
+{% endblock %}

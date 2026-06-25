@@ -23,13 +23,22 @@
         <option value="A">A — Full Financial Access</option>
       </select>
     </div>
-    <div>
+    <div style="position:relative;">
       <label class="sa-label">Properties</label>
-      <select class="sa-input" name="properties" multiple style="min-width:200px;height:60px;">
-        {% for p in properties %}
-        <option value="{{ p.id }}">{{ p.name }}</option>
-        {% endfor %}
-      </select>
+      <div id="prop-select-box" style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:13px; color:#e2e8f0; cursor:pointer; min-width:200px; min-height:34px;">
+        <span id="prop-selected-text">Select properties</span>
+        <span style="font-size:10px; color:#64748b;">▼</span>
+      </div>
+      <div id="prop-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:#1e293b; border:1px solid #334155; border-radius:6px; margin-top:4px; padding:8px; z-index:1000; max-height:220px; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); width:100%;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          {% for p in properties %}
+          <label style="display:flex; align-items:center; gap:8px; color:#e2e8f0; font-size:13px; cursor:pointer; user-select:none;">
+            <input type="checkbox" name="properties" value="{{ p.id }}" class="employee-prop-check">
+            <span>{{ p.name }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
     </div>
     <button class="sa-btn sa-btn-primary" type="submit">Create</button>
   </form>
@@ -117,9 +126,9 @@
 </div>
 
 <!-- Property Assignment Modal -->
-<div id="propsModal" class="sa-modal-overlay">
-  <div class="sa-modal">
-    <h3 class="sa-modal-title">Assign Properties — <span id="modalName"></span></h3>
+<div id="propsModal" class="sa-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(28,25,23,0.4); z-index:9999; align-items:center; justify-content:center;">
+  <div class="sa-modal" style="background:#ffffff; border:1px solid #E7E5E4; border-radius:8px; padding:24px; width:100%; max-width:400px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);">
+    <h3 class="sa-modal-title" style="margin-bottom:16px;">Assign Properties — <span id="modalName"></span></h3>
     <form id="propsForm">
       <input type="hidden" id="propsUserId">
       <div style="display:flex;flex-direction:column;gap:8px;max-height:250px;overflow-y:auto;margin-bottom:16px;">
@@ -139,9 +148,9 @@
 </div>
 
 <!-- Credential Reveal Modal (copy once, no auto-hide) -->
-<div id="credModal" class="sa-modal-overlay">
-  <div class="sa-modal">
-    <h3 class="sa-modal-title">Temporary Password</h3>
+<div id="credModal" class="sa-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(28,25,23,0.4); z-index:9999; align-items:center; justify-content:center;">
+  <div class="sa-modal" style="background:#ffffff; border:1px solid #E7E5E4; border-radius:8px; padding:24px; width:100%; max-width:400px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);">
+    <h3 class="sa-modal-title" style="margin-bottom:16px;">Temporary Password</h3>
     <p style="color:#78716C;font-size:13px;margin-bottom:12px;" id="credMessage"></p>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
       <code id="credValue" style="flex:1;background:#F5F5F4;border:1px solid #E7E5E4;color:#0F766E;padding:10px 12px;border-radius:8px;font-size:15px;letter-spacing:.5px;user-select:all;"></code>
@@ -264,5 +273,39 @@ document.getElementById('propsForm').addEventListener('submit', async e => {
   if (res.ok) { closePropsModal(); location.reload(); }
   else alert(data.error);
 });
+
+// Create Employee Properties dropdown helper
+const propSelectBox = document.getElementById('prop-select-box');
+const propDropdown = document.getElementById('prop-dropdown');
+const propSelectedText = document.getElementById('prop-selected-text');
+const employeePropChecks = document.querySelectorAll('.employee-prop-check');
+
+if (propSelectBox && propDropdown) {
+  propSelectBox.addEventListener('click', (e) => {
+    e.stopPropagation();
+    propDropdown.style.display = propDropdown.style.display === 'none' ? 'block' : 'none';
+  });
+
+  document.addEventListener('click', () => {
+    propDropdown.style.display = 'none';
+  });
+
+  propDropdown.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  function updatePropSelectedText() {
+    const checked = Array.from(employeePropChecks).filter(cb => cb.checked).map(cb => cb.nextElementSibling.textContent);
+    if (checked.length === 0) {
+      propSelectedText.textContent = 'Select properties';
+    } else {
+      propSelectedText.textContent = checked.join(', ');
+    }
+  }
+
+  employeePropChecks.forEach(cb => {
+    cb.addEventListener('change', updatePropSelectedText);
+  });
+}
 </script>
 {% endblock %}

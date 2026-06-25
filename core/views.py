@@ -92,17 +92,8 @@ def cause_page(request):
 
 def things_to_do_page(request):
     """Things to do — host-curated activities (from ThingsScreen)."""
-    things = [
-        {'cat': 'Outdoor', 'title': 'Cycling the East Coast Road',
-         'desc': 'Half-day ride, cycle and helmet included.', 'price': 'Request to book',
-         'img': 'images/coastal_cycling.png', 'wa': "Hi, I'd like to book the East Coast Road cycling experience."},
-        {'cat': 'Wellness', 'title': 'Abhyanga massage',
-         'desc': 'Sixty minutes of warm-oil bliss.', 'price': 'Request to book',
-         'img': 'images/spa_abhyanga.png', 'wa': "Hi, I'd like to book an Abhyanga massage."},
-        {'cat': 'Crafts', 'title': 'Block-printing class',
-         'desc': 'Take home what you print.', 'price': 'Request to book',
-         'img': 'images/block_printing.png', 'wa': "Hi, I'd like to book a block-printing class."},
-    ]
+    from .models import Activity
+    things = Activity.objects.filter(is_active=True).order_by('sort_order', '-created_at')
     return render(request, "pages/things_to_do.html", {'things': things})
 
 

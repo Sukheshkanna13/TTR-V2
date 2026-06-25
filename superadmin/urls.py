@@ -48,5 +48,9 @@ urlpatterns = [
     path('events/<uuid:event_id>/images/upload/', views.event_image_upload, name='event-image-upload'),
     path('events/images/<uuid:image_id>/delete/', views.event_image_delete, name='event-image-delete'),
     path('events/images/<uuid:image_id>/set-primary/', views.event_image_set_primary, name='event-image-set-primary'),
+    # Activities (Things to Do)
+    path('activities/', views.activities_list, name='activities'),
+    path('activities/create/', views.activity_create, name='activity-create'),
+    path('activities/<uuid:activity_id>/update/', views.activity_update, name='activity-update'),
 ]
 
