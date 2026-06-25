@@ -73,7 +73,7 @@
 <script>
   const MY_BOOKINGS_API = "{% url 'bookings:my-bookings' %}";
   const CANCEL_API_BASE = '/bookings/';
-  const HOME_URL        = "{% url 'core:home' %}";
+  const SEARCH_URL      = "{% url 'rooms:search-page' %}";
   const LOGIN_URL       = "{% url 'accounts:login-page' %}";
   const CHECKOUT_URL    = "{% url 'payments:checkout-page' %}";
   const CSRF_TOKEN      = '{{ csrf_token }}';
@@ -134,7 +134,7 @@
           <div class="icon">📋</div>
           <h3>No bookings here</h3>
           <p>When you book a room, it will appear here.</p>
-          <a href="${HOME_URL}" class="tt-btn tt-btn-primary tt-btn-sm">Search rooms</a>
+          <a href="${SEARCH_URL}" class="tt-btn tt-btn-primary tt-btn-sm">Search rooms</a>
         </div>`;
       return;
     }
