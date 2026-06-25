@@ -5,6 +5,17 @@
 
 {% block content %}
 
+{% block extra_css %}
+<style>
+  .tt-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+  .tt-folio-layout { display: grid; grid-template-columns: 1fr 340px; gap: 3rem; align-items: start; }
+  @media (max-width: 900px) {
+    .tt-stats-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .tt-folio-layout { grid-template-columns: 1fr; gap: 2rem; }
+  }
+</style>
+{% endblock %}
+
 <!-- ============================================================
      PAGE HEADER
      ============================================================ -->
@@ -45,13 +56,13 @@
      ============================================================ -->
 <section class="tt-section-sm">
   <div class="tt-page">
-    <div class="tt-folio-layout" style="display:grid;grid-template-columns:1fr 340px;gap:3rem;align-items:start;">
+    <div class="tt-folio-layout">
 
       <!-- LEFT: Confirmed Stays -->
       <div>
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.5rem;">
           <h2 class="tt-h2" style="margin:0;">Stay History</h2>
-          <a href="{% url 'core:home' %}" class="tt-btn tt-btn-ghost tt-btn-sm">Find a room</a>
+          <a href="{% url 'rooms:search-page' %}" class="tt-btn tt-btn-ghost tt-btn-sm">Find a room</a>
         </div>
         <div class="tt-hr" style="margin-bottom:1.75rem;"></div>
 
@@ -111,7 +122,7 @@
         <div style="text-align:center;padding:4rem 2rem;border:1px dashed var(--line);border-radius:var(--r-lg);">
           <p class="tt-italic-soft" style="font-size:1.5rem;color:var(--text-soft);margin-bottom:0.75rem;">No stays yet</p>
           <p class="tt-muted" style="margin-bottom:1.5rem;">Your confirmed bookings will appear here.</p>
-          <a href="{% url 'core:home' %}" class="tt-btn tt-btn-primary">Find a stay &rarr;</a>
+          <a href="{% url 'rooms:search-page' %}" class="tt-btn tt-btn-primary">Find a stay &rarr;</a>
         </div>
         {% endif %}
       </div>
