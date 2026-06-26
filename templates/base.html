@@ -33,6 +33,39 @@
       .tt-mobile-dropdown { left: auto !important; right: -12px !important; transform: translateY(4px) !important; }
       .tt-profile-wrapper:hover .tt-mobile-dropdown, .tt-mobile-dropdown.show { transform: translateY(0) !important; }
     }
+
+    /* ── Global Toast Notification System ── */
+    #tt-toast-container {
+      position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+    }
+    .tt-toast {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: #fff; border: 1.5px solid var(--line);
+      box-shadow: 0 8px 32px rgba(10,22,40,0.14);
+      padding: 14px 18px; min-width: 280px; max-width: 380px;
+      font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 500;
+      color: var(--ink); pointer-events: all;
+      transform: translateX(24px); opacity: 0;
+      transition: transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.28s ease;
+    }
+    .tt-toast.show { transform: translateX(0); opacity: 1; }
+    .tt-toast.hide { transform: translateX(24px); opacity: 0; }
+    .tt-toast-icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
+    .tt-toast-body { flex: 1; line-height: 1.45; }
+    .tt-toast-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+    .tt-toast-msg { color: var(--text-soft); font-size: 13px; }
+    .tt-toast-close {
+      flex-shrink: 0; background: none; border: none; cursor: pointer;
+      color: var(--text-muted); padding: 0; font-size: 16px; line-height: 1;
+      transition: color 0.15s;
+    }
+    .tt-toast-close:hover { color: var(--ink); }
+    /* State borders */
+    .tt-toast.tt-toast-success { border-left: 3px solid #22a05a; }
+    .tt-toast.tt-toast-error   { border-left: 3px solid #e03838; }
+    .tt-toast.tt-toast-warning { border-left: 3px solid #e07c08; }
+    .tt-toast.tt-toast-info    { border-left: 3px solid var(--accent); }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
@@ -189,6 +222,9 @@
   </a>
 {% endwith %}
 
+  <!-- ── Global Toast Container ── -->
+  <div id="tt-toast-container" aria-live="polite" aria-atomic="true"></div>
+
   <script>
     async function logout() {
       try {
@@ -199,6 +235,44 @@
         });
         window.location.href = "{% url 'core:home' %}";
       } catch (err) { console.error('Logout failed:', err); }
+    }
+
+    /**
+     * ttNotify(message, type, title, duration)
+     * type: 'success' | 'error' | 'warning' | 'info'
+     * Global toast notification — call from anywhere on any page.
+     */
+    function ttNotify(message, type = 'info', title = '', duration = 4500) {
+      const icons = {
+        success: `<svg class="tt-toast-icon" viewBox="0 0 20 20" fill="none" stroke="#22a05a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="9"/><path d="M6 10l3 3 5-5"/></svg>`,
+        error:   `<svg class="tt-toast-icon" viewBox="0 0 20 20" fill="none" stroke="#e03838" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="9"/><path d="M7 7l6 6M13 7l-6 6"/></svg>`,
+        warning: `<svg class="tt-toast-icon" viewBox="0 0 20 20" fill="none" stroke="#e07c08" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2l8.66 15H1.34L10 2z"/><path d="M10 8v4M10 14.5v.5"/></svg>`,
+        info:    `<svg class="tt-toast-icon" viewBox="0 0 20 20" fill="none" stroke="#5161CB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="9"/><path d="M10 9v5M10 6.5v.5"/></svg>`,
+      };
+      const defaultTitles = { success: 'Done', error: 'Error', warning: 'Heads up', info: 'Info' };
+      const container = document.getElementById('tt-toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `tt-toast tt-toast-${type}`;
+      toast.innerHTML = `
+        ${icons[type] || icons.info}
+        <div class="tt-toast-body">
+          <div class="tt-toast-title">${title || defaultTitles[type] || ''}</div>
+          <div class="tt-toast-msg">${message}</div>
+        </div>
+        <button class="tt-toast-close" aria-label="Dismiss">&#x2715;</button>
+      `;
+
+      const dismiss = () => {
+        toast.classList.replace('show', 'hide');
+        setTimeout(() => toast.remove(), 320);
+      };
+      toast.querySelector('.tt-toast-close').addEventListener('click', dismiss);
+      container.appendChild(toast);
+      requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+      if (duration > 0) setTimeout(dismiss, duration);
+      return toast;
     }
 
     document.addEventListener('DOMContentLoaded', () => {

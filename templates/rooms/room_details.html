@@ -21,10 +21,77 @@
     .tt-mobile-cta-bar { display:flex; position:fixed; bottom:0; left:0; right:0; z-index:60; background:#fff;
       border-top:1px solid var(--line); padding:14px 18px; justify-content:space-between; align-items:center; box-shadow:var(--shadow-lg); }
   }
+
+  /* Sign-in confirmation modal */
+  #tt-signin-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(10, 22, 40, 0.48);
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(3px);
+    padding: 24px;
+  }
+  #tt-signin-modal.active { display: flex; animation: ttFadeIn 0.22s ease; }
+  @keyframes ttFadeIn { from { opacity:0; } to { opacity:1; } }
+  .tt-modal-card {
+    background: #fff;
+    border: 1.5px solid var(--ink);
+    box-shadow: 0 24px 64px rgba(10,22,40,0.22);
+    padding: 36px 32px 28px;
+    max-width: 400px; width: 100%;
+    animation: ttSlideUp 0.28s cubic-bezier(0.22,1,0.36,1);
+    text-align: center;
+  }
+  @keyframes ttSlideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  .tt-modal-icon {
+    width: 48px; height: 48px; margin: 0 auto 18px;
+    background: #fff7ed; border: 1.5px solid #e07c08;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tt-modal-title {
+    font-size: 17px; font-weight: 700; color: var(--ink);
+    margin-bottom: 8px; line-height: 1.3;
+  }
+  .tt-modal-msg {
+    font-size: 14px; color: var(--text-soft);
+    line-height: 1.55; margin-bottom: 28px;
+  }
+  .tt-modal-actions {
+    display: flex; gap: 12px;
+  }
+  .tt-modal-btn {
+    flex: 1; padding: 11px 16px;
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--ink); transition: all 0.18s ease;
+  }
+  .tt-modal-btn-primary {
+    background: var(--ink); color: #fff;
+  }
+  .tt-modal-btn-primary:hover,
+  .tt-modal-btn-primary:active { background: var(--ink-2); }
+  .tt-modal-btn-ghost {
+    background: #fff; color: var(--ink);
+  }
+  .tt-modal-btn-ghost:hover,
+  .tt-modal-btn-ghost:active { background: var(--bg-soft); }
 </style>
 {% endblock %}
 
 {% block content %}
+
+<!-- Sign-in Confirmation Modal -->
+<div id="tt-signin-modal" role="dialog" aria-modal="true" aria-labelledby="tt-modal-title-txt">
+  <div class="tt-modal-card">
+
+    <div class="tt-modal-title" id="tt-modal-title-txt">Sign in to continue</div>
+    <div class="tt-modal-msg">You need to be signed in to hold a room. Would you like to go to the sign-in page?</div>
+    <div class="tt-modal-actions">
+      <button class="tt-modal-btn tt-modal-btn-ghost" onclick="closeSigninModal()">No, stay here</button>
+      <button class="tt-modal-btn tt-modal-btn-primary" onclick="goToLogin()">Yes, sign in</button>
+    </div>
+  </div>
+</div>
+
 <div class="tt-page" style="padding-top:24px;padding-bottom:96px;">
   {% include "components/_back_nav.html" %}
 
@@ -305,7 +372,11 @@
         credentials: 'include',
         body: JSON.stringify({ room_id: roomId, check_in: checkIn, check_out: checkOut, guests: parseInt(guests) })
       });
-      if (res.status === 401 || res.status === 403) { alert('Please sign in to book a room.'); window.location.href = LOGIN_URL + '?next=' + encodeURIComponent(window.location.pathname + window.location.search); return; }
+      if (res.status === 401 || res.status === 403) {
+        btns.forEach(b => { b.disabled = false; b.innerHTML = 'Hold this room &rarr;'; });
+        document.getElementById('tt-signin-modal').classList.add('active');
+        return;
+      }
       const data = await res.json();
       if (res.ok) {
         window.location.href = `${CHECKOUT_URL}?booking_id=${data.booking.id}`;
@@ -416,6 +487,21 @@
       document.getElementById('galleryGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
+
+  function closeSigninModal() {
+    const modal = document.getElementById('tt-signin-modal');
+    modal.style.animation = 'ttFadeIn 0.18s ease reverse';
+    setTimeout(() => { modal.classList.remove('active'); modal.style.animation = ''; }, 170);
+  }
+
+  function goToLogin() {
+    window.location.href = LOGIN_URL + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+  }
+
+  // Close modal when clicking the backdrop
+  document.getElementById('tt-signin-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeSigninModal();
+  });
 
   loadRoom();
 </script>
