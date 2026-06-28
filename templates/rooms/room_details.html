@@ -396,8 +396,13 @@
     const display = document.getElementById('dateDisplayView');
     const edit = document.getElementById('dateEditView');
     if (edit.classList.contains('hidden')) {
-      document.getElementById('editCheckin').value = checkIn || '';
-      document.getElementById('editCheckout').value = checkOut || '';
+      const today = new Date().toISOString().split('T')[0];
+      const checkinEl = document.getElementById('editCheckin');
+      const checkoutEl = document.getElementById('editCheckout');
+      checkinEl.value = checkIn || '';
+      checkoutEl.value = checkOut || '';
+      checkinEl.min = today;
+      checkoutEl.min = today;
       display.classList.add('hidden');
       edit.classList.remove('hidden');
       document.getElementById('editDatesBtn').textContent = 'Cancel';

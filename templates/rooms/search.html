@@ -130,7 +130,7 @@
           <label class="tt-field-label">Guests</label>
           <div style="display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:#fff;">
             <button type="button" onclick="stepGuests(-1)" style="padding:8px 12px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink);">&#8722;</button>
-            <input type="number" id="guests" name="guests" min="1" max="10" value="2" readonly
+            <input type="number" id="guests" name="guests" min="1" max="10" value="1" readonly
                    style="width:32px;text-align:center;border:none;font-size:14px;color:var(--ink);background:transparent;padding:0;">
             <button type="button" onclick="stepGuests(1)" style="padding:8px 12px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink);">&#43;</button>
           </div>
@@ -215,8 +215,8 @@
     city:        urlParams.get('city') || '',
     check_in:    urlParams.get('check_in') || '',
     check_out:   urlParams.get('check_out') || '',
-    // guests: parse as int, fall back to 2 if missing/zero/NaN
-    guests:      Math.max(1, parseInt(urlParams.get('guests')) || 2),
+    // guests: parse as int, fall back to 1 if missing/zero/NaN
+    guests:      Math.max(1, parseInt(urlParams.get('guests')) || 1),
   };
 
   // ── Date helpers ───────────────────────────────────────────────

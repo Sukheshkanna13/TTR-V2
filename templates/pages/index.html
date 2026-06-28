@@ -6,7 +6,7 @@
 
 <!-- ════════════ HERO (approved home.jsx structure) ════════════ -->
 {% url 'rooms:search-page' as search_url %}
-{% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=2' %}
+{% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=1' %}
 <section class="tt-hero-full">
   <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full">
   <div class="tt-hero-overlay-white"></div>
