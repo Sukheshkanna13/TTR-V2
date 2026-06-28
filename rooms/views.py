@@ -708,7 +708,7 @@ class BookingDetailView(APIView):
         booking.expire_if_needed()
 
         return Response(
-            {"booking": BookingSerializer(booking).data},
+            {"booking": BookingSerializer(booking, context={"request": request}).data},
             status=status.HTTP_200_OK,
         )
 
