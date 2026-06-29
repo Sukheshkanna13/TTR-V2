@@ -427,3 +427,35 @@ input[type=number] {
 .sa-btn-sm:last-child {
   margin-right: 0 !important;
 }
+
+/* ---- Component classes (shared layout primitives) ---- */
+.sa-toolbar{
+  display:flex; align-items:flex-end; flex-wrap:wrap;
+  gap:var(--sp-3); margin-bottom:var(--sp-4);
+}
+.sa-toolbar .sa-toolbar-end{ margin-left:auto; display:flex; gap:var(--sp-2); align-items:flex-end; }
+
+.sa-filter{ display:flex; flex-direction:column; gap:var(--sp-1); min-width:160px; }
+.sa-filter-label{
+  font-size:var(--fs-label); font-weight:500; color:var(--c-text-muted);
+  text-transform:uppercase; letter-spacing:.05em;
+}
+.sa-filter select, .sa-filter input{
+  width:100%; background:var(--c-surface); border:1px solid var(--c-border);
+  color:var(--c-text); font-family:var(--ff); font-size:var(--fs-sm);
+  border-radius:var(--radius); padding:6px 10px; outline:none;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.sa-filter select:focus, .sa-filter input:focus{
+  border-color:var(--c-accent); box-shadow:0 0 0 2px var(--c-accent-soft);
+}
+
+.sa-actions{ display:flex; gap:var(--sp-2); align-items:center; flex-wrap:nowrap; }
+
+.sa-field{ display:flex; flex-direction:column; gap:var(--sp-1); margin-bottom:var(--sp-3); }
+.sa-field-row{ display:flex; gap:var(--sp-3); flex-wrap:wrap; }
+
+.sa-empty{
+  padding:var(--sp-8) var(--sp-4); text-align:center;
+  color:var(--c-text-muted); font-size:var(--fs-sm);
+}
