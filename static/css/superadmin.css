@@ -134,9 +134,9 @@ body .sa-brand {
 
 /* Main Layout content */
 .sa-main{
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 28px 40px;
 }
 body .sa-page-title{
   font-size: 20px !important;
