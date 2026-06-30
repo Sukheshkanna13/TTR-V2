@@ -6,16 +6,16 @@
 <!-- Create Employee -->
 <div class="sa-card" id="createSection">
   <h2 class="sa-section-title">Create Employee</h2>
-  <form id="createForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
-    <div>
+  <form id="createForm" class="sa-field-row" style="align-items:flex-end;">
+    <div class="sa-field">
       <label class="sa-label">Email</label>
       <input class="sa-input" type="email" name="email" required placeholder="employee@hotel.com">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Full Name</label>
       <input class="sa-input" type="text" name="full_name" required placeholder="Full name">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Financial Level</label>
       <select class="sa-input" name="fin_level">
         <option value="C">C — No Financial Access</option>
@@ -23,16 +23,16 @@
         <option value="A">A — Full Financial Access</option>
       </select>
     </div>
-    <div style="position:relative;">
+    <div class="sa-field" style="position:relative;">
       <label class="sa-label">Properties</label>
-      <div id="prop-select-box" style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:13px; color:#e2e8f0; cursor:pointer; min-width:200px; min-height:34px;">
+      <div id="prop-select-box" style="display:flex; justify-content:space-between; align-items:center; background:var(--c-surface); border:1px solid var(--c-border); padding:6px 10px; border-radius:6px; font-size:13px; color:var(--c-text); cursor:pointer; min-width:200px; min-height:34px;">
         <span id="prop-selected-text">Select properties</span>
-        <span style="font-size:10px; color:#64748b;">▼</span>
+        <span style="font-size:10px; color:var(--c-text-muted);">▼</span>
       </div>
-      <div id="prop-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:#1e293b; border:1px solid #334155; border-radius:6px; margin-top:4px; padding:8px; z-index:1000; max-height:220px; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); width:100%;">
+      <div id="prop-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--c-surface); border:1px solid var(--c-border); border-radius:6px; margin-top:4px; padding:8px; z-index:1000; max-height:220px; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); width:100%;">
         <div style="display:flex; flex-direction:column; gap:6px;">
           {% for p in properties %}
-          <label style="display:flex; align-items:center; gap:8px; color:#e2e8f0; font-size:13px; cursor:pointer; user-select:none;">
+          <label style="display:flex; align-items:center; gap:8px; color:var(--c-text); font-size:13px; cursor:pointer; user-select:none;">
             <input type="checkbox" name="properties" value="{{ p.id }}" class="employee-prop-check">
             <span>{{ p.name }}</span>
           </label>
@@ -42,7 +42,7 @@
     </div>
     <button class="sa-btn sa-btn-primary" type="submit">Create</button>
   </form>
-  <div id="createError" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:#450a0a;color:#fca5a5;font-size:13px;"></div>
+  <div id="createError" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:var(--c-bad-bg);color:var(--c-bad-fg);font-size:13px;"></div>
 </div>
 
 <!-- Employee List -->
@@ -76,15 +76,17 @@
         </select>
       </td>
       <td style="font-size:12px;">
+        <span class="sa-actions">
         {% for prop in u.userprofile.assigned_properties.all %}
           <span class="badge badge-slate">{{ prop.name }}</span>
         {% empty %}
-          <span style="color:#64748b;">None</span>
+          <span style="color:var(--c-text-muted);">None</span>
         {% endfor %}
         {% if not u.userprofile.is_revoked %}
         <button class="sa-btn sa-btn-sm" onclick="openPropsModal('{{ u.pk }}', '{{ u.full_name|escapejs }}')"
-                style="margin-left:4px;" title="Assign properties">✎</button>
+                title="Assign properties">✎</button>
         {% endif %}
+        </span>
       </td>
       <td>
         {% if u.userprofile.is_revoked %}
@@ -98,10 +100,11 @@
           <span class="badge badge-slate" title="Must change password on next login">PW pending</span>
         {% endif %}
       </td>
-      <td style="font-size:12px;color:#94a3b8;white-space:nowrap;">{{ u.date_joined|date:"d M Y" }}</td>
-      <td style="font-size:12px;color:#94a3b8;white-space:nowrap;">{{ u.last_login|date:"d M Y H:i"|default:"Never" }}</td>
-      <td style="font-size:12px;color:#94a3b8;">{{ u.userprofile.created_by.full_name|default:"—" }}</td>
+      <td style="font-size:12px;color:var(--c-text-muted);white-space:nowrap;">{{ u.date_joined|date:"d M Y" }}</td>
+      <td style="font-size:12px;color:var(--c-text-muted);white-space:nowrap;">{{ u.last_login|date:"d M Y H:i"|default:"Never" }}</td>
+      <td style="font-size:12px;color:var(--c-text-muted);">{{ u.userprofile.created_by.full_name|default:"—" }}</td>
       <td style="white-space:nowrap;">
+        <span class="sa-actions">
         {% if u.userprofile.is_revoked %}
           <button class="sa-btn sa-btn-sm sa-btn-success" onclick="empAction('{{ u.pk }}', 'reinstate')">Reinstate</button>
           {% if u.last_login is None %}
@@ -116,10 +119,11 @@
           <button class="sa-btn sa-btn-sm" onclick="empAction('{{ u.pk }}', 'reset_password')">Reset PW</button>
           <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="empAction('{{ u.pk }}', 'revoke')">Revoke</button>
         {% endif %}
+        </span>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="9" style="color:#64748b;padding:24px 12px;">No employees found.</td></tr>
+    <tr><td colspan="9" class="sa-empty">No employees found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -139,7 +143,7 @@
         </label>
         {% endfor %}
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <div class="sa-actions" style="justify-content:flex-end;">
         <button type="button" class="sa-btn" onclick="closePropsModal()">Cancel</button>
         <button type="submit" class="sa-btn sa-btn-primary">Save</button>
       </div>
@@ -152,12 +156,12 @@
   <div class="sa-modal" style="background:#ffffff; border:1px solid #E7E5E4; border-radius:8px; padding:24px; width:100%; max-width:400px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);">
     <h3 class="sa-modal-title" style="margin-bottom:16px;">Temporary Password</h3>
     <p style="color:#78716C;font-size:13px;margin-bottom:12px;" id="credMessage"></p>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+    <div class="sa-actions" style="margin-bottom:8px;">
       <code id="credValue" style="flex:1;background:#F5F5F4;border:1px solid #E7E5E4;color:#0F766E;padding:10px 12px;border-radius:8px;font-size:15px;letter-spacing:.5px;user-select:all;"></code>
       <button type="button" class="sa-btn sa-btn-primary" id="credCopyBtn" onclick="copyCred()">Copy</button>
     </div>
     <p style="color:#B45309;font-size:12px;margin-bottom:16px;">Copy it now — it will not be shown again.</p>
-    <div style="display:flex;justify-content:flex-end;">
+    <div class="sa-actions" style="justify-content:flex-end;">
       <button type="button" class="sa-btn" onclick="closeCredModal()">Done</button>
     </div>
   </div>
