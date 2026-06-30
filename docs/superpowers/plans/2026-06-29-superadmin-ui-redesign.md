@@ -236,7 +236,21 @@ git commit -m "fix(superadmin): remove dead dark-theme style blocks that fought 
 - Form/modal fields with inline-spaced label+input → `<div class="sa-field"><label class="sa-label">…</label><input class="sa-input">…</div>`; group side-by-side fields in `<div class="sa-field-row">`.
 - "No records" placeholders → `<div class="sa-empty">…</div>`.
 - Replace ad-hoc inline spacing numbers with the spacing scale: `margin/padding` values map to the nearest `--sp-*` (4/8/12/16/20/24/32). When an inline style only sets spacing/layout that a component class now covers, delete the inline `style` attribute entirely.
-- **Never** introduce a new color. If an inline `style` sets a color, keep that exact color (or its matching `var()` token) — do not restyle.
+- **Light/brand colors stay as-is** (or map to their matching `var()` token). Do not restyle elements that already use the light palette.
+- **Dark-palette inline colors MUST be converted to light tokens** (decision 2026-06-30: these stray dark widgets — custom dropdowns, modals, image placeholders, empty-state text, status selects — currently render dark on the light panel and should match the rest of the panel). Apply this mapping, including colors set via JS `style.cssText` / `style.X` strings:
+
+  | Dark value | Element role | → Light token |
+  |-----------|--------------|---------------|
+  | `#0f172a` | input / control / dropdown background | `var(--c-surface)` |
+  | `#1e293b` | modal or dropdown-panel background | `var(--c-surface)` |
+  | `#1e293b` | decorative / image-placeholder background | `var(--c-hover)` |
+  | `#334155` | border | `var(--c-border)` |
+  | `#64748b` | muted text | `var(--c-text-muted)` |
+  | `#94a3b8` | faint text (e.g. "No Image") | `var(--c-text-faint)` |
+  | `#e2e8f0`, `#f1f5f9`, `#f8fafc` | text on former-dark bg | `var(--c-text)` |
+  | `#2563eb`, `#1d4ed8` | blue accent | `var(--c-accent)` / `var(--c-accent-hover)` |
+
+  For `#1e293b`, choose `--c-surface` vs `--c-hover` by the element's role (interactive panel/modal → surface; static decorative box → hover). After conversion, the page must contain NO dark-palette hex (`grep` for the dark set returns nothing for that page).
 
 **Per-page verification (same for each task):** reload the page in the dev server; confirm (a) layout is tidy with consistent spacing, (b) colors unchanged, (c) all controls still present and functional. Then run `grep -c 'style="' templates/superadmin/<page>.html` and confirm the count dropped substantially.
 
