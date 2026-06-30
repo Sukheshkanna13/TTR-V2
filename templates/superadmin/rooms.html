@@ -206,11 +206,11 @@ document.getElementById('createRoomForm').addEventListener('submit', async e => 
   const box = document.getElementById('createResult');
   box.style.display = 'block';
   if (res.ok) {
-    box.style.background = '#064e3b'; box.style.color = '#6ee7b7';
+    box.style.background = 'var(--c-ok-bg)'; box.style.color = 'var(--c-ok-fg)';
     box.textContent = data.message;
     setTimeout(() => location.reload(), 1500);
   } else {
-    box.style.background = '#450a0a'; box.style.color = '#fca5a5';
+    box.style.background = 'var(--c-bad-bg)'; box.style.color = 'var(--c-bad-fg)';
     box.textContent = data.error;
   }
 });
