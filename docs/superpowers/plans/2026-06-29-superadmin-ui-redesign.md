@@ -249,6 +249,12 @@ git commit -m "fix(superadmin): remove dead dark-theme style blocks that fought 
   | `#94a3b8` | faint text (e.g. "No Image") | `var(--c-text-faint)` |
   | `#e2e8f0`, `#f1f5f9`, `#f8fafc` | text on former-dark bg | `var(--c-text)` |
   | `#2563eb`, `#1d4ed8` | blue accent | `var(--c-accent)` / `var(--c-accent-hover)` |
+  | `#064e3b` | success toast background | `var(--c-ok-bg)` |
+  | `#6ee7b7` | success toast text | `var(--c-ok-fg)` |
+  | `#450a0a`, `#7f1d1d` | error toast background | `var(--c-bad-bg)` |
+  | `#fca5a5` | error toast text | `var(--c-bad-fg)` |
+
+  (Status toasts in create/edit JS use dark bg + light text; the light theme inverts this — light tinted bg + dark text — via the `--c-ok-*`/`--c-bad-*` tokens.)
 
   For `#1e293b`, choose `--c-surface` vs `--c-hover` by the element's role (interactive panel/modal → surface; static decorative box → hover). After conversion, the page must contain NO dark-palette hex (`grep` for the dark set returns nothing for that page).
 
