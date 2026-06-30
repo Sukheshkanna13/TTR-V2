@@ -484,3 +484,18 @@ input[type=number] {
   padding:var(--sp-8) var(--sp-4); text-align:center;
   color:var(--c-text-muted); font-size:var(--fs-sm);
 }
+
+/* ---- Add/Create form layout: even columns, aligned controls, no dead space ---- */
+.sa-form-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:var(--sp-4);
+  align-items:end;
+}
+.sa-form-grid .sa-field{ margin-bottom:0; min-width:0; }
+.sa-form-grid .sa-field > .sa-input,
+.sa-form-grid .sa-field > .custom-multiselect-container,
+.sa-form-grid .sa-field > input,
+.sa-form-grid .sa-field > select{ width:100%; }
+/* the submit button sits in its own grid cell, bottom-aligned with the inputs */
+.sa-form-grid .sa-form-submit{ align-self:end; justify-self:start; white-space:nowrap; }

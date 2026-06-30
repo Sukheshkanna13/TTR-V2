@@ -6,36 +6,36 @@
 <!-- Create Activity -->
 <div class="sa-card">
   <h2 class="sa-section-title">Add Activity</h2>
-  <form id="createActivityForm" enctype="multipart/form-data" class="sa-field-row" style="align-items:flex-end;">
+  <form id="createActivityForm" enctype="multipart/form-data" class="sa-form-grid">
     <div class="sa-field">
       <label class="sa-label">Title</label>
-      <input class="sa-input" type="text" name="title" required placeholder="e.g. Guided Nature Walk" style="width:200px;">
+      <input class="sa-input" type="text" name="title" required placeholder="e.g. Guided Nature Walk">
     </div>
     <div class="sa-field">
       <label class="sa-label">Category</label>
-      <input class="sa-input" type="text" name="category" required placeholder="e.g. Outdoor" style="width:120px;">
+      <input class="sa-input" type="text" name="category" required placeholder="e.g. Outdoor">
     </div>
     <div class="sa-field">
       <label class="sa-label">Description</label>
-      <input class="sa-input" type="text" name="description" placeholder="Short summary" style="min-width:250px;">
+      <input class="sa-input" type="text" name="description" placeholder="Short summary">
     </div>
     <div class="sa-field">
       <label class="sa-label">Price / Action label</label>
-      <input class="sa-input" type="text" name="price" value="Request to book" placeholder="Request to book" style="width:130px;">
+      <input class="sa-input" type="text" name="price" value="Request to book" placeholder="Request to book">
     </div>
     <div class="sa-field">
       <label class="sa-label">Image</label>
-      <input class="sa-input" type="file" name="image" accept="image/*" style="padding:4px; width:200px;">
+      <input class="sa-input" type="file" name="image" accept="image/*" style="padding:4px;">
     </div>
     <div class="sa-field">
       <label class="sa-label">Link</label>
-      <input class="sa-input" type="url" name="whatsapp_link" placeholder="Custom URL (e.g. https://...)" style="width:180px;">
+      <input class="sa-input" type="url" name="whatsapp_link" placeholder="Custom URL (e.g. https://...)">
     </div>
     <div class="sa-field">
       <label class="sa-label">WhatsApp Text</label>
-      <input class="sa-input" type="text" name="whatsapp_message" placeholder="Prefilled chat message" style="width:180px;">
+      <input class="sa-input" type="text" name="whatsapp_message" placeholder="Prefilled chat message">
     </div>
-    <button class="sa-btn sa-btn-primary" type="submit">Create</button>
+    <button class="sa-btn sa-btn-primary sa-form-submit" type="submit">Create</button>
   </form>
   <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
 </div>

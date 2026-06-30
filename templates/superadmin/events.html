@@ -29,7 +29,7 @@
 <!-- Create Event / Attraction -->
 <div class="sa-card">
   <h2 class="sa-section-title">Add Event / Attraction</h2>
-  <form id="createEventForm" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:1rem;align-items:flex-end;">
+  <form id="createEventForm" class="sa-form-grid">
     <div class="sa-field">
       <label class="sa-label">Name</label>
       <input class="sa-input" type="text" name="name" required placeholder="e.g. Clay Art Workshop" style="width:100%;">
@@ -62,9 +62,7 @@
       <label class="sa-label">Description</label>
       <textarea class="sa-input" name="description" placeholder="Write description here..." rows="2" style="width:100%;resize:vertical;"></textarea>
     </div>
-    <div>
-      <button class="sa-btn sa-btn-primary" type="submit">Create</button>
-    </div>
+    <button class="sa-btn sa-btn-primary sa-form-submit" type="submit">Create</button>
   </form>
   <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
 </div>

@@ -6,7 +6,7 @@
 <!-- Create Room -->
 <div class="sa-card">
   <h2 class="sa-section-title">Add Room</h2>
-  <form id="createRoomForm" class="sa-toolbar">
+  <form id="createRoomForm" class="sa-form-grid">
     <div class="sa-field">
       <label class="sa-label">Property</label>
       <select class="sa-input" name="property_id" required>
@@ -31,11 +31,11 @@
     </div>
     <div class="sa-field">
       <label class="sa-label">Price / Night (₹)</label>
-      <input class="sa-input" type="number" name="price_per_night" step="1" min="1" required style="width:120px;">
+      <input class="sa-input" type="number" name="price_per_night" step="1" min="1" required>
     </div>
     <div class="sa-field">
       <label class="sa-label">Capacity</label>
-      <input class="sa-input" type="number" name="capacity" value="2" min="1" style="width:80px;">
+      <input class="sa-input" type="number" name="capacity" value="2" min="1">
     </div>
     <div class="sa-field" style="position:relative;">
       <label class="sa-label">Amenities</label>
@@ -44,11 +44,9 @@
     </div>
     <div class="sa-field">
       <label class="sa-label">Rating (0–5)</label>
-      <input class="sa-input" type="number" name="rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;" required value="4.5">
+      <input class="sa-input" type="number" name="rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" required value="4.5">
     </div>
-    <div class="sa-toolbar-end">
-      <button class="sa-btn sa-btn-primary" type="submit">Create Room</button>
-    </div>
+    <button class="sa-btn sa-btn-primary sa-form-submit" type="submit">Create Room</button>
   </form>
   <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
 </div>
@@ -119,7 +117,7 @@
           <button class="sa-btn sa-btn-sm" id="feat-btn-{{ r.id }}" onclick="toggleFeatured('{{ r.id }}', this)" title="Feature on home page">
             {% if r.is_featured %}★ Featured{% else %}☆ Feature{% endif %}
           </button>
-          <a class="sa-btn sa-btn-sm" href="{% url 'superadmin:room-images' r.id %}">📷 {{ r.images.count }}</a>
+          <a class="sa-btn sa-btn-sm" href="{% url 'superadmin:room-images' r.id %}">Photos ({{ r.images.count }})</a>
           <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteRoom('{{ r.id }}', '{{ r.name|escapejs }}')">Delete</button>
         </div>
       </td>
