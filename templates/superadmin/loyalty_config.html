@@ -6,7 +6,7 @@
 <!-- Per-property config -->
 <div class="sa-card">
   <h2 class="sa-section-title">Points Configuration</h2>
-  <p style="color:#94a3b8;font-size:13px;margin-bottom:16px;">Set earning rates per property.</p>
+  <p style="color:var(--c-text-faint);font-size:13px;margin-bottom:16px;">Set earning rates per property.</p>
   <table>
     <thead>
       <tr>
@@ -42,7 +42,7 @@
       </form>
     </tr>
     {% empty %}
-    <tr><td colspan="5" style="color:#64748b;padding:24px 12px;">No properties found.</td></tr>
+    <tr><td colspan="5" class="sa-empty">No properties found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -73,29 +73,29 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="5" style="color:#64748b;padding:16px 12px;">No tiers configured.</td></tr>
+    <tr><td colspan="5" class="sa-empty">No tiers configured.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 
-  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #334155;">
-    <h3 style="font-size:13px;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Add Tier</h3>
-    <form method="post" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--c-border);">
+    <h3 style="font-size:13px;color:var(--c-text-faint);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Add Tier</h3>
+    <form method="post" class="sa-field-row" style="align-items:flex-end;">
       {% csrf_token %}
       <input type="hidden" name="action" value="save_tier">
-      <div>
+      <div class="sa-field">
         <label class="sa-label">Name</label>
         <input class="sa-input" type="text" name="name" placeholder="e.g. Gold" required>
       </div>
-      <div>
+      <div class="sa-field">
         <label class="sa-label">Min Points</label>
         <input class="sa-input" type="number" name="min_pts" value="0" style="width:100px;">
       </div>
-      <div>
+      <div class="sa-field">
         <label class="sa-label">Discount %</label>
         <input class="sa-input" type="number" name="discount_pct" step="0.1" value="0" style="width:90px;">
       </div>
-      <div>
+      <div class="sa-field">
         <label class="sa-label">Sort Order</label>
         <input class="sa-input" type="number" name="sort_order" value="0" style="width:80px;">
       </div>
@@ -133,29 +133,29 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="6" style="color:#64748b;padding:16px 12px;">No active campaigns.</td></tr>
+    <tr><td colspan="6" class="sa-empty">No active campaigns.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 
-  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #334155;">
-    <h3 style="font-size:13px;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Add Campaign</h3>
-    <form method="post" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--c-border);">
+    <h3 style="font-size:13px;color:var(--c-text-faint);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Add Campaign</h3>
+    <form method="post" class="sa-field-row" style="align-items:flex-end;">
       {% csrf_token %}
       <input type="hidden" name="action" value="save_campaign">
-      <div>
+      <div class="sa-field">
         <label class="sa-label">Name</label>
         <input class="sa-input" type="text" name="name" placeholder="e.g. Diwali Bonus" required>
       </div>
-      <div>
+      <div class="sa-field">
         <label class="sa-label">Start</label>
         <input class="sa-input" type="date" name="start_date" required>
       </div>
-      <div>
+      <div class="sa-field">
         <label class="sa-label">End</label>
         <input class="sa-input" type="date" name="end_date" required>
       </div>
-      <div>
+      <div class="sa-field">
         <label class="sa-label">Multiplier</label>
         <input class="sa-input" type="number" name="multiplier" step="0.1" value="1.5" style="width:90px;">
       </div>

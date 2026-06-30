@@ -6,32 +6,32 @@
 <!-- Create Cause -->
 <div class="sa-card">
   <h2 class="sa-section-title">Add Cause</h2>
-  <form id="createCauseForm" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
-    <div>
+  <form id="createCauseForm" enctype="multipart/form-data" class="sa-field-row" style="align-items:flex-end;">
+    <div class="sa-field">
       <label class="sa-label">Title</label>
       <input class="sa-input" type="text" name="title" required placeholder="e.g. Sandalwood restoration" style="width:200px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Location/State</label>
       <input class="sa-input" type="text" name="location" required placeholder="e.g. KARNATAKA" style="width:120px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Description</label>
       <input class="sa-input" type="text" name="description" placeholder="Short summary" style="min-width:250px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Target Amount (₹)</label>
       <input class="sa-input" type="number" name="target_amount" required placeholder="1000000" style="width:110px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Raised Amount (₹)</label>
       <input class="sa-input" type="number" name="raised_amount" value="0" placeholder="0" style="width:110px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Image</label>
       <input class="sa-input" type="file" name="image" accept="image/*" style="padding:4px; width:200px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Link</label>
       <input class="sa-input" type="url" name="whatsapp_link" placeholder="e.g. https://..." style="width:180px;">
     </div>
@@ -63,9 +63,9 @@
     <tr id="cause-row-{{ c.id }}">
       <td style="width:70px;">
         {% if c.image %}
-          <img src="{{ c.image.url }}" alt="{{ c.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+          <img src="{{ c.image.url }}" alt="{{ c.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--c-border);">
         {% else %}
-          <div style="width:60px;height:40px;background:#334155;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;">No Image</div>
+          <div style="width:60px;height:40px;background:var(--c-hover);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--c-text-faint);">No Image</div>
         {% endif %}
         <input type="file" id="img-{{ c.id }}" style="display:none;" onchange="uploadImageChange('{{ c.id }}')">
       </td>
@@ -96,16 +96,18 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
+        <span class="sa-actions">
         <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="saveCause('{{ c.id }}')">Save</button>
         <button class="sa-btn sa-btn-sm" onclick="document.getElementById('img-' + '{{ c.id }}').click()">Image</button>
         <button class="sa-btn sa-btn-sm" onclick="toggleCause('{{ c.id }}')">
           {% if c.is_active %}Deactivate{% else %}Activate{% endif %}
         </button>
         <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteCause('{{ c.id }}')">Delete</button>
+        </span>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="10" style="color:#64748b;padding:24px 12px;">No causes found.</td></tr>
+    <tr><td colspan="10" class="sa-empty">No causes found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -125,11 +127,11 @@ document.getElementById('createCauseForm').addEventListener('submit', async e =>
   const box = document.getElementById('createResult');
   box.style.display = 'block';
   if (res.ok) {
-    box.style.background = '#064e3b'; box.style.color = '#6ee7b7';
+    box.style.background = 'var(--c-ok-bg)'; box.style.color = 'var(--c-ok-fg)';
     box.textContent = data.message;
     setTimeout(() => location.reload(), 1500);
   } else {
-    box.style.background = '#450a0a'; box.style.color = '#fca5a5';
+    box.style.background = 'var(--c-bad-bg)'; box.style.color = 'var(--c-bad-fg)';
     box.textContent = data.error;
   }
 });
