@@ -5,13 +5,15 @@
 
 <!-- Search -->
 <div class="sa-card" style="margin-bottom:1rem;">
-  <form method="get" style="display:flex;gap:.75rem;align-items:flex-end;">
-    <div>
-      <label class="sa-label">Search</label>
+  <form method="get" class="sa-toolbar">
+    <div class="sa-filter">
+      <label class="sa-filter-label">Search</label>
       <input class="sa-input" type="text" name="q" value="{{ q }}" placeholder="Name or email" style="width:280px;">
     </div>
-    <button class="sa-btn sa-btn-primary" type="submit">Search</button>
-    <a class="sa-btn" href="{% url 'superadmin:guests' %}">Clear</a>
+    <div class="sa-toolbar-end">
+      <button class="sa-btn sa-btn-primary" type="submit">Search</button>
+      <a class="sa-btn" href="{% url 'superadmin:guests' %}">Clear</a>
+    </div>
   </form>
 </div>
 
@@ -43,12 +45,14 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
-        <button class="sa-btn sa-btn-sm sa-btn-success" onclick="adjustPts({{ g.user.pk }}, 1)">+ Points</button>
-        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="adjustPts({{ g.user.pk }}, -1)">− Points</button>
+        <div class="sa-actions">
+          <button class="sa-btn sa-btn-sm sa-btn-success" onclick="adjustPts({{ g.user.pk }}, 1)">+ Points</button>
+          <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="adjustPts({{ g.user.pk }}, -1)">− Points</button>
+        </div>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="7" style="color:#64748b;padding:24px 12px;">No guests found.</td></tr>
+    <tr><td colspan="7" class="sa-empty">No guests found.</td></tr>
     {% endfor %}
     </tbody>
   </table>

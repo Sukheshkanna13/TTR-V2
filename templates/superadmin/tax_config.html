@@ -4,7 +4,7 @@
 <h1 class="sa-page-title">Tax Configuration</h1>
 
 <div class="sa-card">
-  <p style="color:#94a3b8;font-size:13px;margin-bottom:20px;">
+  <p style="color:var(--c-text-faint);font-size:13px;margin-bottom:20px;">
     Set GST thresholds and rates per property. Rooms priced below the threshold use the lower rate; above it use the higher rate.
   </p>
 
@@ -46,7 +46,7 @@
       </form>
     </tr>
     {% empty %}
-    <tr><td colspan="5" style="color:#64748b;padding:24px 12px;">No properties found.</td></tr>
+    <tr><td colspan="5" class="sa-empty">No properties found.</td></tr>
     {% endfor %}
     </tbody>
   </table>

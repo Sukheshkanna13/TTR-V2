@@ -4,9 +4,9 @@
 <h1 class="sa-page-title">Audit Log</h1>
 
 <div class="sa-card" style="margin-bottom:1rem;">
-  <form method="get" style="display:flex;gap:.75rem;align-items:flex-end;">
-    <div>
-      <label class="sa-label">Filter by action</label>
+  <form method="get" class="sa-toolbar">
+    <div class="sa-filter">
+      <label class="sa-filter-label">Filter by action</label>
       <select class="sa-input" name="action">
         <option value="">All actions</option>
         {% for val, label in action_choices %}
@@ -14,8 +14,10 @@
         {% endfor %}
       </select>
     </div>
-    <button class="sa-btn sa-btn-primary" type="submit">Filter</button>
-    <a class="sa-btn" href="{% url 'superadmin:audit-log' %}">Clear</a>
+    <div class="sa-toolbar-end">
+      <button class="sa-btn sa-btn-primary" type="submit">Filter</button>
+      <a class="sa-btn" href="{% url 'superadmin:audit-log' %}">Clear</a>
+    </div>
   </form>
 </div>
 
@@ -38,11 +40,11 @@
       <td>{{ log.actor.email|default:"system" }}</td>
       <td><span class="badge badge-slate">{{ log.action }}</span></td>
       <td>{{ log.target_user.email|default:"—" }}</td>
-      <td style="font-size:12px;color:#94a3b8;max-width:300px;overflow:hidden;text-overflow:ellipsis;">{{ log.detail|default:"—" }}</td>
+      <td style="font-size:12px;color:var(--c-text-faint);max-width:300px;overflow:hidden;text-overflow:ellipsis;">{{ log.detail|default:"—" }}</td>
       <td style="font-family:monospace;font-size:11px;">{{ log.ip_address|default:"—" }}</td>
     </tr>
     {% empty %}
-    <tr><td colspan="6" style="color:#64748b;padding:24px 12px;">No audit entries found.</td></tr>
+    <tr><td colspan="6" class="sa-empty">No audit entries found.</td></tr>
     {% endfor %}
     </tbody>
   </table>

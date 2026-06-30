@@ -4,13 +4,13 @@
 <h1 class="sa-page-title">All Bookings</h1>
 
 <div class="sa-card" style="margin-bottom:1rem">
-  <form method="get" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end">
-    <div>
-      <label class="sa-label">Search</label>
+  <form method="get" class="sa-toolbar">
+    <div class="sa-filter">
+      <label class="sa-filter-label">Search</label>
       <input class="sa-input" type="text" name="q" value="{{ q }}" placeholder="Name / email / ref">
     </div>
-    <div>
-      <label class="sa-label">Status</label>
+    <div class="sa-filter">
+      <label class="sa-filter-label">Status</label>
       <select class="sa-input" name="status">
         <option value="">All</option>
         {% for val, label in status_choices %}
@@ -18,8 +18,8 @@
         {% endfor %}
       </select>
     </div>
-    <div>
-      <label class="sa-label">Property</label>
+    <div class="sa-filter">
+      <label class="sa-filter-label">Property</label>
       <select class="sa-input" name="property">
         <option value="">All</option>
         {% for p in properties %}
@@ -27,16 +27,18 @@
         {% endfor %}
       </select>
     </div>
-    <div>
-      <label class="sa-label">From</label>
+    <div class="sa-filter">
+      <label class="sa-filter-label">From</label>
       <input class="sa-input" type="date" name="from" value="{{ date_from }}">
     </div>
-    <div>
-      <label class="sa-label">To</label>
+    <div class="sa-filter">
+      <label class="sa-filter-label">To</label>
       <input class="sa-input" type="date" name="to" value="{{ date_to }}">
     </div>
-    <button class="sa-btn sa-btn-primary" type="submit">Filter</button>
-    <a class="sa-btn" href="{% url 'superadmin:bookings' %}">Clear</a>
+    <div class="sa-toolbar-end">
+      <button class="sa-btn sa-btn-primary" type="submit">Filter</button>
+      <a class="sa-btn" href="{% url 'superadmin:bookings' %}">Clear</a>
+    </div>
   </form>
 </div>
 
@@ -67,6 +69,7 @@
       <td>₹{{ b.total_price|floatformat:0 }}</td>
       <td><span class="sa-badge sa-badge-{{ b.status }}">{{ b.status }}</span></td>
       <td>
+        <div class="sa-actions">
         {% if b.status == 'confirmed' %}
         <button class="sa-btn sa-btn-sm sa-btn-success"
                 onclick="completeBooking('{{ b.id }}')">Complete</button>
@@ -76,10 +79,11 @@
         <button class="sa-btn sa-btn-sm sa-btn-danger"
                 onclick="cancelBooking('{{ b.id }}')">Cancel hold</button>
         {% endif %}
+        </div>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="9" style="color:#64748b;padding:24px 12px;">No bookings found.</td></tr>
+    <tr><td colspan="9" class="sa-empty">No bookings found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
