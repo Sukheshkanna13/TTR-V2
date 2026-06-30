@@ -248,6 +248,18 @@ body .sa-badge-inactive {
   color: var(--c-bad-fg) !important;
   border: 1px solid var(--c-bad-bd) !important;
 }
+/* Loyalty tiers + locked state — light-token equivalents of the removed dark defs */
+body .badge-gold,
+body .badge-amber {
+  background: var(--c-warn-bg) !important;
+  color: var(--c-warn-fg) !important;
+  border: 1px solid var(--c-warn-bd) !important;
+}
+body .badge-silver {
+  background: var(--c-hover) !important;
+  color: var(--c-text-muted) !important;
+  border: 1px solid var(--c-border) !important;
+}
 
 /* Form inputs, buttons, and labels globally overriden with higher specificity */
 body .sa-input,
@@ -340,6 +352,15 @@ body .sa-btn-danger {
 body .sa-btn-danger:hover {
   background-color: #991717 !important;
   border-color: #991717 !important;
+}
+body .sa-btn-amber {
+  background-color: var(--c-warn-fg) !important;
+  border-color: var(--c-warn-fg) !important;
+  color: var(--c-surface) !important;
+}
+body .sa-btn-amber:hover {
+  background-color: #92400E !important;
+  border-color: #92400E !important;
 }
 body .sa-btn-sm {
   padding: 4px 10px !important;
