@@ -6,8 +6,8 @@
 <!-- Create Room -->
 <div class="sa-card">
   <h2 class="sa-section-title">Add Room</h2>
-  <form id="createRoomForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
-    <div>
+  <form id="createRoomForm" class="sa-toolbar">
+    <div class="sa-field">
       <label class="sa-label">Property</label>
       <select class="sa-input" name="property_id" required>
         <option value="">Select property</option>
@@ -16,11 +16,11 @@
         {% endfor %}
       </select>
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Room Name</label>
       <input class="sa-input" type="text" name="name" required placeholder="e.g. Ocean View 301">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Type</label>
       <select class="sa-input" name="room_type">
         {% for val, label in operational_choices %}{% endfor %}
@@ -29,41 +29,45 @@
         <option value="deluxe">Deluxe</option>
       </select>
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Price / Night (₹)</label>
       <input class="sa-input" type="number" name="price_per_night" step="1" min="1" required style="width:120px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Capacity</label>
       <input class="sa-input" type="number" name="capacity" value="2" min="1" style="width:80px;">
     </div>
-    <div style="position:relative;">
+    <div class="sa-field" style="position:relative;">
       <label class="sa-label">Amenities</label>
       <input type="hidden" name="amenities" id="create-amenities-hidden" value="">
       <div id="create-amenities-dropdown" class="custom-multiselect-container"></div>
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Rating (0–5)</label>
       <input class="sa-input" type="number" name="rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;" required value="4.5">
     </div>
-    <button class="sa-btn sa-btn-primary" type="submit">Create Room</button>
+    <div class="sa-toolbar-end">
+      <button class="sa-btn sa-btn-primary" type="submit">Create Room</button>
+    </div>
   </form>
   <div id="createResult" style="margin-top:12px;display:none;padding:10px;border-radius:6px;font-size:13px;"></div>
 </div>
 
 <!-- Filter -->
-<div class="sa-card" style="margin-bottom:1rem;">
-  <form method="get" style="display:flex;gap:.75rem;align-items:flex-end;">
-    <div>
-      <label class="sa-label">Property</label>
-      <select class="sa-input" name="property" onchange="this.form.submit()">
+<div class="sa-card">
+  <form method="get" class="sa-toolbar">
+    <label class="sa-filter">
+      <span class="sa-filter-label">Property</span>
+      <select name="property" onchange="this.form.submit()">
         <option value="">All properties</option>
         {% for p in properties %}
         <option value="{{ p.id }}" {% if property_filter == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
         {% endfor %}
       </select>
+    </label>
+    <div class="sa-toolbar-end">
+      <a class="sa-btn" href="{% url 'superadmin:rooms' %}">Clear</a>
     </div>
-    <a class="sa-btn" href="{% url 'superadmin:rooms' %}">Clear</a>
   </form>
 </div>
 
@@ -107,19 +111,21 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
-        <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="openEditModal('{{ r.id }}', '{{ r.name|escapejs }}', '{{ r.room_type }}', '{{ r.price_per_night }}', '{{ r.capacity }}', '{{ r.amenities|escapejs }}', '{{ r.description|escapejs }}', '{{ r.property_id }}', '{{ r.rating|default_if_none:"" }}')">Edit</button>
-        <button class="sa-btn sa-btn-sm" onclick="toggleActive('{{ r.id }}', this)">
-          {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
-        </button>
-        <button class="sa-btn sa-btn-sm" id="feat-btn-{{ r.id }}" onclick="toggleFeatured('{{ r.id }}', this)" title="Feature on home page">
-          {% if r.is_featured %}★ Featured{% else %}☆ Feature{% endif %}
-        </button>
-        <a class="sa-btn sa-btn-sm" href="{% url 'superadmin:room-images' r.id %}">📷 {{ r.images.count }}</a>
-        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteRoom('{{ r.id }}', '{{ r.name|escapejs }}')">Delete</button>
+        <div class="sa-actions">
+          <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="openEditModal('{{ r.id }}', '{{ r.name|escapejs }}', '{{ r.room_type }}', '{{ r.price_per_night }}', '{{ r.capacity }}', '{{ r.amenities|escapejs }}', '{{ r.description|escapejs }}', '{{ r.property_id }}', '{{ r.rating|default_if_none:"" }}')">Edit</button>
+          <button class="sa-btn sa-btn-sm" onclick="toggleActive('{{ r.id }}', this)">
+            {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
+          </button>
+          <button class="sa-btn sa-btn-sm" id="feat-btn-{{ r.id }}" onclick="toggleFeatured('{{ r.id }}', this)" title="Feature on home page">
+            {% if r.is_featured %}★ Featured{% else %}☆ Feature{% endif %}
+          </button>
+          <a class="sa-btn sa-btn-sm" href="{% url 'superadmin:room-images' r.id %}">📷 {{ r.images.count }}</a>
+          <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteRoom('{{ r.id }}', '{{ r.name|escapejs }}')">Delete</button>
+        </div>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="10" style="color:#64748b;padding:24px 12px;">No rooms found.</td></tr>
+    <tr><td colspan="10" class="sa-empty">No rooms found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -127,16 +133,16 @@
 
 <!-- Edit Room Modal -->
 <div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;width:500px;max-width:90vw;">
-    <h3 style="color:#f8fafc;font-size:16px;margin-bottom:16px;">Edit Room</h3>
-    <form id="editForm" style="display:flex;flex-direction:column;gap:12px;">
+  <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;padding:24px;width:500px;max-width:90vw;">
+    <h3 class="sa-section-title">Edit Room</h3>
+    <form id="editForm">
       <input type="hidden" id="edit-room-id">
-      <div style="display:flex;gap:12px;">
-        <div style="flex:1;">
+      <div class="sa-field-row">
+        <div class="sa-field" style="flex:1;">
           <label class="sa-label">Name</label>
           <input class="sa-input" type="text" id="edit-name" style="width:100%;">
         </div>
-        <div>
+        <div class="sa-field">
           <label class="sa-label">Type</label>
           <select class="sa-input" id="edit-type">
             <option value="single">Single</option>
@@ -145,16 +151,16 @@
           </select>
         </div>
       </div>
-      <div style="display:flex;gap:12px;">
-        <div>
+      <div class="sa-field-row">
+        <div class="sa-field">
           <label class="sa-label">Price / Night (₹)</label>
           <input class="sa-input" type="number" id="edit-price" step="1" style="width:120px;">
         </div>
-        <div>
+        <div class="sa-field">
           <label class="sa-label">Capacity</label>
           <input class="sa-input" type="number" id="edit-capacity" min="1" style="width:80px;">
         </div>
-        <div style="flex:1;">
+        <div class="sa-field" style="flex:1;">
           <label class="sa-label">Property</label>
           <select class="sa-input" id="edit-property" style="width:100%;">
             {% for p in properties %}
@@ -163,22 +169,22 @@
           </select>
         </div>
       </div>
-      <div style="position:relative;">
+      <div class="sa-field" style="position:relative;">
         <label class="sa-label">Amenities</label>
         <input type="hidden" id="edit-amenities" style="width:100%;">
         <div id="edit-amenities-dropdown" class="custom-multiselect-container"></div>
       </div>
-      <div style="display:flex;gap:12px;">
-        <div style="flex:1;">
+      <div class="sa-field-row">
+        <div class="sa-field" style="flex:1;">
           <label class="sa-label">Description</label>
           <textarea class="sa-input" id="edit-description" rows="3" style="width:100%;resize:vertical;"></textarea>
         </div>
-        <div>
+        <div class="sa-field">
           <label class="sa-label">Rating (0–5)</label>
           <input class="sa-input" type="number" id="edit-rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;" required>
         </div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <div class="sa-actions" style="justify-content:flex-end;">
         <button type="button" class="sa-btn" onclick="closeEditModal()">Cancel</button>
         <button type="submit" class="sa-btn sa-btn-primary">Save Changes</button>
       </div>
@@ -262,14 +268,14 @@ function setupAmenitiesDropdown(containerId, hiddenInputId, initialValue = '') {
   if (!container || !hiddenInput) return;
 
   container.innerHTML = `
-    <div class="multiselect-select-box" style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:13px; color:#e2e8f0; cursor:pointer; min-height:34px; min-width:200px;">
+    <div class="multiselect-select-box" style="display:flex; justify-content:space-between; align-items:center; background:var(--c-surface); border:1px solid var(--c-border); padding:6px 10px; border-radius:6px; font-size:13px; color:var(--c-text); cursor:pointer; min-height:34px; min-width:200px;">
       <span class="selected-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">Select amenities</span>
-      <span style="font-size:10px; color:#64748b;">▼</span>
+      <span style="font-size:10px; color:var(--c-text-muted);">▼</span>
     </div>
-    <div class="multiselect-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:#1e293b; border:1px solid #334155; border-radius:6px; margin-top:4px; padding:8px; z-index:1000; max-height:220px; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); width:100%;">
+    <div class="multiselect-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--c-surface); border:1px solid var(--c-border); border-radius:6px; margin-top:4px; padding:8px; z-index:1000; max-height:220px; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); width:100%;">
       <div class="options-container" style="display:flex; flex-direction:column; gap:6px;"></div>
-      <div style="display:flex; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid #334155;">
-        <input type="text" class="custom-amenity-input" placeholder="Custom..." style="flex:1; background:#0f172a; border:1px solid #334155; color:#e2e8f0; font-size:12px; padding:4px 6px; border-radius:4px; outline:none;">
+      <div style="display:flex; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid var(--c-border);">
+        <input type="text" class="custom-amenity-input" placeholder="Custom..." style="flex:1; background:var(--c-surface); border:1px solid var(--c-border); color:var(--c-text); font-size:12px; padding:4px 6px; border-radius:4px; outline:none;">
         <button type="button" class="add-custom-btn sa-btn sa-btn-sm" style="padding:4px 8px !important; font-size:11px !important; margin-right:0 !important;">Add</button>
       </div>
     </div>
@@ -325,7 +331,7 @@ function setupAmenitiesDropdown(containerId, hiddenInputId, initialValue = '') {
     currentOptions.forEach(opt => {
       const isChecked = selectedItems.has(opt) ? 'checked' : '';
       const itemDiv = document.createElement('label');
-      itemDiv.style.cssText = 'display:flex; align-items:center; gap:8px; color:#e2e8f0; font-size:13px; cursor:pointer; user-select:none;';
+      itemDiv.style.cssText = 'display:flex; align-items:center; gap:8px; color:var(--c-text); font-size:13px; cursor:pointer; user-select:none;';
       itemDiv.innerHTML = `
         <input type="checkbox" value="${opt}" ${isChecked} style="cursor:pointer;">
         <span>${opt}</span>
