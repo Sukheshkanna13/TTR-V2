@@ -2,5 +2,5 @@
 # Points Pyrefly at the project virtualenv so it can resolve Django and other
 # third-party packages. Without this, editors fall back to the system Python
 # (which has no project deps) and report spurious "Cannot find module" errors.
-python-interpreter-path = "venv/bin/python3"
-python-version = "3.14"
+python-interpreter-path = ".venv/bin/python3"
+python-version = "3.13"
