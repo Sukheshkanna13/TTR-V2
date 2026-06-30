@@ -6,32 +6,32 @@
 <!-- Create Activity -->
 <div class="sa-card">
   <h2 class="sa-section-title">Add Activity</h2>
-  <form id="createActivityForm" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
-    <div>
+  <form id="createActivityForm" enctype="multipart/form-data" class="sa-field-row" style="align-items:flex-end;">
+    <div class="sa-field">
       <label class="sa-label">Title</label>
       <input class="sa-input" type="text" name="title" required placeholder="e.g. Guided Nature Walk" style="width:200px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Category</label>
       <input class="sa-input" type="text" name="category" required placeholder="e.g. Outdoor" style="width:120px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Description</label>
       <input class="sa-input" type="text" name="description" placeholder="Short summary" style="min-width:250px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Price / Action label</label>
       <input class="sa-input" type="text" name="price" value="Request to book" placeholder="Request to book" style="width:130px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Image</label>
       <input class="sa-input" type="file" name="image" accept="image/*" style="padding:4px; width:200px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Link</label>
       <input class="sa-input" type="url" name="whatsapp_link" placeholder="Custom URL (e.g. https://...)" style="width:180px;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">WhatsApp Text</label>
       <input class="sa-input" type="text" name="whatsapp_message" placeholder="Prefilled chat message" style="width:180px;">
     </div>
@@ -63,17 +63,17 @@
     <tr id="activity-row-{{ a.id }}">
       <td style="width:70px;">
         {% if a.image %}
-          <img src="{{ a.image.url }}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+          <img src="{{ a.image.url }}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--c-border);">
         {% else %}
           {% load static %}
           {% if "cycling" in a.title|lower %}
-            <img src="{% static 'images/coastal_cycling.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+            <img src="{% static 'images/coastal_cycling.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--c-border);">
           {% elif "massage" in a.title|lower %}
-            <img src="{% static 'images/spa_abhyanga.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+            <img src="{% static 'images/spa_abhyanga.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--c-border);">
           {% elif "printing" in a.title|lower %}
-            <img src="{% static 'images/block_printing.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #334155;">
+            <img src="{% static 'images/block_printing.png' %}" alt="{{ a.title }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--c-border);">
           {% else %}
-            <div style="width:60px;height:40px;background:#334155;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;">No Image</div>
+            <div style="width:60px;height:40px;background:var(--c-hover);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--c-text-faint);">No Image</div>
           {% endif %}
         {% endif %}
         <input type="file" id="img-{{ a.id }}" style="display:none;" onchange="uploadImageChange('{{ a.id }}')">
@@ -105,16 +105,18 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
+        <span class="sa-actions">
         <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="saveActivity('{{ a.id }}')">Save</button>
         <button class="sa-btn sa-btn-sm" onclick="document.getElementById('img-' + '{{ a.id }}').click()">Image</button>
         <button class="sa-btn sa-btn-sm" onclick="toggleActivity('{{ a.id }}')">
           {% if a.is_active %}Deactivate{% else %}Activate{% endif %}
         </button>
         <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteActivity('{{ a.id }}')">Delete</button>
+        </span>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="10" style="color:#64748b;padding:24px 12px;">No activities found.</td></tr>
+    <tr><td colspan="10" class="sa-empty">No activities found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -134,11 +136,11 @@ document.getElementById('createActivityForm').addEventListener('submit', async e
   const box = document.getElementById('createResult');
   box.style.display = 'block';
   if (res.ok) {
-    box.style.background = '#064e3b'; box.style.color = '#6ee7b7';
+    box.style.background = 'var(--c-ok-bg)'; box.style.color = 'var(--c-ok-fg)';
     box.textContent = data.message;
     setTimeout(() => location.reload(), 1500);
   } else {
-    box.style.background = '#450a0a'; box.style.color = '#fca5a5';
+    box.style.background = 'var(--c-bad-bg)'; box.style.color = 'var(--c-bad-fg)';
     box.textContent = data.error;
   }
 });

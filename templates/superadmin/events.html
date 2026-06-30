@@ -4,41 +4,41 @@
 <h1 class="sa-page-title">Events & Attractions Management</h1>
 
 <!-- Filters -->
-<div class="sa-card" style="display:flex;gap:16px;align-items:center;">
-  <span style="font-size:13px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Filters:</span>
-  <div>
-    <label class="sa-label">Category</label>
-    <select class="sa-input" onchange="filterEvents('category', this.value)">
+<div class="sa-card sa-toolbar">
+  <span class="sa-filter-label">Filters:</span>
+  <label class="sa-filter">
+    <span class="sa-filter-label">Category</span>
+    <select onchange="filterEvents('category', this.value)">
       <option value="">All Categories</option>
       {% for val, lbl in category_choices %}
         <option value="{{ val }}" {% if category_filter == val %}selected{% endif %}>{{ lbl }}</option>
       {% endfor %}
     </select>
-  </div>
-  <div>
-    <label class="sa-label">City</label>
-    <select class="sa-input" onchange="filterEvents('city', this.value)">
+  </label>
+  <label class="sa-filter">
+    <span class="sa-filter-label">City</span>
+    <select onchange="filterEvents('city', this.value)">
       <option value="">All Cities</option>
       <option value="Pondicherry" {% if city_filter == 'Pondicherry' %}selected{% endif %}>Pondicherry</option>
       <option value="Near Auroville" {% if city_filter == 'Near Auroville' %}selected{% endif %}>Near Auroville</option>
       <option value="Bengaluru" {% if city_filter == 'Bengaluru' %}selected{% endif %}>Bengaluru</option>
     </select>
-  </div>
+  </label>
 </div>
 
 <!-- Create Event / Attraction -->
 <div class="sa-card">
   <h2 class="sa-section-title">Add Event / Attraction</h2>
   <form id="createEventForm" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:1rem;align-items:flex-end;">
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Name</label>
       <input class="sa-input" type="text" name="name" required placeholder="e.g. Clay Art Workshop" style="width:100%;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">City</label>
       <input class="sa-input" type="text" name="city" required placeholder="e.g. Pondicherry" style="width:100%;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Category</label>
       <select class="sa-input" name="category" style="width:100%;">
         {% for val, lbl in category_choices %}
@@ -46,19 +46,19 @@
         {% endfor %}
       </select>
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Address</label>
       <input class="sa-input" type="text" name="address" placeholder="e.g. White Town" style="width:100%;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Opening Hours / Timing</label>
       <input class="sa-input" type="text" name="opening_hrs" placeholder="e.g. Sat 6:00 AM" style="width:100%;">
     </div>
-    <div>
+    <div class="sa-field">
       <label class="sa-label">Link</label>
       <input class="sa-input" type="url" name="whatsapp_link" placeholder="e.g. https://..." style="width:100%;">
     </div>
-    <div style="grid-column: 1 / -1;">
+    <div class="sa-field" style="grid-column: 1 / -1;">
       <label class="sa-label">Description</label>
       <textarea class="sa-input" name="description" placeholder="Write description here..." rows="2" style="width:100%;resize:vertical;"></textarea>
     </div>
@@ -124,16 +124,18 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
+        <span class="sa-actions">
         <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="saveEvent('{{ e.id }}')">Save</button>
         <a class="sa-btn sa-btn-sm" href="{% url 'superadmin:event-images' e.id %}">Photos ({{ e.photos.count }})</a>
         <button class="sa-btn sa-btn-sm" onclick="toggleVisible('{{ e.id }}')">
           {% if e.is_visible %}Hide{% else %}Show{% endif %}
         </button>
         <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="deleteEvent('{{ e.id }}')">Delete</button>
+        </span>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="10" style="color:#64748b;padding:24px 12px;">No events or attractions found.</td></tr>
+    <tr><td colspan="10" class="sa-empty">No events or attractions found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -164,11 +166,11 @@ document.getElementById('createEventForm').addEventListener('submit', async e =>
   const box = document.getElementById('createResult');
   box.style.display = 'block';
   if (res.ok) {
-    box.style.background = '#064e3b'; box.style.color = '#6ee7b7';
+    box.style.background = 'var(--c-ok-bg)'; box.style.color = 'var(--c-ok-fg)';
     box.textContent = data.message;
     setTimeout(() => location.reload(), 1500);
   } else {
-    box.style.background = '#450a0a'; box.style.color = '#fca5a5';
+    box.style.background = 'var(--c-bad-bg)'; box.style.color = 'var(--c-bad-fg)';
     box.textContent = data.error;
   }
 });
