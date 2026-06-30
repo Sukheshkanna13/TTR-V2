@@ -279,6 +279,10 @@ body .sa-input-inline:focus {
   background-color: var(--c-bg) !important;
   border-color: var(--c-border) !important;
 }
+body .sa-input-sm {
+  padding: 2px 6px !important;
+  font-size: var(--fs-xs) !important;
+}
 body .sa-label {
   display: block !important;
   font-size: 11px !important;
