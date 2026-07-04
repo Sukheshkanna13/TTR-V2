@@ -5,6 +5,7 @@ Serializers for rooms and bookings.
 from datetime import date
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Booking, Room, RoomImage
@@ -167,6 +168,22 @@ class SearchSerializer(serializers.Serializer):
         # guests=0 means "any" — normalise to 1 so capacity filter still makes sense
         if data.get("guests", 1) < 1:
             data["guests"] = 1
+        return data
+
+
+class CheckRoomAvailabilitySerializer(serializers.Serializer):
+    check_in = serializers.DateField()
+    check_out = serializers.DateField()
+
+    def validate(self, data):
+        check_in = data.get("check_in")
+        check_out = data.get("check_out")
+
+        if check_in and check_in < timezone.now().date():
+            raise serializers.ValidationError("Check-in date cannot be in the past.")
+        if check_in and check_out and check_in >= check_out:
+            raise serializers.ValidationError("Check-out date must be after check-in date.")
+
         return data
 
 

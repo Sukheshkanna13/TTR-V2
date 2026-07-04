@@ -5,7 +5,9 @@ Base settings common to all environments.
 
 import os
 from pathlib import Path
+# pyrefly: ignore [missing-import]
 from decouple import Csv, config
+# pyrefly: ignore [missing-import]
 import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -18,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # CORE SETTINGS
 # =============================================================================
 
-SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-production")
+SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
@@ -103,15 +105,9 @@ WSGI_APPLICATION = "hotel_booking.wsgi.application"
 # =============================================================================
 
 # Default to SQLite but allow override via DATABASE_URL
+db_url = config('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ttr_v2',
-        'USER': 'root',
-        'PASSWORD': '1234',  
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-    }
+    'default': dj_database_url.parse(db_url, conn_max_age=600, conn_health_checks=True)
 }
 
 # =============================================================================

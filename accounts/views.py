@@ -24,7 +24,6 @@ from rest_framework.views import APIView
 from django_q.tasks import async_task
 
 from .models import PendingRegistration
-from .permissions import IsSuperAdmin
 from .role_routing import (
     CENTRAL_LOGIN_URL,
     get_post_login_redirect,
@@ -37,7 +36,6 @@ from .serializers import (
     SetPasswordSerializer,
     UserSerializer,
     VerifyOTPSerializer,
-    EmployeeCreationSerializer,
 )
 from .utils import (
     check_login_lock,
@@ -430,11 +428,7 @@ class LogoutView(APIView):
         logout(request)
         return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
 
-    def get(self, request):
-        """Allow GET logout for sidebar <a href> links in admin portals."""
-        logger.info("User logged out (GET): %s", request.user.email)
-        logout(request)
-        return redirect(CENTRAL_LOGIN_URL)
+
 
 
 class CurrentUserView(APIView):
@@ -560,57 +554,6 @@ def update_profile(request):
 
     return JsonResponse({'error': 'Unknown field.'}, status=400)
 
-
-# =============================================================================
-# EMPLOYEE CREATION (Super Admin only)
-# =============================================================================
-
-class CreateEmployeeView(APIView):
-    """POST /admin-api/employees/create/ — Super Admin only."""
-
-    permission_classes = [IsSuperAdmin]
-
-    def post(self, request):
-        serializer = EmployeeCreationSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-        from .models import UserProfile
-        from rooms.models import Property
-
-        data = serializer.validated_data
-        temp_password = secrets.token_urlsafe(12)
-
-        user = User.objects.create_user(
-            email=data["email"],
-            full_name=data["full_name"],
-            phone=data["phone"],
-            password=temp_password,
-        )
-        user.is_active = True
-        user.is_staff = data["role"] == "super_admin"
-        user.save()
-
-        profile, _ = UserProfile.objects.get_or_create(user=user)
-        profile.role = data["role"]
-        profile.fin_level = data.get("fin_level")
-        profile.must_change_password = True
-        profile.save()
-
-        if data.get("assigned_properties"):
-            profile.assigned_properties.set(
-                Property.objects.filter(id__in=data["assigned_properties"])
-            )
-
-        return Response(
-            {
-                "message": "Employee created successfully.",
-                "email": user.email,
-                "temporary_password": temp_password,
-                "must_change_password": True,
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
 
 # ── Forgot Password (3-step OTP reset) ────────────────────────────────────────

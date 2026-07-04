@@ -11,6 +11,7 @@ Routes:
         GET /rooms/<room_id>/       — Get room details
 """
 
+# pyrefly: ignore [missing-import]
 from django.urls import path
 
 from . import views

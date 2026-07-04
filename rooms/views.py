@@ -23,7 +23,6 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from accounts.permissions import IsEmployee
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import serializers
@@ -49,6 +48,7 @@ from .serializers import (
     RoomSerializer,
     SearchSerializer,
     OTABlockSerializer,
+    CheckRoomAvailabilitySerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -254,23 +254,6 @@ class RoomDetailView(APIView):
             {"room": RoomSerializer(room, context={"request": request}).data},
             status=status.HTTP_200_OK,
         )
-
-
-class CheckRoomAvailabilitySerializer(serializers.Serializer):
-    check_in = serializers.DateField()
-    check_out = serializers.DateField()
-
-    def validate(self, data):
-        check_in = data.get("check_in")
-        check_out = data.get("check_out")
-
-        if check_in and check_in < timezone.now().date():
-            raise serializers.ValidationError("Check-in date cannot be in the past.")
-        if check_in and check_out and check_in >= check_out:
-            raise serializers.ValidationError("Check-out date must be after check-in date.")
-
-        return data
-
 
 class CheckRoomAvailabilityView(APIView):
     """
@@ -833,112 +816,6 @@ class MyBookingsView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-
-
-# ============================================================================
-# PHASE 5: OTA Calendar API
-# ============================================================================
-
-class CalendarView(APIView):
-    """
-    GET /api/properties/{id}/calendar/
-    Returns 30-day view of bookings, holds, and OTA blocks.
-    """
-    permission_classes = [AllowAny]
-
-    def get(self, request, property_id):
-        from datetime import timedelta
-        today = timezone.now().date()
-        end_date = today + timedelta(days=30)
-        
-        # Get rooms for this property
-        rooms = Room.objects.filter(property_id=property_id, is_active=True)
-        room_ids = rooms.values_list('id', flat=True)
-        
-        # Get bookings for these rooms
-        bookings = Booking.objects.filter(
-            room_id__in=room_ids,
-            check_in__lt=end_date,
-            check_out__gt=today,
-            status__in=['confirmed', 'pending']
-        )
-        
-        # Get OTA blocks
-        blocks = OTABlock.objects.filter(
-            room_id__in=room_ids,
-            start_date__lt=end_date,
-            end_date__gt=today
-        )
-        
-        # Format response
-        calendar_data = []
-        for room in rooms:
-            room_bookings = bookings.filter(room=room)
-            room_blocks = blocks.filter(room=room)
-            
-            events = []
-            for b in room_bookings:
-                # Only include pending if hold hasn't expired
-                if b.status == 'pending' and getattr(b, 'is_hold_expired', False):
-                    continue
-                    
-                color = 'red' if b.status == 'confirmed' else 'yellow'
-                events.append({
-                    "type": "booking",
-                    "status": "HELD" if b.status == "pending" else "CONFIRMED",
-                    "start_date": b.check_in,
-                    "end_date": b.check_out,
-                    "color": color
-                })
-                
-            for bl in room_blocks:
-                events.append({
-                    "type": "block",
-                    "id": bl.id,
-                    "start_date": bl.start_date,
-                    "end_date": bl.end_date,
-                    "reason": bl.reason,
-                    "color": "grey"
-                })
-                
-            calendar_data.append({
-                "room_id": room.id,
-                "room_name": room.name,
-                "events": events
-            })
-            
-        return Response(calendar_data)
-
-
-class BlockRoomView(APIView):
-    """
-    POST /block/
-    Employee endpoint to manually block a room.
-    """
-    permission_classes = [IsEmployee]
-
-    def post(self, request):
-        serializer = OTABlockSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UnblockRoomView(APIView):
-    """
-    POST /unblock/{id}/
-    Employee endpoint to remove a manual block.
-    """
-    permission_classes = [IsEmployee]
-
-    def post(self, request, pk):
-        try:
-            block = OTABlock.objects.get(pk=pk)
-            block.delete()
-            return Response({"message": "Block removed successfully."}, status=status.HTTP_200_OK)
-        except OTABlock.DoesNotExist:
-            return Response({"error": "Block not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 # ============================================================================
