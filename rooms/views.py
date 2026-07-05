@@ -25,7 +25,6 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import serializers
 
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -47,7 +46,6 @@ from .serializers import (
     HoldRoomSerializer,
     RoomSerializer,
     SearchSerializer,
-    OTABlockSerializer,
     CheckRoomAvailabilitySerializer,
 )
 
@@ -340,7 +338,6 @@ class HoldRoomView(APIView):
             )
 
         # Calculate total price dynamically
-        num_nights = (check_out - check_in).days
         total_price = room.calculate_price(check_in, check_out)
 
         # ----------------------------------------------------------------

@@ -43,8 +43,6 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
-        <button class="sa-btn sa-btn-sm sa-btn-success" onclick="adjustPts({{ g.user.pk }}, 1)">+ Points</button>
-        <button class="sa-btn sa-btn-sm sa-btn-danger" onclick="adjustPts({{ g.user.pk }}, -1)">− Points</button>
       </td>
     </tr>
     {% empty %}
@@ -54,32 +52,6 @@
   </table>
 </div>
 
-<script>
-const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-
-async function adjustPts(userId, direction) {
-  const raw = prompt(direction > 0 ? 'Points to ADD:' : 'Points to DEDUCT:');
-  if (!raw) return;
-  const amount = parseInt(raw, 10);
-  if (isNaN(amount) || amount <= 0) return alert('Enter a positive number.');
-
-  const reason = prompt('Reason (optional):') || 'Manual adjustment';
-  const finalAmount = direction > 0 ? amount : -amount;
-
-  const res = await fetch(`/super-admin/guests/${userId}/loyalty/`, {
-    method: 'POST',
-    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
-    body: JSON.stringify({amount: finalAmount, reason}),
-  });
-  const data = await res.json();
-  if (res.ok) {
-    document.getElementById('pts-' + userId).textContent = data.loyalty_points;
-    alert(data.message);
-  } else {
-    alert(data.error);
-  }
-}
-</script>
 
 <style>
 .sa-input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;}

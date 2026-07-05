@@ -157,7 +157,6 @@ class FeaturedForHomeTest(TestCase):
         a = _frroom(_frprop('A'), name='A', rating='4.9')
         b = _frroom(_frprop('B'), name='B', rating='4.8')
         c = _frroom(_frprop('C'), name='C', rating='4.7')
-        d = _frroom(_frprop('D'), name='D', rating='4.6')
         result = Room.objects.featured_for_home()
         self.assertEqual([r.id for r in result], [a.id, b.id, c.id])
 

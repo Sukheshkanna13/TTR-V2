@@ -4,6 +4,7 @@ Uses email as the unique identifier instead of username.
 OTP is stored directly in PostgreSQL with an expiry timestamp.
 """
 
+from typing import ClassVar
 import uuid
 
 from django.conf import settings
@@ -23,7 +24,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     - Password is hashed with bcrypt (configured in settings.PASSWORD_HASHERS)
     """
 
-    id = models.UUIDField(
+    id = models.UUIDField(  # pyrefly: ignore [bad-override-mutable-attribute]
         primary_key=True,
         default=uuid.uuid4,
         editable=False,
@@ -62,7 +63,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=timezone.now,
     )
 
-    objects = UserManager()
+    objects: ClassVar[UserManager] = UserManager()
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name"]

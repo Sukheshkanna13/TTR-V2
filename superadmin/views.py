@@ -1,8 +1,6 @@
 import json
 import secrets
-from decimal import Decimal, InvalidOperation
-
-from django.contrib.auth import get_user_model
+from decimal import Decimal
 from django.contrib.auth.hashers import make_password
 from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
@@ -14,7 +12,7 @@ from rooms.models import Booking, Room, RoomImage, Property
 from .decorators import require_super_admin
 from .models import AuditLog, PropertyTaxConfig
 
-User = get_user_model()
+from accounts.models import User
 
 
 def _log(request, action, target_user=None, detail=''):
@@ -106,12 +104,12 @@ def dashboard_live_data(request):
     pending_holds = []
     for b in pending_qs:
         reference = b.booking_reference or str(b.id)
-        if b.user:
+        if getattr(b, 'user', None):
             guest = b.user.full_name or b.user.email
         else:
             guest = '(deleted)'
-        room_name = b.room.name if b.room else ''
-        property_name = b.room.property.name if b.room and b.room.property else ''
+        room_name = b.room.name
+        property_name = b.room.property.name if b.room.property else ''
         pending_holds.append({
             'id': str(b.id),
             'reference': reference,
@@ -203,12 +201,20 @@ def employee_update(request, user_id):
         return JsonResponse({'error': 'You cannot disable your own account.'}, status=400)
 
     if action == 'revoke':
-        employee.userprofile.revoke(request.user)
+        if hasattr(employee, 'userprofile'):
+            employee.userprofile.revoke(request.user)
+        else:
+            employee.is_active = False
+            employee.save(update_fields=['is_active'])
         _log(request, 'EMPLOYEE_REVOKED', target_user=employee)
         return JsonResponse({'message': 'Employee revoked. Access removed.'})
 
     if action == 'reinstate':
-        employee.userprofile.reinstate()
+        if hasattr(employee, 'userprofile'):
+            employee.userprofile.reinstate()
+        else:
+            employee.is_active = True
+            employee.save(update_fields=['is_active'])
         _log(request, 'EMPLOYEE_UNLOCKED', target_user=employee,
              detail='reinstated from revoked')
         return JsonResponse({'message': 'Employee reinstated.'})
@@ -229,23 +235,26 @@ def employee_update(request, user_id):
         temp = secrets.token_urlsafe(12)
         employee.set_password(temp)
         employee.save()
-        employee.userprofile.must_change_password = True
-        employee.userprofile.save(update_fields=['must_change_password'])
+        if hasattr(employee, 'userprofile'):
+            employee.userprofile.must_change_password = True
+            employee.userprofile.save(update_fields=['must_change_password'])
         _log(request, 'PASSWORD_RESET', target_user=employee)
         return JsonResponse({'message': f'Password reset. New temp: {temp}', 'temp_password': temp})
 
     if action == 'update_fin':
         fin = data.get('fin_level', 'C')
-        employee.userprofile.fin_level = fin
-        employee.userprofile.save(update_fields=['fin_level'])
+        if hasattr(employee, 'userprofile'):
+            employee.userprofile.fin_level = fin
+            employee.userprofile.save(update_fields=['fin_level'])
         _log(request, 'EMPLOYEE_UPDATED', target_user=employee, detail=f"fin_level→{fin}")
         return JsonResponse({'message': 'Financial level updated.'})
 
     if action == 'update_properties':
         prop_ids = data.get('property_ids', [])
-        employee.userprofile.assigned_properties.set(
-            Property.objects.filter(id__in=prop_ids)
-        )
+        if hasattr(employee, 'userprofile'):
+            employee.userprofile.assigned_properties.set(
+                Property.objects.filter(id__in=prop_ids)
+            )
         _log(request, 'EMPLOYEE_UPDATED', target_user=employee,
              detail=f"properties={prop_ids}")
         return JsonResponse({'message': 'Properties updated.'})
@@ -262,7 +271,8 @@ def employee_delete(request, user_id):
     if employee == request.user:
         return JsonResponse({'error': 'You cannot delete your own account.'}, status=400)
 
-    if not employee.userprofile.can_hard_delete:
+    profile = getattr(employee, 'userprofile', None)
+    if profile and not profile.can_hard_delete:
         return JsonResponse(
             {'error': 'Account has activity — revoke instead of deleting.'},
             status=400,
@@ -377,7 +387,7 @@ def loyalty_config(request):
     properties = Property.objects.filter(is_active=True).prefetch_related('loyalty_config')
     tiers = LoyaltyTier.objects.all()
     campaigns = CampaignRule.objects.all()[:20]
-    configs = {c.property_id: c for c in LoyaltyConfig.objects.all()}
+    configs = {getattr(c, 'property_id'): c for c in LoyaltyConfig.objects.all()}
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -608,7 +618,7 @@ def booking_complete(request, booking_id):
 
 @require_super_admin
 def guests_list(request):
-    from accounts.models import UserProfile
+
     q = request.GET.get('q', '').strip()
 
     guests = User.objects.filter(
@@ -622,7 +632,7 @@ def guests_list(request):
 
     guest_data = []
     for u in guests[:100]:
-        profile = u.userprofile
+        profile = getattr(u, 'userprofile', None)
         booking_count = Booking.objects.filter(user=u, status__in=('confirmed', 'completed')).count()
         guest_data.append({
             'user': u,
@@ -633,33 +643,6 @@ def guests_list(request):
     return render(request, 'superadmin/guests.html', {
         'guests': guest_data,
         'q': q,
-    })
-
-
-@require_super_admin
-@require_POST
-def loyalty_adjust(request, user_id):
-    target = get_object_or_404(User, pk=user_id)
-    data = json.loads(request.body)
-    amount = int(data.get('amount', 0))
-    reason = data.get('reason', '').strip() or 'Manual adjustment'
-
-    if amount == 0:
-        return JsonResponse({'error': 'Amount cannot be zero.'}, status=400)
-
-    profile = target.userprofile
-    profile.loyalty_points = max(0, profile.loyalty_points + amount)
-    profile.save(update_fields=['loyalty_points'])
-    profile.recalculate_tier()
-
-    action = 'LOYALTY_CREDIT' if amount > 0 else 'LOYALTY_DEBIT'
-    _log(request, action, target_user=target,
-         detail=f"amount={amount}, reason={reason}, new_balance={profile.loyalty_points}")
-
-    return JsonResponse({
-        'message': f'Points adjusted by {amount:+d}. New balance: {profile.loyalty_points}.',
-        'loyalty_points': profile.loyalty_points,
-        'loyalty_tier': profile.loyalty_tier,
     })
 
 

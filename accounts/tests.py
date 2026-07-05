@@ -8,11 +8,14 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from typing import TYPE_CHECKING
 
 from accounts.models import LoginAttempt, UserProfile
 
-
-User = get_user_model()
+if TYPE_CHECKING:
+    from accounts.models import User
+else:
+    User = get_user_model()
 
 
 def make_user(email, role="guest", password="Pass1234!", **profile_fields):

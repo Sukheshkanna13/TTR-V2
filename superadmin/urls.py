@@ -35,7 +35,7 @@ urlpatterns = [
     path('rooms/images/<uuid:image_id>/set-primary/', views.room_image_set_primary, name='room-image-set-primary'),
     # Guests
     path('guests/', views.guests_list, name='guests'),
-    path('guests/<uuid:user_id>/loyalty/', views.loyalty_adjust, name='loyalty-adjust'),
+
     # Causes
     path('causes/', views.causes_list, name='causes'),
     path('causes/create/', views.cause_create, name='cause-create'),

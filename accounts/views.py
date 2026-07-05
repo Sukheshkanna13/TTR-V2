@@ -10,7 +10,6 @@ Only after Step 3 is a User row written to the database.
 """
 
 import logging
-import secrets
 
 from django.contrib.auth import authenticate, get_user_model, login, logout, update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
@@ -21,8 +20,6 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django_q.tasks import async_task
-
 from .models import PendingRegistration
 from .role_routing import (
     CENTRAL_LOGIN_URL,
@@ -46,7 +43,13 @@ from .utils import (
     verify_otp,
 )
 
-User = get_user_model()
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from accounts.models import User
+else:
+    User = get_user_model()
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,7 +81,7 @@ class RegisterView(APIView):
 
         # Upsert the pending record (allow re-registration if previous attempt expired or unverified)
         PendingRegistration.objects.filter(email=email).delete()
-        pending = PendingRegistration.objects.create(
+        PendingRegistration.objects.create(
             email=email,
             full_name=full_name,
             phone=phone,
@@ -285,14 +288,7 @@ class SetPasswordView(APIView):
 
         logger.info("Registration complete — User created and logged in: %s", email)
 
-        # Send WhatsApp welcome (non-blocking)
-        if user.phone:
-            async_task(
-                "core.tasks.send_whatsapp_message",
-                phone=user.phone,
-                template_name="welcome_message",
-                template_data={"name": user.full_name},
-            )
+
 
         return Response(
             {

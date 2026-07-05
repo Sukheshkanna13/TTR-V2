@@ -5,12 +5,22 @@ Serializers for rooms and bookings.
 from datetime import date
 
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Booking, Room, RoomImage
 
 User = get_user_model()
+
+
+def validate_booking_dates(check_in, check_out):
+    """Common date validation logic for check-in and check-out dates."""
+    errors = {}
+    if check_in and check_in < date.today():
+        errors["check_in"] = "Check-in date cannot be in the past."
+    if check_in and check_out and check_out <= check_in:
+        errors["check_out"] = "Check-out date must be after check-in date."
+    if errors:
+        raise serializers.ValidationError(errors)
 
 
 class RoomImageSerializer(serializers.ModelSerializer):
@@ -153,38 +163,21 @@ class SearchSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid property ID format.")
         return value
 
-    def validate_check_in(self, value):
-        if value < date.today():
-            raise serializers.ValidationError("Check-in date cannot be in the past.")
-        return value
-
-    def validate(self, data):
-        check_in = data.get("check_in")
-        check_out = data.get("check_out")
-        if check_in and check_out and check_out <= check_in:
-            raise serializers.ValidationError(
-                {"check_out": "Check-out date must be after check-in date."}
-            )
+    def validate(self, attrs):
+        validate_booking_dates(attrs.get("check_in"), attrs.get("check_out"))
         # guests=0 means "any" — normalise to 1 so capacity filter still makes sense
-        if data.get("guests", 1) < 1:
-            data["guests"] = 1
-        return data
+        if attrs.get("guests", 1) < 1:
+            attrs["guests"] = 1
+        return attrs
 
 
 class CheckRoomAvailabilitySerializer(serializers.Serializer):
     check_in = serializers.DateField()
     check_out = serializers.DateField()
 
-    def validate(self, data):
-        check_in = data.get("check_in")
-        check_out = data.get("check_out")
-
-        if check_in and check_in < timezone.now().date():
-            raise serializers.ValidationError("Check-in date cannot be in the past.")
-        if check_in and check_out and check_in >= check_out:
-            raise serializers.ValidationError("Check-out date must be after check-in date.")
-
-        return data
+    def validate(self, attrs):
+        validate_booking_dates(attrs.get("check_in"), attrs.get("check_out"))
+        return attrs
 
 
 class HoldRoomSerializer(serializers.Serializer):
@@ -215,19 +208,9 @@ class HoldRoomSerializer(serializers.Serializer):
         },
     )
 
-    def validate_check_in(self, value):
-        if value < date.today():
-            raise serializers.ValidationError("Check-in date cannot be in the past.")
-        return value
-
-    def validate(self, data):
-        check_in = data.get("check_in")
-        check_out = data.get("check_out")
-        if check_in and check_out and check_out <= check_in:
-            raise serializers.ValidationError(
-                {"check_out": "Check-out date must be after check-in date."}
-            )
-        return data
+    def validate(self, attrs):
+        validate_booking_dates(attrs.get("check_in"), attrs.get("check_out"))
+        return attrs
 
 
 class BookingSerializer(serializers.ModelSerializer):
@@ -284,7 +267,7 @@ class OTABlockSerializer(serializers.ModelSerializer):
         fields = ['id', 'room', 'start_date', 'end_date', 'reason', 'created_at']
         read_only_fields = ['id', 'created_at']
 
-    def validate(self, data):
-        if data['end_date'] < data['start_date']:
+    def validate(self, attrs):
+        if attrs['end_date'] < attrs['start_date']:
             raise serializers.ValidationError({"end_date": "End date must be after or equal to start date."})
-        return data
+        return attrs

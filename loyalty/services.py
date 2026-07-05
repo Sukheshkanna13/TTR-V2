@@ -4,7 +4,6 @@ Called by payments after booking is confirmed.
 """
 import logging
 from decimal import Decimal
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ def award_booking_points(booking_pk):
         user = booking.user
 
         # --- Step 1: get config ---
-        prop = booking.room.property if booking.room else None
+        prop = booking.room.property if booking.room is not None else None
         config = None
         if prop:
             try:
@@ -74,8 +73,9 @@ def award_booking_points(booking_pk):
             models_q_property_or_global(prop)
         ).order_by('-multiplier')
 
-        if campaigns.exists():
-            campaign_mult = Decimal(str(campaigns.first().multiplier))
+        active_campaign = campaigns.first()
+        if active_campaign is not None:
+            campaign_mult = Decimal(str(active_campaign.multiplier))
             if campaign_mult > multiplier:
                 multiplier = campaign_mult
 
@@ -106,8 +106,9 @@ def _update_tier(profile):
     try:
         from loyalty.models import LoyaltyTier
         tiers = LoyaltyTier.objects.filter(min_pts__lte=profile.loyalty_points).order_by('-min_pts')
-        if tiers.exists():
-            new_tier = tiers.first().name.lower()
+        top_tier = tiers.first()
+        if top_tier is not None:
+            new_tier = top_tier.name.lower()
             if profile.loyalty_tier != new_tier:
                 profile.loyalty_tier = new_tier
                 profile.save(update_fields=['loyalty_tier'])
