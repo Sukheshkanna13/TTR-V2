@@ -14,7 +14,6 @@ def loyalty_context(request):
             return {}
 
         points = profile.loyalty_points or 0
-        current_tier_name = profile.loyalty_tier or 'bronze'
 
         # Current tier from DB
         current_tier = LoyaltyTier.objects.filter(

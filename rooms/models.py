@@ -5,10 +5,7 @@ Room — stores hotel room details (city, type, price, capacity, amenities).
 Booking — stores confirmed/pending/cancelled bookings with date ranges.
 """
 
-from datetime import date, datetime
-from decimal import Decimal
-from typing import TYPE_CHECKING
-import secrets
+from typing import ClassVar, TYPE_CHECKING
 import uuid
 
 from django.conf import settings
@@ -18,6 +15,7 @@ import builtins
 
 if TYPE_CHECKING:
     from superadmin.models import PropertyTaxConfig
+    from loyalty.models import LoyaltyConfig
 
 
 class Property(models.Model):
@@ -29,6 +27,7 @@ class Property(models.Model):
     # Type annotations for static typing / Pyrefly
     rooms: models.Manager
     tax_config: "PropertyTaxConfig"
+    loyalty_config: "LoyaltyConfig"
 
     id = models.UUIDField(
         primary_key=True,
@@ -103,7 +102,7 @@ class Room(models.Model):
         ("deluxe", "Deluxe"),
     ]
 
-    objects = RoomManager()
+    objects: ClassVar[RoomManager] = RoomManager()
 
     # Type annotations for static typing / Pyrefly
     rates: models.Manager

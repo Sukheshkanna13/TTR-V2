@@ -2,8 +2,7 @@
 Production settings for hotel_booking project.
 """
 from .base import *
-import os
-
+import dj_database_url
 DEBUG = False
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="example.com", cast=Csv())

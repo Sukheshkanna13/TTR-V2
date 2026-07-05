@@ -3,10 +3,10 @@ Django settings for hotel_booking project.
 Base settings common to all environments.
 """
 
-import os
 from pathlib import Path
+# pyrefly: ignore [missing-import]
 from decouple import Csv, config
-import dj_database_url
+# pyrefly: ignore [missing-import]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # Now that settings is a package (hotel_booking/settings/base.py),
@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # CORE SETTINGS
 # =============================================================================
 
-SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-production")
+SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
@@ -102,7 +102,6 @@ WSGI_APPLICATION = "hotel_booking.wsgi.application"
 # DATABASE
 # =============================================================================
 
-# Default to SQLite but allow override via DATABASE_URL
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -112,8 +111,7 @@ DATABASES = {
         'HOST': '127.0.0.1',
         'PORT': '3306', 
     }
-}
- 
+
 # =============================================================================
 # CUSTOM USER MODEL
 # =============================================================================
