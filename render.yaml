@@ -1,0 +1,43 @@
+# Render Blueprint — https://docs.render.com/blueprint-spec
+# Your TL can deploy this with one click from the Render dashboard.
+
+databases:
+  - name: ttr-v2-db
+    plan: free
+    databaseName: ttr_v2
+    user: ttr_admin
+
+services:
+  - type: web
+    name: ttr-v2
+    plan: free
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn hotel_booking.wsgi --log-file -"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ttr-v2-db
+          property: connectionString
+      - key: DJANGO_SETTINGS_MODULE
+        value: hotel_booking.settings.prod
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"
+      - key: DEBUG
+        value: "False"
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: PYTHON_VERSION
+        value: "3.13.0"
+      - key: EMAIL_HOST_USER
+        sync: false    # Set manually in Render dashboard
+      - key: EMAIL_HOST_PASSWORD
+        sync: false    # Set manually in Render dashboard
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false

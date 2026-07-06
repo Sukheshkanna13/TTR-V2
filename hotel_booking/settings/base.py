@@ -3,11 +3,12 @@ Django settings for hotel_booking project.
 Base settings common to all environments.
 """
 
+import os
 from pathlib import Path
 # pyrefly: ignore [missing-import]
 from decouple import Csv, config
 # pyrefly: ignore [missing-import]
-
+import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # Now that settings is a package (hotel_booking/settings/base.py),
 # BASE_DIR should point to the repository root.
@@ -102,15 +103,13 @@ WSGI_APPLICATION = "hotel_booking.wsgi.application"
 # DATABASE
 # =============================================================================
 
+# Default to SQLite for local dev; Render/prod sets DATABASE_URL automatically.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ttr_v2',
-        'USER': 'root',
-        'PASSWORD': 'vengeance',
-        'HOST': '127.0.0.1',
-        'PORT': '3306', 
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 # =============================================================================
