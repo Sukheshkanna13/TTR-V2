@@ -82,8 +82,12 @@ LOGGING = {
 }
 
 # =============================================================================
-# EMAIL — Gmail SMTP for now (switch to SendGrid when ready)
+# EMAIL — Console Backend (Render Free Tier blocks outbound SMTP ports)
 # =============================================================================
+# We must use the console backend on Render's free tier to avoid timeouts.
+# The OTP will be printed to your Render Logs tab instead of sending a real email.
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 # Inherits Gmail SMTP from base.py. Override with SendGrid when you have a key:
 # EMAIL_HOST = "smtp.sendgrid.net"
 # EMAIL_HOST_USER = "apikey"
