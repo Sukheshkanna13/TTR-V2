@@ -8,7 +8,7 @@
 {% url 'rooms:search-page' as search_url %}
 {% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=1' %}
 <section class="tt-hero-full">
-  <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full">
+  <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full" loading="lazy">
   <div class="tt-hero-overlay-white"></div>
 
   <!-- Sticky floating search pill -->
@@ -138,7 +138,7 @@
     <div class="tt-moments-carousel-track-js" id="momentsTrack">
       {% for m in moments %}
       <div class="tt-moments-carousel-item">
-        <img src="{% static m.img %}" alt="{{ m.cap }}" draggable="false" style="width:100%;height:100%;object-fit:cover;display:block;">
+        <img src="{% static m.img %}" alt="{{ m.cap }}" draggable="false" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy">
         <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.45) 100%);z-index:1;"></div>
         <span class="tt-moment-cap">{{ m.cap }}</span>
       </div>
@@ -162,7 +162,7 @@
       <div class="tt-journey-grid">
         {% for j in journeys %}
         <div class="tt-journey">
-          <img src="{% static j.img %}" alt="{{ j.title }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+          <img src="{% static j.img %}" alt="{{ j.title }}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy">
           <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.7) 100%);z-index:1;"></div>
           <span class="tt-journey-cat">{{ j.cat }}</span>
           <div class="tt-journey-body">

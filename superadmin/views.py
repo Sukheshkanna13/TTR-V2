@@ -2,6 +2,7 @@ import json
 import secrets
 from decimal import Decimal
 from django.contrib.auth.hashers import make_password
+from django.core.paginator import Paginator
 from django.db.models import Sum, Count, Q, F, ExpressionWrapper, DurationField
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -134,14 +135,19 @@ def dashboard_live_data(request):
 
 @require_super_admin
 def employees_list(request):
-    employees = User.objects.filter(
+    employees_qs = User.objects.filter(
         userprofile__role='employee'
     ).select_related(
         'userprofile', 'userprofile__created_by'
     ).prefetch_related('userprofile__assigned_properties').order_by('-date_joined')
+    
+    paginator = Paginator(employees_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     properties = Property.objects.filter(is_active=True)
     return render(request, 'superadmin/employees.html', {
-        'employees': employees,
+        'employees': page_obj,
+        'page_obj': page_obj,
         'properties': properties,
     })
 
@@ -451,12 +457,17 @@ def loyalty_config(request):
 @require_super_admin
 def rooms_list(request):
     property_filter = request.GET.get('property', '')
-    rooms = Room.objects.select_related('property').order_by('property__name', 'name')
+    rooms_qs = Room.objects.select_related('property').order_by('property__name', 'name')
     if property_filter:
-        rooms = rooms.filter(property_id=property_filter)
+        rooms_qs = rooms_qs.filter(property_id=property_filter)
+        
+    paginator = Paginator(rooms_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     properties = Property.objects.filter(is_active=True).order_by('name')
     return render(request, 'superadmin/rooms.html', {
-        'rooms': rooms,
+        'rooms': page_obj,
+        'page_obj': page_obj,
         'properties': properties,
         'property_filter': property_filter,
         'operational_choices': Room.OPERATIONAL_STATUS_CHOICES,
@@ -581,8 +592,13 @@ def bookings_list(request):
         )
 
     properties = Property.objects.filter(is_active=True).order_by('name')
+    
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     return render(request, 'superadmin/bookings.html', {
-        'bookings': qs[:200],
+        'bookings': page_obj,
+        'page_obj': page_obj,
         'properties': properties,
         'status_choices': Booking.STATUS_CHOICES,
         'status_filter': status_filter,
@@ -636,8 +652,11 @@ def guests_list(request):
             Q(full_name__icontains=q) | Q(email__icontains=q)
         )
 
+    paginator = Paginator(guests, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     guest_data = []
-    for u in guests[:100]:
+    for u in page_obj:
         profile = getattr(u, 'userprofile', None)
         booking_count = Booking.objects.filter(user=u, status__in=('confirmed', 'completed')).count()
         guest_data.append({
@@ -648,6 +667,7 @@ def guests_list(request):
 
     return render(request, 'superadmin/guests.html', {
         'guests': guest_data,
+        'page_obj': page_obj,
         'q': q,
     })
 

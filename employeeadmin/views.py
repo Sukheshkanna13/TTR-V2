@@ -1,7 +1,9 @@
 from decimal import Decimal
 
+from django.core.paginator import Paginator
+from django.db.models import Sum, Q
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -73,22 +75,35 @@ def dashboard_live_data(request):
 def bookings_list(request):
     fin = _fin_level(request)
     rooms = _assigned_rooms(request)
-    bookings = Booking.objects.filter(
+    bookings_qs = Booking.objects.filter(
         room__in=rooms,
         status__in=('confirmed', 'completed', 'cancelled'),
-    ).select_related('user', 'room', 'room__property').order_by('-check_in')[:50]
-    return render(request, 'employeeadmin/bookings.html', {'bookings': bookings, 'fin': fin})
+    ).select_related('user', 'room', 'room__property').order_by('-check_in')
+    
+    paginator = Paginator(bookings_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'employeeadmin/bookings.html', {
+        'bookings': page_obj, 
+        'page_obj': page_obj,
+        'fin': fin
+    })
 
 
 @require_employee
 def rooms_list(request):
     property_filter = request.GET.get('property', '')
-    rooms = _assigned_rooms(request).select_related('property').order_by('property__name', 'name')
+    rooms_qs = _assigned_rooms(request).select_related('property').order_by('property__name', 'name')
     if property_filter:
-        rooms = rooms.filter(property_id=property_filter)
+        rooms_qs = rooms_qs.filter(property_id=property_filter)
+        
+    paginator = Paginator(rooms_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     properties = _assigned_properties(request).filter(is_active=True).order_by('name')
     return render(request, 'employeeadmin/rooms.html', {
-        'rooms': rooms,
+        'rooms': page_obj,
+        'page_obj': page_obj,
         'properties': properties,
         'property_filter': property_filter,
         'operational_choices': Room.OPERATIONAL_STATUS_CHOICES,
