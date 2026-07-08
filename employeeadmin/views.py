@@ -347,20 +347,24 @@ def room_image_upload(request, room_id):
     if room not in rooms:
         return JsonResponse({'error': 'Not assigned.'}, status=403)
 
-    image_file = request.FILES.get('image')
-    if not image_file:
-        return JsonResponse({'error': 'No image file.'}, status=400)
+    image_files = request.FILES.getlist('image')
+    if not image_files:
+        return JsonResponse({'error': 'No image files provided.'}, status=400)
 
     caption = request.POST.get('caption', '').strip()
     is_primary = request.POST.get('is_primary') == 'on'
+    
     if is_primary:
         room.images.filter(is_primary=True).update(is_primary=False)
 
-    RoomImage.objects.create(
-        room=room, image=image_file, caption=caption, is_primary=is_primary,
-        order=room.images.count(),
-    )
-    return JsonResponse({'message': 'Image uploaded.'})
+    for idx, image_file in enumerate(image_files):
+        primary = is_primary if idx == 0 else False
+        RoomImage.objects.create(
+            room=room, image=image_file, caption=caption, is_primary=primary,
+            order=room.images.count(),
+        )
+
+    return JsonResponse({'message': f'{len(image_files)} image(s) uploaded.'})
 
 
 @require_employee

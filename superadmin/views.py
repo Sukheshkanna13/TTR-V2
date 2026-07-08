@@ -778,9 +778,9 @@ def room_images(request, room_id):
 @require_POST
 def room_image_upload(request, room_id):
     room = get_object_or_404(Room, pk=room_id)
-    image_file = request.FILES.get('image')
-    if not image_file:
-        return JsonResponse({'error': 'No image file provided.'}, status=400)
+    image_files = request.FILES.getlist('image')
+    if not image_files:
+        return JsonResponse({'error': 'No image files provided.'}, status=400)
 
     caption = request.POST.get('caption', '').strip()
     is_primary = request.POST.get('is_primary') == 'on'
@@ -788,12 +788,17 @@ def room_image_upload(request, room_id):
     if is_primary:
         room.images.filter(is_primary=True).update(is_primary=False)
 
-    img = RoomImage.objects.create(
-        room=room, image=image_file, caption=caption, is_primary=is_primary,
-        order=room.images.count(),
-    )
-    _log(request, 'ROOM_IMAGE_UPLOADED', detail=f"room={room.name}, image={img.id}")
-    return JsonResponse({'message': 'Image uploaded.', 'id': str(img.id)})
+    uploaded_ids = []
+    for idx, image_file in enumerate(image_files):
+        primary = is_primary if idx == 0 else False
+        img = RoomImage.objects.create(
+            room=room, image=image_file, caption=caption, is_primary=primary,
+            order=room.images.count(),
+        )
+        uploaded_ids.append(str(img.id))
+        _log(request, 'ROOM_IMAGE_UPLOADED', detail=f"room={room.name}, image={img.id}")
+
+    return JsonResponse({'message': f'{len(image_files)} image(s) uploaded.'})
 
 
 @require_super_admin
