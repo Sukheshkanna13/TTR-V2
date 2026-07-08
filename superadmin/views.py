@@ -2,7 +2,7 @@ import json
 import secrets
 from decimal import Decimal
 from django.contrib.auth.hashers import make_password
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, F, ExpressionWrapper, DurationField
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -36,9 +36,10 @@ def dashboard(request):
         status='confirmed', check_in__lte=today, check_out__gt=today,
     ).count()
 
-    todays_arrivals = list(Booking.objects.filter(
+    todays_arrivals_qs = Booking.objects.filter(
         status='confirmed', check_in=today,
-    ).select_related('user', 'room__property'))
+    )
+    todays_arrivals = list(todays_arrivals_qs.select_related('user', 'room__property'))
 
     todays_departures = list(Booking.objects.filter(
         status='confirmed', check_out=today,
@@ -48,7 +49,7 @@ def dashboard(request):
         status='pending',
     ).select_related('user', 'room__property').order_by('created_at')[:20])
 
-    today_revenue = sum(b.total_price for b in todays_arrivals)
+    today_revenue = todays_arrivals_qs.aggregate(t=Sum('total_price'))['t'] or 0
 
     month_revenue = Booking.objects.filter(
         status='confirmed', check_in__gte=month_start,
@@ -333,15 +334,20 @@ def analytics(request):
         p['property']: p['room_count']
         for p in Room.objects.filter(is_active=True).values('property').annotate(room_count=Count('id'))
     }
+    booked_nights_aggs = confirmed_qs.values('room__property_id').annotate(
+        t_nights=Sum(ExpressionWrapper(F('check_out') - F('check_in'), output_field=DurationField()))
+    )
+    booked_nights_by_property = {
+        item['room__property_id']: (item['t_nights'].days if item['t_nights'] else 0)
+        for item in booked_nights_aggs
+    }
+
     occupancy_by_property = []
     for row in revenue_by_property:
         prop_id = row['room__property__id']
         room_count = property_rooms.get(prop_id, 1)
         capacity_nights = days_in_range * room_count
-        booked_nights = sum(
-            (b.check_out - b.check_in).days
-            for b in confirmed_qs.filter(room__property_id=prop_id).only('check_in', 'check_out')
-        )
+        booked_nights = booked_nights_by_property.get(prop_id, 0)
         occupancy_by_property.append({
             'name': row['room__property__name'],
             'revenue': row['revenue'],

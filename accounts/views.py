@@ -16,6 +16,7 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import redirect, render
+from django.db.models import Sum, F, ExpressionWrapper, DurationField
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -459,18 +460,32 @@ def folio_page(request):
     attempts (pending / expired / failed / cancelled) are intentionally excluded.
     """
     from rooms.models import Booking
-    stays = list(
-        Booking.objects.filter(
-            user=request.user,
-            status__in=['confirmed', 'completed'],
-        ).select_related('room', 'room__property').order_by('-check_in')
+    # The base queryset of past real stays for this user
+    base_qs = Booking.objects.filter(
+        user=request.user,
+        status__in=['confirmed', 'completed'],
     )
-    nights_stayed = sum(b.num_nights for b in stays)
-    total_spent = sum(b.total_price for b in stays)
+    
+    # 1. Fetch the paginated objects for display (limit to 12)
+    stays = list(base_qs.select_related('room', 'room__property').order_by('-check_in')[:12])
+    stays_count = base_qs.count()
+    
+    # 2. Push the math down to the database level using aggregate
+    # Subtracting two DateFields in Postgres yields an integer (days) or an interval
+    # Django ORM handles interval to DurationField mapping
+    aggs = base_qs.aggregate(
+        t_spent=Sum('total_price'),
+        t_nights=Sum(ExpressionWrapper(F('check_out') - F('check_in'), output_field=DurationField()))
+    )
+    
+    total_spent = aggs['t_spent'] or 0
+    nights_stayed_duration = aggs['t_nights']
+    nights_stayed = nights_stayed_duration.days if nights_stayed_duration else 0
+    
     profile = getattr(request.user, 'userprofile', None)
     context = {
-        'stays': stays[:12],
-        'stays_count': len(stays),
+        'stays': stays,
+        'stays_count': stays_count,
         'nights_stayed': nights_stayed,
         'total_spent': total_spent,
         'loyalty_points': getattr(profile, 'loyalty_points', 0) or 0,
