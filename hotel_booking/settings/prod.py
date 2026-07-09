@@ -5,7 +5,7 @@ Deployed on Render (free tier — PostgreSQL, no Redis).
 from .base import *
 import dj_database_url
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=".onrender.com", cast=Csv())
 
