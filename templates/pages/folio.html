@@ -127,6 +127,9 @@
           <a href="{% url 'rooms:search-page' %}" class="tt-btn tt-btn-primary">Find a stay &rarr;</a>
         </div>
         {% endif %}
+        
+        {% include 'partials/pagination.html' %}
+        
       </div>
 
       <!-- RIGHT SIDEBAR -->

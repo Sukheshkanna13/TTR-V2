@@ -12,6 +12,7 @@ Only after Step 3 is a User row written to the database.
 import logging
 
 from django.contrib.auth import authenticate, get_user_model, login, logout, update_session_auth_hash
+from django.core.paginator import Paginator
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
@@ -466,8 +467,11 @@ def folio_page(request):
         status__in=['confirmed', 'completed'],
     )
     
-    # 1. Fetch the paginated objects for display (limit to 12)
-    stays = list(base_qs.select_related('room', 'room__property').order_by('-check_in')[:12])
+    # 1. Fetch the paginated objects for display
+    all_stays = base_qs.select_related('room', 'room__property').order_by('-check_in')
+    paginator = Paginator(all_stays, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     stays_count = base_qs.count()
     
     # 2. Push the math down to the database level using aggregate
@@ -482,16 +486,16 @@ def folio_page(request):
     nights_stayed_duration = aggs['t_nights']
     nights_stayed = nights_stayed_duration.days if nights_stayed_duration else 0
     
-    profile = getattr(request.user, 'userprofile', None)
-    context = {
-        'stays': stays,
+    return render(request, "pages/folio.html", {
+        'stays': page_obj,
+        'page_obj': page_obj,
         'stays_count': stays_count,
-        'nights_stayed': nights_stayed,
         'total_spent': total_spent,
-        'loyalty_points': getattr(profile, 'loyalty_points', 0) or 0,
-        'loyalty_tier': (getattr(profile, 'loyalty_tier', '') or 'bronze'),
-    }
-    return render(request, 'pages/folio.html', context)
+        'nights_stayed': nights_stayed,
+        'profile': request.user.userprofile,
+        'loyalty_points': getattr(request.user.userprofile, 'loyalty_points', 0) or 0,
+        'loyalty_tier': (getattr(request.user.userprofile, 'loyalty_tier', '') or 'bronze'),
+    })
 
 
 @login_required(login_url=CENTRAL_LOGIN_URL)

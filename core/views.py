@@ -4,6 +4,7 @@ Handles landing page and general page views.
 """
 
 from django.shortcuts import render
+from django.core.paginator import Paginator
 
 
 def home_page(request):
@@ -78,8 +79,12 @@ def cause_page(request):
     
     active_programs = causes.count()
 
+    paginator = Paginator(causes, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     return render(request, "pages/cause.html", {
-        'causes': causes,
+        'causes': page_obj,
+        'page_obj': page_obj,
         'total_raised': total_raised_str,
         'guests_participated': guests_participated,
         'active_programs': active_programs,
@@ -90,15 +95,27 @@ def things_to_do_page(request):
     """Things to do — host-curated activities (from ThingsScreen)."""
     from .models import Activity
     things = Activity.objects.filter(is_active=True).order_by('sort_order', '-created_at')
-    return render(request, "pages/things_to_do.html", {'things': things})
+    
+    paginator = Paginator(things, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, "pages/things_to_do.html", {
+        'things': page_obj,
+        'page_obj': page_obj
+    })
 
 
 def events_page(request):
     """Events — database-driven Attractions of all categories."""
     from .models import Attraction
     events = Attraction.objects.filter(is_visible=True).prefetch_related('photos').order_by('sort_order', '-created_at')
+    
+    paginator = Paginator(events, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     return render(request, "pages/events.html", {
-        'events': events,
+        'events': page_obj,
+        'page_obj': page_obj,
         'categories': Attraction.CATEGORY_CHOICES,
     })
 

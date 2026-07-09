@@ -557,8 +557,13 @@ def audit_log(request):
     action_filter = request.GET.get('action')
     if action_filter:
         logs = logs.filter(action=action_filter)
+        
+    paginator = Paginator(logs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     return render(request, 'superadmin/audit_log.html', {
-        'logs': logs[:100],
+        'logs': page_obj,
+        'page_obj': page_obj,
         'action_choices': AuditLog.ACTION_CHOICES,
         'selected_action': action_filter,
     })
@@ -856,9 +861,14 @@ def room_status_board_data(request):
 @require_super_admin
 def causes_list(request):
     from core.models import Cause
-    causes = Cause.objects.all().order_by('sort_order', '-created_at')
+    causes_qs = Cause.objects.all().order_by('sort_order', '-created_at')
+    
+    paginator = Paginator(causes_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     return render(request, 'superadmin/causes.html', {
-        'causes': causes,
+        'causes': page_obj,
+        'page_obj': page_obj,
     })
 
 
@@ -981,9 +991,13 @@ def events_list(request):
         events = events.filter(category=category_filter)
     if city_filter:
         events = events.filter(city=city_filter)
+        
+    paginator = Paginator(events, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'superadmin/events.html', {
-        'events': events,
+        'events': page_obj,
+        'page_obj': page_obj,
         'category_choices': Attraction.CATEGORY_CHOICES,
         'category_filter': category_filter,
         'city_filter': city_filter,
@@ -1114,9 +1128,14 @@ def event_image_set_primary(request, image_id):
 @require_super_admin
 def activities_list(request):
     from core.models import Activity
-    activities = Activity.objects.all().order_by('sort_order', '-created_at')
+    activities_qs = Activity.objects.all().order_by('sort_order', '-created_at')
+    
+    paginator = Paginator(activities_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
     return render(request, 'superadmin/activities.html', {
-        'activities': activities,
+        'activities': page_obj,
+        'page_obj': page_obj,
     })
 
 
