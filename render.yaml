@@ -41,5 +41,3 @@ services:
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
-      - key: CLOUDINARY_URL
-        sync: false

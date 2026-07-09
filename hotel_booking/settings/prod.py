@@ -19,22 +19,13 @@ CSRF_TRUSTED_ORIGINS = config(
 # Whitenoise for static files (serves CSS/JS/images directly from the app)
 MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
-# Add Cloudinary to installed apps
-INSTALLED_APPS.insert(0, "cloudinary")
-INSTALLED_APPS.insert(0, "cloudinary_storage")
-
 STORAGES = {
     "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
-}
-
-# Provide Cloudinary credentials from Render environment variables
-CLOUDINARY_STORAGE = {
-    'CLOUDINARY_URL': config('CLOUDINARY_URL', default=''),
 }
 # Security Headers
 SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
