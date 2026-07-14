@@ -507,66 +507,84 @@ def edit_profile_page(request):
     })
 
 
+def _update_name(user, data):
+    from django.http import JsonResponse
+    name = data.get('value', '').strip()
+    if not name:
+        return JsonResponse({'error': 'Name cannot be empty.'}, status=400)
+    user.full_name = name
+    user.save(update_fields=['full_name'])
+    return JsonResponse({'message': 'Name updated successfully.'})
+
+
+def _update_phone(user, data):
+    import re
+    from django.http import JsonResponse
+    phone = data.get('value', '').strip()
+    if not re.match(r'^[6-9]\d{9}$', phone):
+        return JsonResponse({'error': 'Enter a valid 10-digit Indian mobile number.'}, status=400)
+    user.phone = phone
+    user.save(update_fields=['phone'])
+    return JsonResponse({'message': 'Phone updated successfully.'})
+
+
+def _request_email_change(user, data):
+    from django.http import JsonResponse
+    from django.core.cache import cache
+    new_email = data.get('value', '').strip().lower()
+    if not new_email or '@' not in new_email:
+        return JsonResponse({'error': 'Enter a valid email address.'}, status=400)
+    if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+        return JsonResponse({'error': 'That email is already in use.'}, status=400)
+    otp_code = create_and_store_otp(new_email)
+    send_otp_email(new_email, otp_code)
+    cache.set(f'email_change:{user.pk}:{new_email}', True, timeout=600)
+    return JsonResponse({'message': f'Verification code sent to {new_email}. Enter it below.'})
+
+
+def _verify_email_change(user, data):
+    from django.http import JsonResponse
+    from django.core.cache import cache
+    new_email = data.get('email', '').strip().lower()
+    otp = data.get('otp', '').strip()
+    if not cache.get(f'email_change:{user.pk}:{new_email}'):
+        return JsonResponse({'error': 'OTP expired or not initiated. Request a new one.'}, status=400)
+    result = verify_otp(new_email, otp)
+    if not result['success']:
+        return JsonResponse({'error': result['error']}, status=400)
+    if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+        return JsonResponse({'error': 'That email is already in use.'}, status=400)
+    user.email = new_email
+    user.save(update_fields=['email'])
+    cache.delete(f'email_change:{user.pk}:{new_email}')
+    return JsonResponse({'message': 'Email updated successfully.'})
+
+
 @login_required(login_url=CENTRAL_LOGIN_URL)
 def update_profile(request):
     """AJAX endpoint: update name/phone immediately; email requires OTP."""
     import json
-    import re
+    from django.http import JsonResponse
+    
     if request.method != 'POST':
-        from django.http import JsonResponse
         return JsonResponse({'error': 'Method not allowed.'}, status=405)
+        
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        from django.http import JsonResponse
         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
 
-    from django.http import JsonResponse
-    from django.core.cache import cache
     user = request.user
     field = data.get('field', '')
 
     if field == 'name':
-        name = data.get('value', '').strip()
-        if not name:
-            return JsonResponse({'error': 'Name cannot be empty.'}, status=400)
-        user.full_name = name
-        user.save(update_fields=['full_name'])
-        return JsonResponse({'message': 'Name updated successfully.'})
-
+        return _update_name(user, data)
     if field == 'phone':
-        phone = data.get('value', '').strip()
-        if not re.match(r'^[6-9]\d{9}$', phone):
-            return JsonResponse({'error': 'Enter a valid 10-digit Indian mobile number.'}, status=400)
-        user.phone = phone
-        user.save(update_fields=['phone'])
-        return JsonResponse({'message': 'Phone updated successfully.'})
-
+        return _update_phone(user, data)
     if field == 'email_request':
-        new_email = data.get('value', '').strip().lower()
-        if not new_email or '@' not in new_email:
-            return JsonResponse({'error': 'Enter a valid email address.'}, status=400)
-        if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
-            return JsonResponse({'error': 'That email is already in use.'}, status=400)
-        otp_code = create_and_store_otp(new_email)
-        send_otp_email(new_email, otp_code)
-        cache.set(f'email_change:{user.pk}:{new_email}', True, timeout=600)
-        return JsonResponse({'message': f'Verification code sent to {new_email}. Enter it below.'})
-
+        return _request_email_change(user, data)
     if field == 'email_verify':
-        new_email = data.get('email', '').strip().lower()
-        otp = data.get('otp', '').strip()
-        if not cache.get(f'email_change:{user.pk}:{new_email}'):
-            return JsonResponse({'error': 'OTP expired or not initiated. Request a new one.'}, status=400)
-        result = verify_otp(new_email, otp)
-        if not result['success']:
-            return JsonResponse({'error': result['error']}, status=400)
-        if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
-            return JsonResponse({'error': 'That email is already in use.'}, status=400)
-        user.email = new_email
-        user.save(update_fields=['email'])
-        cache.delete(f'email_change:{user.pk}:{new_email}')
-        return JsonResponse({'message': 'Email updated successfully.'})
+        return _verify_email_change(user, data)
 
     return JsonResponse({'error': 'Unknown field.'}, status=400)
 
