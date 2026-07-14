@@ -53,6 +53,7 @@ else:
     User = get_user_model()
 
 logger = logging.getLogger(__name__)
+EMAIL_BACKEND_PATH = "accounts.backends.EmailBackend"
 
 
 # =============================================================================
@@ -179,7 +180,7 @@ class VerifyOTPView(APIView):
                 )
             user.is_active = True
             user.save(update_fields=["is_active"])
-            login(request, user, backend="accounts.backends.EmailBackend")
+            login(request, user, backend=EMAIL_BACKEND_PATH)
             logger.info("Existing user verified and logged in: %s", email)
             return Response(
                 {"message": "Email verified. You are now logged in.", "user": UserSerializer(user).data},
@@ -286,7 +287,7 @@ class SetPasswordView(APIView):
         pending.delete()
 
         # Log the user in
-        login(request, user, backend="accounts.backends.EmailBackend")
+        login(request, user, backend=EMAIL_BACKEND_PATH)
 
         logger.info("Registration complete — User created and logged in: %s", email)
 
@@ -389,7 +390,7 @@ class LoginView(APIView):
             )
 
         reset_login_attempts(email)
-        login(request, user, backend="accounts.backends.EmailBackend")
+        login(request, user, backend=EMAIL_BACKEND_PATH)
         logger.info("User logged in: %s", email)
 
         next_url = request.data.get("next") or request.query_params.get("next")
