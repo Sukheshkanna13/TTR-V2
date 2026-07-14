@@ -9,6 +9,8 @@ from rest_framework import serializers
 
 from .models import Booking, Room, RoomImage
 
+INVALID_DATE_MSG = "Enter a valid date (YYYY-MM-DD)."
+
 User = get_user_model()
 
 
@@ -114,13 +116,13 @@ class SearchSerializer(serializers.Serializer):
     check_in = serializers.DateField(
         error_messages={
             "required": "Check-in date is required.",
-            "invalid": "Enter a valid date (YYYY-MM-DD).",
+            "invalid": INVALID_DATE_MSG,
         },
     )
     check_out = serializers.DateField(
         error_messages={
             "required": "Check-out date is required.",
-            "invalid": "Enter a valid date (YYYY-MM-DD).",
+            "invalid": INVALID_DATE_MSG,
         },
     )
     # guests is optional — defaults to 1 if missing or 0; never block the request over a missing count
@@ -191,13 +193,13 @@ class HoldRoomSerializer(serializers.Serializer):
     check_in = serializers.DateField(
         error_messages={
             "required": "Check-in date is required.",
-            "invalid": "Enter a valid date (YYYY-MM-DD).",
+            "invalid": INVALID_DATE_MSG,
         },
     )
     check_out = serializers.DateField(
         error_messages={
             "required": "Check-out date is required.",
-            "invalid": "Enter a valid date (YYYY-MM-DD).",
+            "invalid": INVALID_DATE_MSG,
         },
     )
     guests = serializers.IntegerField(
