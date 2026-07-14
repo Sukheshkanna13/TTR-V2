@@ -82,7 +82,7 @@ class UnifiedLoginRedirectTests(TestCase):
         User.objects.create_superuser(
             email="superuser-no-profile@example.com",
             full_name="Super User",
-            password="Pass1234!",
+            password=TEST_PASSWORD,
         )
 
         response = self.post_login("superuser-no-profile@example.com")
@@ -253,7 +253,7 @@ class StaffStayInPortalTests(TestCase):
         make_user("sa-next@example.com", role="super_admin")
         response = self.client.post(
             reverse("accounts:login"),
-            data=json.dumps({"email": "sa-next@example.com", "password": "Pass1234!", "next": "/"}),
+            data=json.dumps({"email": "sa-next@example.com", "password": TEST_PASSWORD, "next": "/"}),
             content_type="application/json",
         )
 
@@ -288,7 +288,7 @@ class LoginRecoveryCommandTests(TestCase):
         call_command(
             "bootstrap_superadmin",
             email="boss@example.com",
-            password="BossPass123!",
+            password=TEST_PASSWORD,
             stdout=out,
         )
 
@@ -296,7 +296,7 @@ class LoginRecoveryCommandTests(TestCase):
         self.assertTrue(user.is_active)
         self.assertTrue(user.is_staff)
         self.assertTrue(user.is_superuser)
-        self.assertTrue(user.check_password("BossPass123!"))
+        self.assertTrue(user.check_password(TEST_PASSWORD))
         self.assertEqual(user.userprofile.role, "super_admin")
         self.assertFalse(user.userprofile.must_change_password)
         self.assertFalse(LoginAttempt.objects.filter(email="boss@example.com").exists())
