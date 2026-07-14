@@ -388,8 +388,8 @@ class Booking(models.Model):
     )
     razorpay_order_id = models.CharField(
         max_length=100,
-        null=True,
         blank=True,
+        default="",
         help_text="Razorpay order ID for this booking.",
     )
     booking_reference = models.CharField(
