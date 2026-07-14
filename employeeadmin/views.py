@@ -270,6 +270,33 @@ def room_create(request):
     return JsonResponse({'message': f'Room "{room.name}" created.', 'id': str(room.id)})
 
 
+def _handle_room_update_details(room, data):
+    for field in ('name', 'price_per_night', 'capacity', 'amenities', 'description'):
+        val = data.get(field)
+        if val is not None:
+            if field == 'price_per_night':
+                val = Decimal(str(val))
+            elif field == 'capacity':
+                val = int(val)
+            setattr(room, field, val)
+    # Rating: explicit null clears, value sets
+    if 'rating' in data:
+        r = data['rating']
+        room.rating = Decimal(str(r)) if r is not None and str(r).strip() else Decimal("4.5")
+    room.save()
+    return JsonResponse({'message': 'Room updated.'})
+
+
+def _handle_room_set_status(room, data):
+    new_status = data.get('operational_status', '')
+    valid = {s for s, _ in Room.OPERATIONAL_STATUS_CHOICES}
+    if new_status not in valid:
+        return JsonResponse({'error': 'Invalid status.'}, status=400)
+    room.operational_status = new_status
+    room.save(update_fields=['operational_status'])
+    return JsonResponse({'message': f'Status set to {new_status}.'})
+
+
 @require_employee
 @require_POST
 def room_edit(request, room_id):
@@ -284,29 +311,10 @@ def room_edit(request, room_id):
     action = data.get('action')
 
     if action == 'update_details':
-        for field in ('name', 'price_per_night', 'capacity', 'amenities', 'description'):
-            val = data.get(field)
-            if val is not None:
-                if field == 'price_per_night':
-                    val = Decimal(str(val))
-                elif field == 'capacity':
-                    val = int(val)
-                setattr(room, field, val)
-        # Rating: explicit null clears, value sets
-        if 'rating' in data:
-            r = data['rating']
-            room.rating = Decimal(str(r)) if r is not None and str(r).strip() else Decimal("4.5")
-        room.save()
-        return JsonResponse({'message': 'Room updated.'})
+        return _handle_room_update_details(room, data)
 
     if action == 'set_status':
-        new_status = data.get('operational_status', '')
-        valid = {s for s, _ in Room.OPERATIONAL_STATUS_CHOICES}
-        if new_status not in valid:
-            return JsonResponse({'error': 'Invalid status.'}, status=400)
-        room.operational_status = new_status
-        room.save(update_fields=['operational_status'])
-        return JsonResponse({'message': f'Status set to {new_status}.'})
+        return _handle_room_set_status(room, data)
 
     if action == 'toggle_active':
         room.is_active = not room.is_active
