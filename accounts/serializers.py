@@ -15,6 +15,7 @@ from rest_framework import serializers
 User = get_user_model()
 
 INVALID_EMAIL_MSG = "Enter a valid email address."
+REQUIRED_EMAIL_MSG = "Email is required."
 
 
 # =============================================================================
@@ -32,7 +33,7 @@ class InitiateRegistrationSerializer(serializers.Serializer):
         error_messages={"required": "Full name is required.", "blank": "Full name cannot be blank."},
     )
     email = serializers.EmailField(
-        error_messages={"required": "Email is required.", "invalid": INVALID_EMAIL_MSG},
+        error_messages={"required": REQUIRED_EMAIL_MSG, "invalid": INVALID_EMAIL_MSG},
     )
     phone = serializers.CharField(
         max_length=15,
@@ -63,7 +64,7 @@ class VerifyOTPSerializer(serializers.Serializer):
     """Validates OTP verification input."""
 
     email = serializers.EmailField(
-        error_messages={"required": "Email is required.", "invalid": INVALID_EMAIL_MSG},
+        error_messages={"required": REQUIRED_EMAIL_MSG, "invalid": INVALID_EMAIL_MSG},
     )
     otp = serializers.CharField(
         max_length=6,
@@ -95,7 +96,7 @@ class SetPasswordSerializer(serializers.Serializer):
     """
 
     email = serializers.EmailField(
-        error_messages={"required": "Email is required.", "invalid": INVALID_EMAIL_MSG},
+        error_messages={"required": REQUIRED_EMAIL_MSG, "invalid": INVALID_EMAIL_MSG},
     )
     password = serializers.CharField(
         write_only=True,
@@ -128,7 +129,7 @@ class ResendOTPSerializer(serializers.Serializer):
     """Validates resend OTP input."""
 
     email = serializers.EmailField(
-        error_messages={"required": "Email is required.", "invalid": INVALID_EMAIL_MSG},
+        error_messages={"required": REQUIRED_EMAIL_MSG, "invalid": INVALID_EMAIL_MSG},
     )
 
     def validate_email(self, value):
@@ -139,7 +140,7 @@ class LoginSerializer(serializers.Serializer):
     """Validates login input."""
 
     email = serializers.EmailField(
-        error_messages={"required": "Email is required.", "invalid": INVALID_EMAIL_MSG},
+        error_messages={"required": REQUIRED_EMAIL_MSG, "invalid": INVALID_EMAIL_MSG},
     )
     password = serializers.CharField(
         write_only=True,
