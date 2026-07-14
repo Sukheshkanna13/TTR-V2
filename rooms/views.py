@@ -50,6 +50,8 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
+BOOKING_NOT_FOUND_MSG = "Booking not found."
+
 
 
 
@@ -478,7 +480,7 @@ class ProcessPaymentView(APIView):
             )
         except Booking.DoesNotExist:
             return Response(
-                {"error": "Booking not found."},
+                {"error": BOOKING_NOT_FOUND_MSG},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -550,7 +552,7 @@ class CancelBookingView(APIView):
             )
         except Booking.DoesNotExist:
             return Response(
-                {"error": "Booking not found."},
+                {"error": BOOKING_NOT_FOUND_MSG},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -618,7 +620,7 @@ class ReleaseHoldView(APIView):
             )
         except Booking.DoesNotExist:
             return Response(
-                {"error": "Booking not found."},
+                {"error": BOOKING_NOT_FOUND_MSG},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -649,7 +651,7 @@ class BookingDetailView(APIView):
             )
         except Booking.DoesNotExist:
             return Response(
-                {"error": "Booking not found."},
+                {"error": BOOKING_NOT_FOUND_MSG},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -680,7 +682,7 @@ class ConfirmationView(APIView):
             )
         except Booking.DoesNotExist:
             return Response(
-                {"error": "Booking not found."},
+                {"error": BOOKING_NOT_FOUND_MSG},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
