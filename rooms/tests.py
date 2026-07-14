@@ -10,11 +10,13 @@ from rooms.models import Room, Property, Booking, RoomImage
 
 User = get_user_model()
 
+TEST_PASSWORD = 'guestpass123'
+
 
 def _guest(email='guest@test.com'):
     return User.objects.create_user(
         email=email, full_name='Guest', phone='7777777777',
-        password='guestpass123', is_active=True,
+        password=TEST_PASSWORD, is_active=True,
     )
 
 
