@@ -133,7 +133,7 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 # allauth ≥65 API
 ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]  # NOSONAR
 ACCOUNT_EMAIL_VERIFICATION = "none"  # OTP handled separately
 
 SOCIALACCOUNT_PROVIDERS = {
