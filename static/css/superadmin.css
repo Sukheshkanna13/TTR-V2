@@ -60,7 +60,7 @@ body .sa-brand {
   font-size: 15px !important;
   font-weight: 600 !important;
   color: var(--c-text) !important;
-  letter-spacing: -0.02em !important;
+  letter-spacing: -0.02em ;
   margin-bottom: 0 !important;
 }
 .sa-role {
@@ -143,7 +143,7 @@ body .sa-page-title{
   font-weight: 600 !important;
   color: var(--c-text) !important;
   margin-bottom: 24px !important;
-  letter-spacing: -0.02em !important;
+  letter-spacing: -0.02em ;
 }
 
 /* Cards */
@@ -178,7 +178,7 @@ body .sa-stat-label{
   color: var(--c-text-muted) !important;
   margin-top: 4px !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.06em !important;
+  letter-spacing: 0.06em ;
   font-weight: 500 !important;
 }
 
@@ -196,7 +196,7 @@ thead th{
   font-weight: 500 !important;
   font-size: 11px !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
+  letter-spacing: 0.05em ;
   white-space: nowrap !important;
   vertical-align: middle !important;
 }
@@ -301,7 +301,7 @@ body .sa-label {
   color: var(--c-text-muted) !important;
   margin-bottom: 4px !important;
   text-transform: uppercase !important;
-  letter-spacing: .05em !important;
+  letter-spacing: .05em ;
   font-weight: 500 !important;
 }
 body .sa-btn {
@@ -371,7 +371,7 @@ body .sa-section-title {
   font-weight: 600 !important;
   color: var(--c-text) !important;
   margin-bottom: 16px !important;
-  letter-spacing: -0.01em !important;
+  letter-spacing: -0.01em ;
 }
 code {
   font-family: monospace;
