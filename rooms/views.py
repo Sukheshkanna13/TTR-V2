@@ -57,6 +57,74 @@ logger = logging.getLogger(__name__)
 # PHASE 2: Room Search
 # =========================================================================
 
+def _format_serializer_errors(errors):
+    flat_errors = {}
+    for field, msgs in errors.items():
+        if isinstance(msgs, list):
+            flat_errors[field] = msgs[0] if msgs else "Invalid value."
+        elif isinstance(msgs, dict):
+            for k, v in msgs.items():
+                flat_errors[k] = v[0] if isinstance(v, list) else str(v)
+        else:
+            flat_errors[field] = str(msgs)
+    return flat_errors
+
+def _build_search_queryset(data):
+    from .models import Room
+    city        = data.get("city")
+    property_id = data.get("property_id")
+    check_in    = data["check_in"]
+    check_out   = data["check_out"]
+    guests      = max(1, data.get("guests", 1))
+
+    room_type = data.get("room_type")
+    min_price = data.get("min_price")
+    max_price = data.get("max_price")
+    sort      = data.get("sort")
+
+    unavailable_ids = Room.objects.get_unavailable_room_ids(check_in, check_out)
+
+    rooms = Room.objects.filter(
+        is_active=True,
+        operational_status="available",
+        capacity__gte=guests,
+    ).exclude(
+        id__in=unavailable_ids,
+    )
+
+    is_all_properties = not property_id or str(property_id).lower() in ["0", "all", "none", ""]
+    
+    if not is_all_properties:
+        rooms = rooms.filter(property_id=property_id)
+    elif city:
+        rooms = rooms.filter(city__iexact=city)
+
+    if room_type:
+        rooms = rooms.filter(room_type=room_type)
+    if min_price is not None:
+        rooms = rooms.filter(price_per_night__gte=min_price)
+    if max_price is not None:
+        rooms = rooms.filter(price_per_night__lte=max_price)
+
+    if sort == "price_desc":
+        rooms = rooms.order_by("-price_per_night")
+    else:
+        rooms = rooms.order_by("price_per_night")
+        
+    return rooms
+
+def _get_location_label(city, property_id):
+    location_label = city or "All locations"
+    is_all_properties = not property_id or str(property_id).lower() in ["0", "all", "none", ""]
+    if not is_all_properties:
+        try:
+            from .models import Property
+            prop = Property.objects.get(id=property_id)
+            location_label = prop.name
+        except Exception:
+            pass
+    return location_label
+
 class SearchRoomsView(APIView):
     """
     GET  /rooms/search/?check_in=&check_out=&city=&guests=   — URL-param search (homepage redirect)
@@ -83,100 +151,40 @@ class SearchRoomsView(APIView):
         serializer = SearchSerializer(data=source_data)
 
         if not serializer.is_valid():
-            # Return human-readable errors — flatten nested dicts for the frontend
-            flat_errors = {}
-            for field, msgs in serializer.errors.items():
-                if isinstance(msgs, list):
-                    flat_errors[field] = msgs[0] if msgs else "Invalid value."
-                elif isinstance(msgs, dict):
-                    # nested validation error (e.g. non_field_errors)
-                    for k, v in msgs.items():
-                        flat_errors[k] = v[0] if isinstance(v, list) else str(v)
-                else:
-                    flat_errors[field] = str(msgs)
             return Response(
-                {"errors": flat_errors, "message": "Please fix the highlighted fields."},
+                {"errors": _format_serializer_errors(serializer.errors), "message": "Please fix the highlighted fields."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         data = serializer.validated_data
-        city        = data.get("city")
+        check_in = data["check_in"]
+        check_out = data["check_out"]
+        city = data.get("city")
         property_id = data.get("property_id")
-        check_in    = data["check_in"]
-        check_out   = data["check_out"]
-        # guests is always at least 1 after serializer validation
-        guests      = max(1, data.get("guests", 1))
-
-        # Optional filters
-        room_type = data.get("room_type")
-        min_price = data.get("min_price")
-        max_price = data.get("max_price")
-        sort      = data.get("sort")
-
-        # ----------------------------------------------------------------
-        # SINGLE QUERY: find available rooms across requested dates
-        # ----------------------------------------------------------------
-
-        # Step 1: rooms blocked by confirmed bookings, active holds, or OTA blocks
-        unavailable_ids = Room.objects.get_unavailable_room_ids(check_in, check_out)
-
-        # Step 2: active, available rooms with sufficient capacity
-        rooms = Room.objects.filter(
-            is_active=True,
-            operational_status="available",
-            capacity__gte=guests,
-        ).exclude(
-            id__in=unavailable_ids,
-        )
-
-        # Step 3: scope to property > city > all (in that priority order)
-        # We treat property_id='0' or empty as "All Properties"
-        is_all_properties = not property_id or str(property_id).lower() in ["0", "all", "none", ""]
+        guests = max(1, data.get("guests", 1))
         
-        if not is_all_properties:
-            rooms = rooms.filter(property_id=property_id)
-        elif city:
-            rooms = rooms.filter(city__iexact=city)
-        # else: no scope — return all cities/properties
-
-        # Step 4: apply optional refinement filters (no extra DB round-trips)
-        if room_type:
-            rooms = rooms.filter(room_type=room_type)
-        if min_price is not None:
-            rooms = rooms.filter(price_per_night__gte=min_price)
-        if max_price is not None:
-            rooms = rooms.filter(price_per_night__lte=max_price)
-
-        # Step 5: sorting
-        if sort == "price_desc":
-            rooms = rooms.order_by("-price_per_night")
-        else:
-            rooms = rooms.order_by("price_per_night")
+        rooms = _build_search_queryset(data)
 
         context = {"request": request, "check_in": check_in, "check_out": check_out}
         room_list  = RoomSerializer(rooms, many=True, context=context).data
         num_nights = (check_out - check_in).days
 
-        location_label = city or "All locations"
-        if not is_all_properties:
-            try:
-                prop = Property.objects.get(id=property_id)
-                location_label = prop.name
-            except (Property.DoesNotExist, ValueError):
-                pass
+        location_label = _get_location_label(city, property_id)
+
+        search_context = {
+            "city": city,
+            "check_in": str(check_in),
+            "check_out": str(check_out),
+            "guests": guests,
+            "num_nights": num_nights,
+        }
 
         if not room_list:
             return Response(
                 {
                     "message": f"No rooms available in {location_label} for those dates. Try adjusting your dates or destination.",
                     "rooms": [],
-                    "search": {
-                        "city": city,
-                        "check_in": str(check_in),
-                        "check_out": str(check_out),
-                        "guests": guests,
-                        "num_nights": num_nights,
-                    },
+                    "search": search_context,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -185,13 +193,7 @@ class SearchRoomsView(APIView):
             {
                 "message": f"{len(room_list)} room{'s' if len(room_list) != 1 else ''} available in {location_label}.",
                 "rooms": room_list,
-                "search": {
-                    "city": city,
-                    "check_in": str(check_in),
-                    "check_out": str(check_out),
-                    "guests": guests,
-                    "num_nights": num_nights,
-                },
+                "search": search_context,
             },
             status=status.HTTP_200_OK,
         )
