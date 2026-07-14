@@ -57,7 +57,7 @@
 
 {% block extra_js %}
 <script>
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(globalThis.location.search);
   const ref    = params.get('ref');
 
   async function loadConfirmation() {
@@ -88,6 +88,6 @@
     }
   }
 
-  loadConfirmation();
+  document.addEventListener('DOMContentLoaded', loadConfirmation);
 </script>
 {% endblock %}

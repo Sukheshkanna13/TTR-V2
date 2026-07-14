@@ -233,7 +233,7 @@
           credentials: 'include',
           headers: { 'X-CSRFToken': '{{ csrf_token }}' }
         });
-        window.location.href = "{% url 'core:home' %}";
+        globalThis.location.href = "{% url 'core:home' %}";
       } catch (err) { console.error('Logout failed:', err); }
     }
 
@@ -325,7 +325,7 @@
     // return to the same page after logging in.
     (function () {
       const loginBase = "{% url 'accounts:login-page' %}";
-      const here = window.location.pathname + window.location.search;
+      const here = globalThis.location.pathname + globalThis.location.search;
       // Don't append next if we're already on the login/register page
       if (here.startsWith(loginBase)) return;
       document.querySelectorAll('a[href="' + loginBase + '"]').forEach(a => {
