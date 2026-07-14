@@ -181,7 +181,7 @@ class EmployeeManagementTest(TestCase):
         self.assertEqual(profile.role, 'employee')  # still listed
 
     def test_revoked_employee_still_appears_in_list(self):
-        emp, profile = _make_employee('emp5@test.com')
+        _, profile = _make_employee('emp5@test.com')
         profile.revoke(self.admin)
         res = self.client.get(reverse('superadmin:employees'))
         self.assertContains(res, 'emp5@test.com')
