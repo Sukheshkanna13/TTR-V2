@@ -17,8 +17,10 @@ if TYPE_CHECKING:
 else:
     User = get_user_model()
 
+TEST_PASSWORD = "Pass1234!"
 
-def make_user(email, role="guest", password="Pass1234!", **profile_fields):
+
+def make_user(email, role="guest", password=TEST_PASSWORD, **profile_fields):
     user = User.objects.create_user(
         email=email,
         full_name="Test User",
@@ -34,7 +36,7 @@ class UnifiedLoginRedirectTests(TestCase):
     def setUp(self):
         self.url = reverse("accounts:login")
 
-    def post_login(self, email, password="Pass1234!", next_url=None):
+    def post_login(self, email, password=TEST_PASSWORD, next_url=None):
         payload = {"email": email, "password": password}
         if next_url is not None:
             payload["next"] = next_url
