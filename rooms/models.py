@@ -90,6 +90,41 @@ class RoomManager(models.Manager):
                 result.append(room)
         return result
 
+    def get_unavailable_room_ids(self, check_in, check_out):
+        """
+        Find all room IDs that are blocked for the requested date range.
+
+        A room is blocked if it has:
+        - A CONFIRMED booking overlapping the dates, OR
+        - A PENDING hold that hasn't expired yet overlapping the dates
+
+        Overlap logic:
+            existing.check_in < requested.check_out
+            AND existing.check_out > requested.check_in
+        """
+        from django.db.models import Q
+
+        now = timezone.now()
+
+        booked_ids = Booking.objects.filter(
+            check_in__lt=check_out,
+            check_out__gt=check_in,
+        ).filter(
+            # Confirmed bookings always block
+            Q(status="confirmed")
+            |
+            # Pending holds block only if they haven't expired
+            Q(status="pending", hold_expires_at__gt=now)
+        ).values_list("room_id", flat=True)
+
+        # Also get rooms blocked by OTA
+        ota_blocked_ids = OTABlock.objects.filter(
+            start_date__lt=check_out,
+            end_date__gt=check_in,
+        ).values_list("room_id", flat=True)
+
+        return set(list(booked_ids) + list(ota_blocked_ids))
+
 
 class Room(models.Model):
     """
