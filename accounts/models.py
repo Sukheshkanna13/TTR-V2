@@ -247,7 +247,7 @@ class UserProfile(models.Model):
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='userprofile')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='guest')
-    fin_level = models.CharField(max_length=1, choices=FIN_LEVEL_CHOICES, null=True, blank=True)
+    fin_level = models.CharField(max_length=1, choices=FIN_LEVEL_CHOICES, blank=True, default='')
     assigned_properties = models.ManyToManyField('rooms.Property', blank=True, related_name='assigned_employees')
     must_change_password = models.BooleanField(default=False)
     loyalty_points = models.PositiveIntegerField(default=0)
