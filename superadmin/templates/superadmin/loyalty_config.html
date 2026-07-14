@@ -14,18 +14,18 @@
       <div style="font-weight:600;margin-bottom:10px;">{{ prop.name }}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
         <div class="form-group" style="margin:0;">
-          <label>First Booking Pts</label>
-          <input type="number" name="first_booking_pts" class="form-control"
+          <label for="first_pts_{{ prop.pk }}">First Booking Pts</label>
+          <input type="number" id="first_pts_{{ prop.pk }}" name="first_booking_pts" class="form-control"
                  value="{{ prop.loyalty_config.first_booking_pts|default:'200' }}" placeholder="200" min="0">
         </div>
         <div class="form-group" style="margin:0;">
-          <label>Pts / Night</label>
-          <input type="number" name="pts_per_night" class="form-control"
+          <label for="pts_night_{{ prop.pk }}">Pts / Night</label>
+          <input type="number" id="pts_night_{{ prop.pk }}" name="pts_per_night" class="form-control"
                  value="{{ prop.loyalty_config.pts_per_night|default:'100' }}" placeholder="100" min="0">
         </div>
         <div class="form-group" style="margin:0;">
-          <label>Monthly Multiplier</label>
-          <input type="number" name="monthly_repeat_multiplier" class="form-control"
+          <label for="monthly_mult_{{ prop.pk }}">Monthly Multiplier</label>
+          <input type="number" id="monthly_mult_{{ prop.pk }}" name="monthly_repeat_multiplier" class="form-control"
                  value="{{ prop.loyalty_config.monthly_repeat_multiplier|default:'1.5' }}" placeholder="1.5" step="0.1" min="1">
         </div>
       </div>
@@ -43,20 +43,20 @@
       <input type="hidden" name="action" value="save_tier">
       <input type="hidden" name="tier_id" value="{{ tier.pk }}">
       <div class="form-group" style="margin:0;">
-        <label>Name</label>
-        <input type="text" name="name" class="form-control" value="{{ tier.name }}">
+        <label for="tier_name_{{ tier.pk }}">Name</label>
+        <input type="text" id="tier_name_{{ tier.pk }}" name="name" class="form-control" value="{{ tier.name }}">
       </div>
       <div class="form-group" style="margin:0;">
-        <label>Min Pts</label>
-        <input type="number" name="min_pts" class="form-control" value="{{ tier.min_pts }}" min="0">
+        <label for="tier_min_{{ tier.pk }}">Min Pts</label>
+        <input type="number" id="tier_min_{{ tier.pk }}" name="min_pts" class="form-control" value="{{ tier.min_pts }}" min="0">
       </div>
       <div class="form-group" style="margin:0;">
-        <label>Discount %</label>
-        <input type="number" name="discount_pct" class="form-control" value="{{ tier.discount_pct }}" step="0.5" min="0">
+        <label for="tier_disc_{{ tier.pk }}">Discount %</label>
+        <input type="number" id="tier_disc_{{ tier.pk }}" name="discount_pct" class="form-control" value="{{ tier.discount_pct }}" step="0.5" min="0">
       </div>
       <div class="form-group" style="margin:0;">
-        <label>Order</label>
-        <input type="number" name="sort_order" class="form-control" value="{{ tier.sort_order }}" min="0">
+        <label for="tier_order_{{ tier.pk }}">Order</label>
+        <input type="number" id="tier_order_{{ tier.pk }}" name="sort_order" class="form-control" value="{{ tier.sort_order }}" min="0">
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;">
         <button type="submit" class="btn btn-primary btn-sm">Save</button>
@@ -110,10 +110,10 @@
   <form method="post" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;">
     {% csrf_token %}
     <input type="hidden" name="action" value="save_campaign">
-    <div class="form-group" style="margin:0;"><label>Campaign Name</label><input type="text" name="name" class="form-control" placeholder="Diwali Bonus"></div>
-    <div class="form-group" style="margin:0;"><label>Start Date</label><input type="date" name="start_date" class="form-control"></div>
-    <div class="form-group" style="margin:0;"><label>End Date</label><input type="date" name="end_date" class="form-control"></div>
-    <div class="form-group" style="margin:0;"><label>Multiplier</label><input type="number" name="multiplier" class="form-control" value="1.5" step="0.1" min="1"></div>
+    <div class="form-group" style="margin:0;"><label for="camp_name">Campaign Name</label><input type="text" id="camp_name" name="name" class="form-control" placeholder="Diwali Bonus"></div>
+    <div class="form-group" style="margin:0;"><label for="camp_start">Start Date</label><input type="date" id="camp_start" name="start_date" class="form-control"></div>
+    <div class="form-group" style="margin:0;"><label for="camp_end">End Date</label><input type="date" id="camp_end" name="end_date" class="form-control"></div>
+    <div class="form-group" style="margin:0;"><label for="camp_mult">Multiplier</label><input type="number" id="camp_mult" name="multiplier" class="form-control" value="1.5" step="0.1" min="1"></div>
     <button type="submit" class="btn btn-primary">Add</button>
   </form>
 </div>

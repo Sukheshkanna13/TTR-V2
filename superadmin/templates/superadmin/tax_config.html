@@ -13,18 +13,18 @@
     {% csrf_token %}
     <input type="hidden" name="property_id" value="{{ prop.pk }}">
     <div class="form-group" style="margin:0;">
-      <label>Threshold (₹ per night)</label>
-      <input type="number" name="threshold" class="form-control"
+      <label for="threshold_{{ prop.pk }}">Threshold (₹ per night)</label>
+      <input type="number" id="threshold_{{ prop.pk }}" name="threshold" class="form-control"
              value="{{ prop.tax_config.threshold|default:'7500' }}" step="100" min="0">
     </div>
     <div class="form-group" style="margin:0;">
-      <label>Low Rate %</label>
-      <input type="number" name="low_rate_pct" class="form-control"
+      <label for="low_rate_{{ prop.pk }}">Low Rate %</label>
+      <input type="number" id="low_rate_{{ prop.pk }}" name="low_rate_pct" class="form-control"
              value="{{ prop.tax_config.low_rate_pct|default:'12' }}" step="0.1" min="0">
     </div>
     <div class="form-group" style="margin:0;">
-      <label>High Rate %</label>
-      <input type="number" name="high_rate_pct" class="form-control"
+      <label for="high_rate_{{ prop.pk }}">High Rate %</label>
+      <input type="number" id="high_rate_{{ prop.pk }}" name="high_rate_pct" class="form-control"
              value="{{ prop.tax_config.high_rate_pct|default:'18' }}" step="0.1" min="0">
     </div>
     <div>
