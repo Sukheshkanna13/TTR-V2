@@ -27,8 +27,8 @@ class Command(BaseCommand):
         if not email:
             raise CommandError("--email is required.")
 
-        User = get_user_model()
-        user, created = User.objects.get_or_create(
+        user_model = get_user_model()
+        user, created = user_model.objects.get_or_create(
             email=email,
             defaults={
                 "full_name": options["full_name"],
