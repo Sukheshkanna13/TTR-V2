@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 
 from rooms.models import Booking, Room, RoomImage, OTABlock, RoomRate, Property
 from .decorators import require_employee
+NOT_ASSIGNED_MSG = 'Not assigned.'
 
 
 def _fin_level(request):
@@ -339,7 +340,7 @@ def room_images(request, room_id):
     rooms = _assigned_rooms(request)
     room = get_object_or_404(Room, pk=room_id)
     if room not in rooms:
-        return JsonResponse({'error': 'Not assigned.'}, status=403)
+        return JsonResponse({'error': NOT_ASSIGNED_MSG}, status=403)
     images = room.images.all().order_by('order', '-is_primary')
     return render(request, 'employeeadmin/room_images.html', {
         'room': room,
@@ -353,7 +354,7 @@ def room_image_upload(request, room_id):
     rooms = _assigned_rooms(request)
     room = get_object_or_404(Room, pk=room_id)
     if room not in rooms:
-        return JsonResponse({'error': 'Not assigned.'}, status=403)
+        return JsonResponse({'error': NOT_ASSIGNED_MSG}, status=403)
 
     image_files = request.FILES.getlist('image')
     if not image_files:
@@ -381,7 +382,7 @@ def room_image_delete(request, image_id):
     rooms = _assigned_rooms(request)
     img = get_object_or_404(RoomImage, pk=image_id)
     if img.room not in rooms:
-        return JsonResponse({'error': 'Not assigned.'}, status=403)
+        return JsonResponse({'error': NOT_ASSIGNED_MSG}, status=403)
     img.image.delete(save=False)
     img.delete()
     return JsonResponse({'message': 'Image deleted.'})
@@ -393,7 +394,7 @@ def room_image_set_primary(request, image_id):
     rooms = _assigned_rooms(request)
     img = get_object_or_404(RoomImage, pk=image_id)
     if img.room not in rooms:
-        return JsonResponse({'error': 'Not assigned.'}, status=403)
+        return JsonResponse({'error': NOT_ASSIGNED_MSG}, status=403)
     img.room.images.filter(is_primary=True).update(is_primary=False)
     img.is_primary = True
     img.save(update_fields=['is_primary'])
