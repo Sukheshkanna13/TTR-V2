@@ -70,14 +70,14 @@
         body: JSON.stringify({
           email:    document.getElementById('email').value,
           password: document.getElementById('password').value,
-          next: new URLSearchParams(window.location.search).get('next')
+          next: new URLSearchParams(globalThis.location.search).get('next')
         }),
         credentials: 'include'
       });
 
       if (res.ok) {
         const data = await res.json();
-        window.location.href = data.redirect_url || "{% url 'core:home' %}";
+        globalThis.location.href = data.redirect_url || "{% url 'core:home' %}";
       } else {
         const data = await res.json();
         errorBox.textContent = data.detail || data.error || 'Login failed. Please try again.';
@@ -86,6 +86,7 @@
         loginBtn.innerHTML = 'Sign in <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
       }
     } catch (err) {
+      console.error('Login error:', err);
       errorBox.textContent = 'Network error. Please check your connection.';
       errorBox.classList.remove('hidden');
       loginBtn.disabled = false;
@@ -95,7 +96,7 @@
 
   // Forward ?next= to the register link so new users return to the same page
   (function() {
-    const next = new URLSearchParams(window.location.search).get('next');
+    const next = new URLSearchParams(globalThis.location.search).get('next');
     const regLink = document.getElementById('registerLink');
     if (next && regLink) regLink.href += '?next=' + encodeURIComponent(next);
   })();

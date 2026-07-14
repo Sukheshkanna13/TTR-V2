@@ -124,7 +124,7 @@
     background: var(--ink); color: #fff; border-color: var(--ink);
   }
   .step-dot.done {
-    background: #16a34a; color: #fff; border-color: #16a34a;
+    background: #15803d; color: #fff; border-color: #15803d;
   }
 </style>
 {% endblock %}
@@ -194,6 +194,7 @@
         btn.innerHTML = 'Send verification code <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
       }
     } catch (err) {
+      console.error('Registration error:', err);
       showError('s1ErrorBox', 'Network error. Please try again.');
       btn.disabled = false;
       btn.textContent = 'Send verification code';
@@ -215,16 +216,19 @@
         credentials: 'include'
       });
       const data = await res.json();
-      if (res.ok && data.next_step === 'set-password') {
-        setStep(3);
-      } else if (!res.ok) {
+      if (res.ok) {
+        if (data.next_step === 'set-password') {
+          setStep(3);
+        } else {
+          // Legacy user — already logged in, go home
+          globalThis.location.href = "{% url 'core:home' %}";
+        }
+      } else {
         showError('s2ErrorBox', data.error || 'Verification failed.');
         btn.disabled = false; btn.textContent = 'Verify code';
-      } else {
-        // Legacy user — already logged in, go home
-        window.location.href = "{% url 'core:home' %}";
       }
     } catch (err) {
+      console.error('OTP verification error:', err);
       showError('s2ErrorBox', 'Network error. Please try again.');
       btn.disabled = false; btn.textContent = 'Verify code';
     }
@@ -252,8 +256,8 @@
       });
       const data = await res.json();
       if (res.ok) {
-        const nextUrl = new URLSearchParams(window.location.search).get('next');
-        window.location.href = nextUrl || "{% url 'core:home' %}";
+        const nextUrl = new URLSearchParams(globalThis.location.search).get('next');
+        globalThis.location.href = nextUrl || "{% url 'core:home' %}";
       } else {
         let msg = data.error || 'Something went wrong.';
         if (data.errors) { msg = Object.values(data.errors).flat().join(' '); }
@@ -262,6 +266,7 @@
         btn.textContent = 'Create account';
       }
     } catch (err) {
+      console.error('Password set error:', err);
       showError('s3ErrorBox', 'Network error. Please try again.');
       btn.disabled = false; btn.textContent = 'Create account';
     }
