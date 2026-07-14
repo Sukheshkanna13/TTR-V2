@@ -46,7 +46,7 @@ async function logout() {
             method: 'POST',
             credentials: 'include'
         });
-        window.location.href = 'index.html';
+        globalThis.location.href = 'index.html';
     } catch (err) {
         console.error("Logout failed:", err);
     }
