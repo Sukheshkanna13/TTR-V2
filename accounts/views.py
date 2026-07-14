@@ -571,7 +571,7 @@ def update_profile(request):
         
     try:
         data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
+    except ValueError:
         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
 
     user = request.user
