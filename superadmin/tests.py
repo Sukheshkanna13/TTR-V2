@@ -10,8 +10,10 @@ from rooms.models import Property, Room
 
 User = get_user_model()
 
+TEST_PASSWORD = 'testpass123'
 
-def _make_super_admin(email='superadmin@test.com', password='testpass123'):
+
+def _make_super_admin(email='superadmin@test.com', password=TEST_PASSWORD):
     """Create a super_admin user with a UserProfile and return (user, password)."""
     user = User.objects.create_user(
         email=email,
@@ -111,7 +113,7 @@ def _make_employee(email='emp@test.com', created_by=None, last_login=None):
     """Create an employee user + profile. Optionally stamp last_login."""
     user = User.objects.create_user(
         email=email, full_name='Test Employee', phone='8888888888',
-        password='emppass123', is_active=True,
+        password=TEST_PASSWORD, is_active=True,
     )
     profile = UserProfile.objects.create(user=user, role='employee', fin_level='C')
     if created_by is not None:
