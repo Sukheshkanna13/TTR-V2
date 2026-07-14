@@ -1,7 +1,7 @@
 """
 Development settings for hotel_booking project.
 """
-from .base import *
+from .base import *  # NOSONAR
 
 DEBUG = True
 

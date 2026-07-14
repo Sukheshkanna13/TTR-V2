@@ -2,7 +2,7 @@
 Production settings for hotel_booking project.
 Deployed on Render (free tier — PostgreSQL, no Redis).
 """
-from .base import *
+from .base import *  # NOSONAR
 import dj_database_url
 
 DEBUG = True
