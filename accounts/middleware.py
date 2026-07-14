@@ -83,10 +83,15 @@ class RoleRoutingMiddleware:
     def __call__(self, request):
         path = request.path
         user = request.user
-        role = None
-        if user.is_authenticated:
-            role = get_user_role(user)
+        role = get_user_role(user) if user.is_authenticated else None
 
+        redirect_response = self._check_access(path, user, role)
+        if redirect_response:
+            return redirect_response
+
+        return self.get_response(request)
+
+    def _check_access(self, path, user, role):
         # Staff accounts are operational-only. If a signed-in staff member lands
         # on a customer-facing page (home, room search, booking, folio), bounce
         # them back to their portal dashboard instead of letting them act as a
@@ -94,26 +99,28 @@ class RoleRoutingMiddleware:
         if role in STAFF_ROLES and is_customer_facing_path(path):
             return redirect(get_default_redirect_for_role(role))
 
+        is_django_admin = path.startswith('/admin/') and not path.startswith('/admin-portal/')
+        is_super_admin = path.startswith('/super-admin/')
+        is_employee_admin = path.startswith('/admin-portal/')
+
+        # If not a protected path, allow access
+        if not (is_django_admin or is_super_admin or is_employee_admin):
+            return None
+
+        # All protected paths require authentication first
+        if not user.is_authenticated:
+            return redirect(get_login_url_with_next(path))
+
         # Django admin → superuser only
-        if path.startswith('/admin/') and not path.startswith('/admin-portal/'):
-            if not user.is_authenticated:
-                return redirect(get_login_url_with_next(path))
-            if not user.is_superuser:
-                return redirect('/super-admin/dashboard/' if role == ROLE_SUPER_ADMIN else '/')
-
+        if is_django_admin and not user.is_superuser:
+            return redirect('/super-admin/dashboard/' if role == ROLE_SUPER_ADMIN else '/')
+            
         # Super admin portal → super_admin role only
-        if path.startswith('/super-admin/'):
-            if not user.is_authenticated:
-                return redirect(get_login_url_with_next(path))
-            if role != ROLE_SUPER_ADMIN:
-                return redirect(CENTRAL_LOGIN_URL)
-
+        if is_super_admin and role != ROLE_SUPER_ADMIN:
+            return redirect(CENTRAL_LOGIN_URL)
+            
         # Employee portal → employee or employee_admin role
-        if path.startswith('/admin-portal/'):
-            if not user.is_authenticated:
-                return redirect(get_login_url_with_next(path))
-            if role not in (ROLE_EMPLOYEE, ROLE_EMPLOYEE_ADMIN, ROLE_SUPER_ADMIN):
-                return redirect(CENTRAL_LOGIN_URL)
+        if is_employee_admin and role not in (ROLE_EMPLOYEE, ROLE_EMPLOYEE_ADMIN, ROLE_SUPER_ADMIN):
+            return redirect(CENTRAL_LOGIN_URL)
 
-        response = self.get_response(request)
-        return response
+        return None
