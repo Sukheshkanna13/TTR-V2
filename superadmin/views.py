@@ -15,6 +15,9 @@ from .models import AuditLog, PropertyTaxConfig
 
 from accounts.models import User
 
+UNKNOWN_ACTION_ERR = "Unknown action."
+REQ_TO_BOOK = "Request to book"
+
 
 def _log(request, action, target_user=None, detail=''):
     AuditLog.objects.create(
@@ -197,6 +200,63 @@ def employee_create(request):
     })
 
 
+def _emp_revoke(request, employee, data):
+    if hasattr(employee, 'userprofile'):
+        employee.userprofile.revoke(request.user)
+    else:
+        employee.is_active = False
+        employee.save(update_fields=['is_active'])
+    _log(request, 'EMPLOYEE_REVOKED', target_user=employee)
+    return JsonResponse({'message': 'Employee revoked. Access removed.'})
+
+def _emp_reinstate(request, employee, data):
+    if hasattr(employee, 'userprofile'):
+        employee.userprofile.reinstate()
+    else:
+        employee.is_active = True
+        employee.save(update_fields=['is_active'])
+    _log(request, 'EMPLOYEE_UNLOCKED', target_user=employee, detail='reinstated from revoked')
+    return JsonResponse({'message': 'Employee reinstated.'})
+
+def _emp_lock(request, employee, data):
+    employee.is_active = False
+    employee.save(update_fields=['is_active'])
+    _log(request, 'EMPLOYEE_LOCKED', target_user=employee)
+    return JsonResponse({'message': 'Account locked.'})
+
+def _emp_unlock(request, employee, data):
+    employee.is_active = True
+    employee.save(update_fields=['is_active'])
+    _log(request, 'EMPLOYEE_UNLOCKED', target_user=employee)
+    return JsonResponse({'message': 'Account unlocked.'})
+
+def _emp_reset_password(request, employee, data):
+    temp = secrets.token_urlsafe(12)
+    employee.set_password(temp)
+    employee.save()
+    if hasattr(employee, 'userprofile'):
+        employee.userprofile.must_change_password = True
+        employee.userprofile.save(update_fields=['must_change_password'])
+    _log(request, 'PASSWORD_RESET', target_user=employee)
+    return JsonResponse({'message': f'Password reset. New temp: {temp}', 'temp_password': temp})
+
+def _emp_update_fin(request, employee, data):
+    fin = data.get('fin_level', 'C')
+    if hasattr(employee, 'userprofile'):
+        employee.userprofile.fin_level = fin
+        employee.userprofile.save(update_fields=['fin_level'])
+    _log(request, 'EMPLOYEE_UPDATED', target_user=employee, detail=f"fin_level→{fin}")
+    return JsonResponse({'message': 'Financial level updated.'})
+
+def _emp_update_properties(request, employee, data):
+    prop_ids = data.get('property_ids', [])
+    if hasattr(employee, 'userprofile'):
+        employee.userprofile.assigned_properties.set(
+            Property.objects.filter(id__in=prop_ids)
+        )
+    _log(request, 'EMPLOYEE_UPDATED', target_user=employee, detail=f"properties={prop_ids}")
+    return JsonResponse({'message': 'Properties updated.'})
+
 @require_super_admin
 @require_POST
 def employee_update(request, user_id):
@@ -207,66 +267,21 @@ def employee_update(request, user_id):
     if employee == request.user and action in ('lock', 'revoke'):
         return JsonResponse({'error': 'You cannot disable your own account.'}, status=400)
 
-    if action == 'revoke':
-        if hasattr(employee, 'userprofile'):
-            employee.userprofile.revoke(request.user)
-        else:
-            employee.is_active = False
-            employee.save(update_fields=['is_active'])
-        _log(request, 'EMPLOYEE_REVOKED', target_user=employee)
-        return JsonResponse({'message': 'Employee revoked. Access removed.'})
+    handlers = {
+        'revoke': _emp_revoke,
+        'reinstate': _emp_reinstate,
+        'lock': _emp_lock,
+        'unlock': _emp_unlock,
+        'reset_password': _emp_reset_password,
+        'update_fin': _emp_update_fin,
+        'update_properties': _emp_update_properties,
+    }
+    
+    handler = handlers.get(action)
+    if handler:
+        return handler(request, employee, data)
 
-    if action == 'reinstate':
-        if hasattr(employee, 'userprofile'):
-            employee.userprofile.reinstate()
-        else:
-            employee.is_active = True
-            employee.save(update_fields=['is_active'])
-        _log(request, 'EMPLOYEE_UNLOCKED', target_user=employee,
-             detail='reinstated from revoked')
-        return JsonResponse({'message': 'Employee reinstated.'})
-
-    if action == 'lock':
-        employee.is_active = False
-        employee.save(update_fields=['is_active'])
-        _log(request, 'EMPLOYEE_LOCKED', target_user=employee)
-        return JsonResponse({'message': 'Account locked.'})
-
-    if action == 'unlock':
-        employee.is_active = True
-        employee.save(update_fields=['is_active'])
-        _log(request, 'EMPLOYEE_UNLOCKED', target_user=employee)
-        return JsonResponse({'message': 'Account unlocked.'})
-
-    if action == 'reset_password':
-        temp = secrets.token_urlsafe(12)
-        employee.set_password(temp)
-        employee.save()
-        if hasattr(employee, 'userprofile'):
-            employee.userprofile.must_change_password = True
-            employee.userprofile.save(update_fields=['must_change_password'])
-        _log(request, 'PASSWORD_RESET', target_user=employee)
-        return JsonResponse({'message': f'Password reset. New temp: {temp}', 'temp_password': temp})
-
-    if action == 'update_fin':
-        fin = data.get('fin_level', 'C')
-        if hasattr(employee, 'userprofile'):
-            employee.userprofile.fin_level = fin
-            employee.userprofile.save(update_fields=['fin_level'])
-        _log(request, 'EMPLOYEE_UPDATED', target_user=employee, detail=f"fin_level→{fin}")
-        return JsonResponse({'message': 'Financial level updated.'})
-
-    if action == 'update_properties':
-        prop_ids = data.get('property_ids', [])
-        if hasattr(employee, 'userprofile'):
-            employee.userprofile.assigned_properties.set(
-                Property.objects.filter(id__in=prop_ids)
-            )
-        _log(request, 'EMPLOYEE_UPDATED', target_user=employee,
-             detail=f"properties={prop_ids}")
-        return JsonResponse({'message': 'Properties updated.'})
-
-    return JsonResponse({'error': 'Unknown action.'}, status=400)
+    return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
 
 @require_super_admin
@@ -474,6 +489,52 @@ def rooms_list(request):
     })
 
 
+def _room_set_status(request, room, data):
+    new_status = data.get('operational_status', '')
+    valid = {s for s, _ in Room.OPERATIONAL_STATUS_CHOICES}
+    if new_status not in valid:
+        return JsonResponse({'error': 'Invalid status.'}, status=400)
+    room.operational_status = new_status
+    room.save(update_fields=['operational_status'])
+    _log(request, 'ROOM_STATUS_UPDATED', detail=f"room={room.name}, status={new_status}")
+    return JsonResponse({'message': f'Status set to {new_status}.'})
+
+def _room_toggle_active(request, room, data):
+    room.is_active = not room.is_active
+    room.save(update_fields=['is_active'])
+    state = 'activated' if room.is_active else 'deactivated'
+    _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
+    return JsonResponse({'message': f'Room {state}.', 'is_active': room.is_active})
+
+def _room_toggle_featured(request, room, data):
+    room.is_featured = not room.is_featured
+    room.save(update_fields=['is_featured'])
+    state = 'featured' if room.is_featured else 'unfeatured'
+    _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
+    return JsonResponse({'message': f'Room {state}.', 'is_featured': room.is_featured})
+
+def _room_update_details(request, room, data):
+    fields_changed = []
+    for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description', 'rating'):
+        val = data.get(field)
+        if val is not None:
+            if field == 'price_per_night':
+                val = Decimal(str(val))
+            elif field == 'capacity':
+                val = int(val)
+            elif field == 'rating':
+                val = Decimal(str(round(float(val), 1))) if val else Decimal("4.5")
+            setattr(room, field, val)
+            fields_changed.append(field)
+    prop_id = data.get('property_id')
+    if prop_id:
+        room.property = get_object_or_404(Property, pk=prop_id)
+        fields_changed.append('property')
+    if fields_changed:
+        room.save()
+        _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, fields={fields_changed}")
+    return JsonResponse({'message': 'Room updated.'})
+
 @require_super_admin
 @require_POST
 def room_update(request, room_id):
@@ -481,56 +542,18 @@ def room_update(request, room_id):
     data = json.loads(request.body)
     action = data.get('action')
 
-    if action == 'set_status':
-        new_status = data.get('operational_status', '')
-        valid = {s for s, _ in Room.OPERATIONAL_STATUS_CHOICES}
-        if new_status not in valid:
-            return JsonResponse({'error': 'Invalid status.'}, status=400)
-        room.operational_status = new_status
-        room.save(update_fields=['operational_status'])
-        _log(request, 'ROOM_STATUS_UPDATED', detail=f"room={room.name}, status={new_status}")
-        return JsonResponse({'message': f'Status set to {new_status}.'})
+    handlers = {
+        'set_status': _room_set_status,
+        'toggle_active': _room_toggle_active,
+        'toggle_featured': _room_toggle_featured,
+        'update_details': _room_update_details,
+    }
+    
+    handler = handlers.get(action)
+    if handler:
+        return handler(request, room, data)
 
-    if action == 'toggle_active':
-        room.is_active = not room.is_active
-        room.save(update_fields=['is_active'])
-        state = 'activated' if room.is_active else 'deactivated'
-        _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
-        return JsonResponse({'message': f'Room {state}.', 'is_active': room.is_active})
-
-    if action == 'toggle_featured':
-        room.is_featured = not room.is_featured
-        room.save(update_fields=['is_featured'])
-        state = 'featured' if room.is_featured else 'unfeatured'
-        _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
-        return JsonResponse({
-            'message': f'Room {state}.',
-            'is_featured': room.is_featured,
-        })
-
-    if action == 'update_details':
-        fields_changed = []
-        for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description', 'rating'):
-            val = data.get(field)
-            if val is not None:
-                if field == 'price_per_night':
-                    val = Decimal(str(val))
-                elif field == 'capacity':
-                    val = int(val)
-                elif field == 'rating':
-                    val = Decimal(str(round(float(val), 1))) if val else Decimal("4.5")
-                setattr(room, field, val)
-                fields_changed.append(field)
-        prop_id = data.get('property_id')
-        if prop_id:
-            room.property = get_object_or_404(Property, pk=prop_id)
-            fields_changed.append('property')
-        if fields_changed:
-            room.save()
-            _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, fields={fields_changed}")
-        return JsonResponse({'message': 'Room updated.'})
-
-    return JsonResponse({'error': 'Unknown action.'}, status=400)
+    return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
 
 @require_super_admin
@@ -730,7 +753,7 @@ def property_update(request, property_id):
         _log(request, 'PROPERTY_UPDATED', detail=f"property={prop.name}")
         return JsonResponse({'message': 'Property updated.'})
 
-    return JsonResponse({'error': 'Unknown action.'}, status=400)
+    return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
 
 # ── Room Create ────────────────────────────────────────────────────────────────
@@ -904,6 +927,68 @@ def cause_create(request):
 
 @require_super_admin
 @require_POST
+def _cause_toggle_active(request, cause, data):
+    cause.is_active = not cause.is_active
+    cause.save(update_fields=['is_active'])
+    state = 'activated' if cause.is_active else 'deactivated'
+    _log(request, 'CAUSE_UPDATED', detail=f"cause={cause.title}, {state}")
+    return JsonResponse({'message': f'Cause {state}.', 'is_active': cause.is_active})
+
+def _cause_delete(request, cause, data):
+    title = cause.title
+    if cause.image:
+        cause.image.delete(save=False)
+    cause.delete()
+    _log(request, 'CAUSE_DELETED', detail=f"cause={title}")
+    return JsonResponse({'message': 'Cause deleted.'})
+
+def _cause_update_details(request, cause, data):
+    fields_changed = []
+    
+    title_val = data.get('title')
+    loc_val = data.get('location')
+    desc_val = data.get('description')
+    target_val = data.get('target_amount')
+    raised_val = data.get('raised_amount')
+    sort_val = data.get('sort_order')
+
+    if title_val is not None:
+        cause.title = title_val.strip()
+        fields_changed.append('title')
+    if loc_val is not None:
+        cause.location = loc_val.strip()
+        fields_changed.append('location')
+    if desc_val is not None:
+        cause.description = desc_val.strip()
+        fields_changed.append('description')
+    if target_val is not None:
+        cause.target_amount = Decimal(str(target_val))
+        fields_changed.append('target_amount')
+    if raised_val is not None:
+        cause.raised_amount = Decimal(str(raised_val))
+        fields_changed.append('raised_amount')
+    if sort_val is not None:
+        cause.sort_order = int(sort_val)
+        fields_changed.append('sort_order')
+    
+    whatsapp_link_val = data.get('whatsapp_link')
+    if whatsapp_link_val is not None:
+        cause.whatsapp_link = whatsapp_link_val.strip()
+        fields_changed.append('whatsapp_link')
+
+    if request.FILES.get('image'):
+        if cause.image:
+            cause.image.delete(save=False)
+        cause.image = request.FILES['image']
+        fields_changed.append('image')
+
+    if fields_changed:
+        cause.save()
+        _log(request, 'CAUSE_UPDATED', detail=f"cause={cause.title}, fields={fields_changed}")
+    return JsonResponse({'message': 'Cause updated.'})
+
+@require_super_admin
+@require_POST
 def cause_update(request, cause_id):
     from core.models import Cause
     cause = get_object_or_404(Cause, pk=cause_id)
@@ -915,67 +1000,17 @@ def cause_update(request, cause_id):
         action = request.POST.get('action')
         data = request.POST
 
-    if action == 'toggle_active':
-        cause.is_active = not cause.is_active
-        cause.save(update_fields=['is_active'])
-        state = 'activated' if cause.is_active else 'deactivated'
-        _log(request, 'CAUSE_UPDATED', detail=f"cause={cause.title}, {state}")
-        return JsonResponse({'message': f'Cause {state}.', 'is_active': cause.is_active})
+    handlers = {
+        'toggle_active': _cause_toggle_active,
+        'delete': _cause_delete,
+        'update_details': _cause_update_details,
+    }
+    
+    handler = handlers.get(action)
+    if handler:
+        return handler(request, cause, data)
 
-    if action == 'delete':
-        title = cause.title
-        if cause.image:
-            cause.image.delete(save=False)
-        cause.delete()
-        _log(request, 'CAUSE_DELETED', detail=f"cause={title}")
-        return JsonResponse({'message': 'Cause deleted.'})
-
-    if action == 'update_details':
-        fields_changed = []
-        
-        title_val = data.get('title')
-        loc_val = data.get('location')
-        desc_val = data.get('description')
-        target_val = data.get('target_amount')
-        raised_val = data.get('raised_amount')
-        sort_val = data.get('sort_order')
-
-        if title_val is not None:
-            cause.title = title_val.strip()
-            fields_changed.append('title')
-        if loc_val is not None:
-            cause.location = loc_val.strip()
-            fields_changed.append('location')
-        if desc_val is not None:
-            cause.description = desc_val.strip()
-            fields_changed.append('description')
-        if target_val is not None:
-            cause.target_amount = Decimal(str(target_val))
-            fields_changed.append('target_amount')
-        if raised_val is not None:
-            cause.raised_amount = Decimal(str(raised_val))
-            fields_changed.append('raised_amount')
-        if sort_val is not None:
-            cause.sort_order = int(sort_val)
-            fields_changed.append('sort_order')
-        
-        whatsapp_link_val = data.get('whatsapp_link')
-        if whatsapp_link_val is not None:
-            cause.whatsapp_link = whatsapp_link_val.strip()
-            fields_changed.append('whatsapp_link')
-
-        if request.FILES.get('image'):
-            if cause.image:
-                cause.image.delete(save=False)
-            cause.image = request.FILES['image']
-            fields_changed.append('image')
-
-        if fields_changed:
-            cause.save()
-            _log(request, 'CAUSE_UPDATED', detail=f"cause={cause.title}, fields={fields_changed}")
-        return JsonResponse({'message': 'Cause updated.'})
-
-    return JsonResponse({'error': 'Unknown action.'}, status=400)
+    return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
 
 # ── Events / Attractions ─────────────────────────────────────────────────────
@@ -1028,6 +1063,33 @@ def event_create(request):
     return JsonResponse({'message': f'Event "{event.name}" created.', 'id': str(event.id)})
 
 
+def _event_toggle_visible(request, event, data):
+    event.is_visible = not event.is_visible
+    event.save(update_fields=['is_visible'])
+    state = 'visible' if event.is_visible else 'hidden'
+    _log(request, 'EVENT_UPDATED', detail=f"event={event.name}, {state}")
+    return JsonResponse({'message': f'Event is now {state}.', 'is_visible': event.is_visible})
+
+def _event_delete(request, event, data):
+    name = event.name
+    event.delete()
+    _log(request, 'EVENT_DELETED', detail=f"event={name}")
+    return JsonResponse({'message': 'Event deleted.'})
+
+def _event_update_details(request, event, data):
+    fields_changed = []
+    for field in ('name', 'city', 'category', 'description', 'address', 'opening_hrs', 'sort_order', 'whatsapp_link'):
+        val = data.get(field)
+        if val is not None:
+            if field == 'sort_order':
+                val = int(val)
+            setattr(event, field, val)
+            fields_changed.append(field)
+    if fields_changed:
+        event.save()
+        _log(request, 'EVENT_UPDATED', detail=f"event={event.name}, fields={fields_changed}")
+    return JsonResponse({'message': 'Event updated.'})
+
 @require_super_admin
 @require_POST
 def event_update(request, event_id):
@@ -1036,34 +1098,17 @@ def event_update(request, event_id):
     data = json.loads(request.body)
     action = data.get('action')
 
-    if action == 'toggle_visible':
-        event.is_visible = not event.is_visible
-        event.save(update_fields=['is_visible'])
-        state = 'visible' if event.is_visible else 'hidden'
-        _log(request, 'EVENT_UPDATED', detail=f"event={event.name}, {state}")
-        return JsonResponse({'message': f'Event is now {state}.', 'is_visible': event.is_visible})
+    handlers = {
+        'toggle_visible': _event_toggle_visible,
+        'delete': _event_delete,
+        'update_details': _event_update_details,
+    }
+    
+    handler = handlers.get(action)
+    if handler:
+        return handler(request, event, data)
 
-    if action == 'delete':
-        name = event.name
-        event.delete()
-        _log(request, 'EVENT_DELETED', detail=f"event={name}")
-        return JsonResponse({'message': 'Event deleted.'})
-
-    if action == 'update_details':
-        fields_changed = []
-        for field in ('name', 'city', 'category', 'description', 'address', 'opening_hrs', 'sort_order', 'whatsapp_link'):
-            val = data.get(field)
-            if val is not None:
-                if field == 'sort_order':
-                    val = int(val)
-                setattr(event, field, val)
-                fields_changed.append(field)
-        if fields_changed:
-            event.save()
-            _log(request, 'EVENT_UPDATED', detail=f"event={event.name}, fields={fields_changed}")
-        return JsonResponse({'message': 'Event updated.'})
-
-    return JsonResponse({'error': 'Unknown action.'}, status=400)
+    return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
 
 @require_super_admin
@@ -1146,7 +1191,7 @@ def activity_create(request):
     title = request.POST.get('title', '').strip()
     category = request.POST.get('category', '').strip()
     description = request.POST.get('description', '').strip()
-    price = request.POST.get('price', 'Request to book').strip() or 'Request to book'
+    price = request.POST.get('price', REQ_TO_BOOK).strip() or REQ_TO_BOOK
     image_file = request.FILES.get('image')
     whatsapp_link = request.POST.get('whatsapp_link', '').strip()
     whatsapp_message = request.POST.get('whatsapp_message', '').strip()
@@ -1163,6 +1208,65 @@ def activity_create(request):
     return JsonResponse({'message': f'Activity "{activity.title}" created.', 'id': str(activity.id)})
 
 
+def _activity_toggle_active(request, activity, data):
+    activity.is_active = not activity.is_active
+    activity.save(update_fields=['is_active'])
+    state = 'activated' if activity.is_active else 'deactivated'
+    _log(request, 'ACTIVITY_UPDATED', detail=f"activity={activity.title}, {state}")
+    return JsonResponse({'message': f'Activity {state}.', 'is_active': activity.is_active})
+
+def _activity_delete(request, activity, data):
+    title = activity.title
+    if activity.image:
+        activity.image.delete(save=False)
+    activity.delete()
+    _log(request, 'ACTIVITY_DELETED', detail=f"activity={title}")
+    return JsonResponse({'message': 'Activity deleted.'})
+
+def _activity_update_details(request, activity, data):
+    fields_changed = []
+
+    title_val = data.get('title')
+    cat_val = data.get('category')
+    desc_val = data.get('description')
+    price_val = data.get('price')
+    sort_val = data.get('sort_order')
+    whatsapp_link_val = data.get('whatsapp_link')
+    whatsapp_message_val = data.get('whatsapp_message')
+
+    if title_val is not None:
+        activity.title = title_val.strip()
+        fields_changed.append('title')
+    if cat_val is not None:
+        activity.category = cat_val.strip()
+        fields_changed.append('category')
+    if desc_val is not None:
+        activity.description = desc_val.strip()
+        fields_changed.append('description')
+    if price_val is not None:
+        activity.price = price_val.strip() or REQ_TO_BOOK
+        fields_changed.append('price')
+    if sort_val is not None:
+        activity.sort_order = int(sort_val)
+        fields_changed.append('sort_order')
+    if whatsapp_link_val is not None:
+        activity.whatsapp_link = whatsapp_link_val.strip()
+        fields_changed.append('whatsapp_link')
+    if whatsapp_message_val is not None:
+        activity.whatsapp_message = whatsapp_message_val.strip()
+        fields_changed.append('whatsapp_message')
+
+    if request.FILES.get('image'):
+        if activity.image:
+            activity.image.delete(save=False)
+        activity.image = request.FILES['image']
+        fields_changed.append('image')
+
+    if fields_changed:
+        activity.save()
+        _log(request, 'ACTIVITY_UPDATED', detail=f"activity={activity.title}, fields={fields_changed}")
+    return JsonResponse({'message': 'Activity updated.'})
+
 @require_super_admin
 @require_POST
 def activity_update(request, activity_id):
@@ -1176,65 +1280,16 @@ def activity_update(request, activity_id):
         action = request.POST.get('action')
         data = request.POST
 
-    if action == 'toggle_active':
-        activity.is_active = not activity.is_active
-        activity.save(update_fields=['is_active'])
-        state = 'activated' if activity.is_active else 'deactivated'
-        _log(request, 'ACTIVITY_UPDATED', detail=f"activity={activity.title}, {state}")
-        return JsonResponse({'message': f'Activity {state}.', 'is_active': activity.is_active})
+    handlers = {
+        'toggle_active': _activity_toggle_active,
+        'delete': _activity_delete,
+        'update_details': _activity_update_details,
+    }
+    
+    handler = handlers.get(action)
+    if handler:
+        return handler(request, activity, data)
 
-    if action == 'delete':
-        title = activity.title
-        if activity.image:
-            activity.image.delete(save=False)
-        activity.delete()
-        _log(request, 'ACTIVITY_DELETED', detail=f"activity={title}")
-        return JsonResponse({'message': 'Activity deleted.'})
-
-    if action == 'update_details':
-        fields_changed = []
-
-        title_val = data.get('title')
-        cat_val = data.get('category')
-        desc_val = data.get('description')
-        price_val = data.get('price')
-        sort_val = data.get('sort_order')
-        whatsapp_link_val = data.get('whatsapp_link')
-        whatsapp_message_val = data.get('whatsapp_message')
-
-        if title_val is not None:
-            activity.title = title_val.strip()
-            fields_changed.append('title')
-        if cat_val is not None:
-            activity.category = cat_val.strip()
-            fields_changed.append('category')
-        if desc_val is not None:
-            activity.description = desc_val.strip()
-            fields_changed.append('description')
-        if price_val is not None:
-            activity.price = price_val.strip() or 'Request to book'
-            fields_changed.append('price')
-        if sort_val is not None:
-            activity.sort_order = int(sort_val)
-            fields_changed.append('sort_order')
-        if whatsapp_link_val is not None:
-            activity.whatsapp_link = whatsapp_link_val.strip()
-            fields_changed.append('whatsapp_link')
-        if whatsapp_message_val is not None:
-            activity.whatsapp_message = whatsapp_message_val.strip()
-            fields_changed.append('whatsapp_message')
-
-        if request.FILES.get('image'):
-            if activity.image:
-                activity.image.delete(save=False)
-            activity.image = request.FILES['image']
-            fields_changed.append('image')
-
-        if fields_changed:
-            activity.save()
-            _log(request, 'ACTIVITY_UPDATED', detail=f"activity={activity.title}, fields={fields_changed}")
-        return JsonResponse({'message': 'Activity updated.'})
-
-    return JsonResponse({'error': 'Unknown action.'}, status=400)
+    return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
 
