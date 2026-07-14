@@ -11,10 +11,12 @@ from employeeadmin.views import _assigned_rooms
 
 User = get_user_model()
 
+TEST_PASSWORD = 'x'
+
 
 def make_user(email, phone, role='guest'):
     user = User.objects.create_user(
-        email=email, full_name='Test User', phone=phone, password='x', is_active=True,
+        email=email, full_name='Test User', phone=phone, password=TEST_PASSWORD, is_active=True,
     )
     UserProfile.objects.create(user=user, role=role)
     return user
@@ -47,7 +49,7 @@ class AssignedRoomsSecurityTest(TestCase):
 
     def test_broken_profile_sees_no_rooms(self):
         broken_user = User.objects.create_user(
-            email='x@x.com', full_name='X', phone='9000000002', password='x', is_active=True,
+            email='x@x.com', full_name='X', phone='9000000002', password=TEST_PASSWORD, is_active=True,
         )
         req = self.factory.get('/')
         req.user = broken_user
