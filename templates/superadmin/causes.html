@@ -8,32 +8,32 @@
   <h2 class="sa-section-title">Add Cause</h2>
   <form id="createCauseForm" enctype="multipart/form-data" class="sa-form-grid">
     <div class="sa-field">
-      <label class="sa-label">Title</label>
-      <input class="sa-input" type="text" name="title" required placeholder="e.g. Sandalwood restoration">
+      <label class="sa-label" for="add_title">Title</label>
+      <input class="sa-input" type="text" id="add_title" name="title" required placeholder="e.g. Sandalwood restoration">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Location/State</label>
-      <input class="sa-input" type="text" name="location" required placeholder="e.g. KARNATAKA">
+      <label class="sa-label" for="add_location">Location/State</label>
+      <input class="sa-input" type="text" id="add_location" name="location" required placeholder="e.g. KARNATAKA">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Description</label>
-      <input class="sa-input" type="text" name="description" placeholder="Short summary">
+      <label class="sa-label" for="add_description">Description</label>
+      <input class="sa-input" type="text" id="add_description" name="description" placeholder="Short summary">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Target Amount (₹)</label>
-      <input class="sa-input" type="number" name="target_amount" required placeholder="1000000">
+      <label class="sa-label" for="add_target_amount">Target Amount (₹)</label>
+      <input class="sa-input" type="number" id="add_target_amount" name="target_amount" required placeholder="1000000">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Raised Amount (₹)</label>
-      <input class="sa-input" type="number" name="raised_amount" value="0" placeholder="0">
+      <label class="sa-label" for="add_raised_amount">Raised Amount (₹)</label>
+      <input class="sa-input" type="number" id="add_raised_amount" name="raised_amount" value="0" placeholder="0">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Image</label>
-      <input class="sa-input" type="file" name="image" accept="image/*" style="padding:4px;">
+      <label class="sa-label" for="add_image">Image</label>
+      <input class="sa-input" type="file" id="add_image" name="image" accept="image/*" style="padding:4px;">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Link</label>
-      <input class="sa-input" type="url" name="whatsapp_link" placeholder="e.g. https://...">
+      <label class="sa-label" for="add_whatsapp_link">Link</label>
+      <input class="sa-input" type="url" id="add_whatsapp_link" name="whatsapp_link" placeholder="e.g. https://...">
     </div>
     <button class="sa-btn sa-btn-primary sa-form-submit" type="submit">Create</button>
   </form>
