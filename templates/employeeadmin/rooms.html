@@ -8,8 +8,8 @@
   <h2 class="ea-section-title">Add Room</h2>
   <form id="createRoomForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
     <div>
-      <label class="ea-label">Property</label>
-      <select class="ea-input" name="property_id" required>
+      <label class="ea-label" for="createProp">Property</label>
+      <select class="ea-input" name="property_id" id="createProp" required>
         <option value="">Select property</option>
         {% for p in properties %}
         <option value="{{ p.id }}">{{ p.name }}</option>
@@ -17,32 +17,32 @@
       </select>
     </div>
     <div>
-      <label class="ea-label">Room Name</label>
-      <input class="ea-input" type="text" name="name" required placeholder="e.g. Ocean View 301">
+      <label class="ea-label" for="createName">Room Name</label>
+      <input class="ea-input" type="text" name="name" id="createName" required placeholder="e.g. Ocean View 301">
     </div>
     <div>
-      <label class="ea-label">Type</label>
-      <select class="ea-input" name="room_type">
+      <label class="ea-label" for="createType">Type</label>
+      <select class="ea-input" name="room_type" id="createType">
         <option value="single">Single</option>
         <option value="double">Double</option>
         <option value="deluxe">Deluxe</option>
       </select>
     </div>
     <div>
-      <label class="ea-label">Price / Night (₹)</label>
-      <input class="ea-input" type="number" name="price_per_night" step="1" min="1" required style="width:120px;">
+      <label class="ea-label" for="createPrice">Price / Night (₹)</label>
+      <input class="ea-input" type="number" name="price_per_night" id="createPrice" step="1" min="1" required style="width:120px;">
     </div>
     <div>
-      <label class="ea-label">Capacity</label>
-      <input class="ea-input" type="number" name="capacity" value="2" min="1" style="width:80px;">
+      <label class="ea-label" for="createCapacity">Capacity</label>
+      <input class="ea-input" type="number" name="capacity" id="createCapacity" value="2" min="1" style="width:80px;">
     </div>
     <div>
-      <label class="ea-label">Amenities</label>
-      <input class="ea-input" type="text" name="amenities" placeholder="WiFi, AC, TV" style="min-width:200px;">
+      <label class="ea-label" for="createAmenities">Amenities</label>
+      <input class="ea-input" type="text" name="amenities" id="createAmenities" placeholder="WiFi, AC, TV" style="min-width:200px;">
     </div>
     <div>
-      <label class="ea-label">Rating (0–5)</label>
-      <input class="ea-input" type="number" name="rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;">
+      <label class="ea-label" for="createRating">Rating (0–5)</label>
+      <input class="ea-input" type="number" name="rating" id="createRating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;">
     </div>
     <button class="ea-btn ea-btn-primary" type="submit">Create Room</button>
   </form>
@@ -53,8 +53,8 @@
 <div class="ea-card" style="margin-bottom:1rem;">
   <form method="get" style="display:flex;gap:.75rem;align-items:flex-end;">
     <div>
-      <label class="ea-label">Property</label>
-      <select class="ea-input" name="property" onchange="this.form.submit()">
+      <label class="ea-label" for="filterProp">Property</label>
+      <select class="ea-input" name="property" id="filterProp" onchange="this.form.submit()">
         <option value="">All properties</option>
         {% for p in properties %}
         <option value="{{ p.id }}" {% if property_filter == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
@@ -105,7 +105,7 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
-        <button class="ea-btn ea-btn-sm ea-btn-primary" onclick="openEditModal('{{ r.id }}', '{{ r.name|escapejs }}', '{{ r.room_type }}', '{{ r.price_per_night }}', '{{ r.capacity }}', '{{ r.amenities|escapejs }}', '{{ r.description|escapejs }}', '{{ r.property_id }}', '{{ r.rating|default_if_none:"" }}')">Edit</button>
+        <button class="ea-btn ea-btn-sm ea-btn-primary" data-id="{{ r.id }}" data-name="{{ r.name }}" data-type="{{ r.room_type }}" data-price="{{ r.price_per_night }}" data-capacity="{{ r.capacity }}" data-amenities="{{ r.amenities }}" data-description="{{ r.description }}" data-propid="{{ r.property_id }}" data-rating="{{ r.rating|default_if_none:'' }}" onclick="openEditModal(this)">Edit</button>
         <button class="ea-btn ea-btn-sm" onclick="toggleActive('{{ r.id }}', this)">
           {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
         </button>
@@ -131,11 +131,11 @@
       <input type="hidden" id="edit-room-id">
       <div style="display:flex;gap:12px;">
         <div style="flex:1;">
-          <label class="ea-label">Name</label>
+          <label class="ea-label" for="edit-name">Name</label>
           <input class="ea-input" type="text" id="edit-name" style="width:100%;" required>
         </div>
         <div>
-          <label class="ea-label">Type</label>
+          <label class="ea-label" for="edit-type">Type</label>
           <select class="ea-input" id="edit-type">
             <option value="single">Single</option>
             <option value="double">Double</option>
@@ -145,15 +145,15 @@
       </div>
       <div style="display:flex;gap:12px;">
         <div>
-          <label class="ea-label">Price / Night (₹)</label>
+          <label class="ea-label" for="edit-price">Price / Night (₹)</label>
           <input class="ea-input" type="number" id="edit-price" step="1" required style="width:120px;">
         </div>
         <div>
-          <label class="ea-label">Capacity</label>
+          <label class="ea-label" for="edit-capacity">Capacity</label>
           <input class="ea-input" type="number" id="edit-capacity" min="1" required style="width:80px;">
         </div>
         <div style="flex:1;">
-          <label class="ea-label">Property</label>
+          <label class="ea-label" for="edit-property">Property</label>
           <select class="ea-input" id="edit-property" style="width:100%;" required>
             {% for p in properties %}
             <option value="{{ p.id }}">{{ p.name }}</option>
@@ -162,16 +162,16 @@
         </div>
       </div>
       <div>
-        <label class="ea-label">Amenities</label>
+        <label class="ea-label" for="edit-amenities">Amenities</label>
         <input class="ea-input" type="text" id="edit-amenities" style="width:100%;">
       </div>
       <div style="display:flex;gap:12px;">
         <div style="flex:1;">
-          <label class="ea-label">Description</label>
+          <label class="ea-label" for="edit-description">Description</label>
           <textarea class="ea-input" id="edit-description" rows="3" style="width:100%;resize:vertical;"></textarea>
         </div>
         <div>
-          <label class="ea-label">Rating (0–5)</label>
+          <label class="ea-label" for="edit-rating">Rating (0–5)</label>
           <input class="ea-input" type="number" id="edit-rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;">
         </div>
       </div>
@@ -241,16 +241,17 @@ async function toggleFeatured(roomId, btn) {
 }
 
 // Edit modal
-function openEditModal(id, name, type, price, capacity, amenities, description, propId, rating) {
-  document.getElementById('edit-room-id').value = id;
-  document.getElementById('edit-name').value = name;
-  document.getElementById('edit-type').value = type;
-  document.getElementById('edit-price').value = price;
-  document.getElementById('edit-capacity').value = capacity;
-  document.getElementById('edit-amenities').value = amenities;
-  document.getElementById('edit-description').value = description;
-  document.getElementById('edit-property').value = propId;
-  document.getElementById('edit-rating').value = rating || '';
+function openEditModal(btn) {
+  const ds = btn.dataset;
+  document.getElementById('edit-room-id').value = ds.id;
+  document.getElementById('edit-name').value = ds.name;
+  document.getElementById('edit-type').value = ds.type;
+  document.getElementById('edit-price').value = ds.price;
+  document.getElementById('edit-capacity').value = ds.capacity;
+  document.getElementById('edit-amenities').value = ds.amenities;
+  document.getElementById('edit-description').value = ds.description;
+  document.getElementById('edit-property').value = ds.propid;
+  document.getElementById('edit-rating').value = ds.rating || '';
   document.getElementById('editModal').style.display = 'flex';
 }
 function closeEditModal() {
