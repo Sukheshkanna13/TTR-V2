@@ -6,12 +6,12 @@
 <div class="sa-card" style="margin-bottom:1rem">
   <form method="get" class="sa-toolbar">
     <div class="sa-filter">
-      <label class="sa-filter-label">From</label>
-      <input class="sa-input" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+      <label class="sa-filter-label" for="date_from">From</label>
+      <input class="sa-input" type="date" id="date_from" name="from" value="{{ date_from|date:'Y-m-d' }}">
     </div>
     <div class="sa-filter">
-      <label class="sa-filter-label">To</label>
-      <input class="sa-input" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+      <label class="sa-filter-label" for="date_to">To</label>
+      <input class="sa-input" type="date" id="date_to" name="to" value="{{ date_to|date:'Y-m-d' }}">
     </div>
     <div class="sa-toolbar-end">
       <button class="sa-btn sa-btn-primary" type="submit">Apply</button>
