@@ -11,16 +11,16 @@
   <h2 class="sa-section-title">Upload Photo</h2>
   <form id="uploadForm" enctype="multipart/form-data" class="sa-field-row" style="align-items:flex-end;">
     <div class="sa-field">
-      <label class="sa-label">Image File</label>
-      <input class="sa-input" type="file" name="image" accept="image/*" required style="padding:4px;">
+      <label class="sa-label" for="add_image">Image File</label>
+      <input class="sa-input" type="file" id="add_image" name="image" accept="image/*" required style="padding:4px;">
     </div>
     <div class="sa-field" style="flex-direction:row;align-items:center;gap:6px;">
       <input type="checkbox" name="is_primary" id="isPrimary">
       <label for="isPrimary" style="font-size:13px;color:var(--c-text-faint);cursor:pointer;">Set as primary</label>
     </div>
     <div class="sa-field">
-      <label class="sa-label">Sort Order</label>
-      <input class="sa-input" type="number" name="sort_order" value="0" style="width:70px;">
+      <label class="sa-label" for="add_sort_order">Sort Order</label>
+      <input class="sa-input" type="number" id="add_sort_order" name="sort_order" value="0" style="width:70px;">
     </div>
     <button class="sa-btn sa-btn-primary" type="submit">Upload</button>
   </form>
@@ -34,7 +34,7 @@
     {% for img in images %}
     <div id="img-{{ img.id }}" style="border:1px solid var(--c-border);border-radius:8px;overflow:hidden;background:var(--c-hover);">
       <div style="height:160px;overflow:hidden;background:var(--c-hover);">
-        <img src="{{ img.image.url }}" alt="Event photo"
+        <img src="{{ img.image.url }}" alt="Event"
              style="width:100%;height:100%;object-fit:cover;" loading="lazy">
       </div>
       <div style="padding:10px;">
