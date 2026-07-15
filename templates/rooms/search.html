@@ -45,7 +45,7 @@
     width: 100%; height: 100%;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 8px; background: #f8f9fa; color: #bdbdbd;
+    gap: 8px; background: #f8f9fa; color: #737373;
     font-size: 12px; letter-spacing: .04em;
   }
   #results .tt-card-image-wrap img {
@@ -106,7 +106,7 @@
 
         <!-- Where — destination / property -->
         <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Where</label>
+          <label class="tt-field-label" for="city_filter">Where</label>
           <select class="tt-select" id="city_filter" name="property_id">
             <option value="">All Properties</option>
             {% for prop in properties %}
@@ -117,17 +117,17 @@
 
         <!-- Check-in / Check-out — required for live availability + pricing -->
         <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Check-in</label>
+          <label class="tt-field-label" for="check_in">Check-in</label>
           <input class="tt-input" type="date" id="check_in" name="check_in">
         </div>
         <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Check-out</label>
+          <label class="tt-field-label" for="check_out">Check-out</label>
           <input class="tt-input" type="date" id="check_out" name="check_out">
         </div>
 
         <!-- Guests — directly affects which rooms appear (capacity filter) -->
         <div class="tt-field" style="margin-bottom:16px;">
-          <label class="tt-field-label">Guests</label>
+          <label class="tt-field-label" for="guests">Guests</label>
           <div style="display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:#fff;">
             <button type="button" onclick="stepGuests(-1)" style="padding:8px 12px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink);">&#8722;</button>
             <input type="number" id="guests" name="guests" min="1" max="10" value="1" readonly
@@ -142,15 +142,15 @@
         <button type="button" id="mobileFilterToggle" class="tt-btn tt-btn-ghost tt-btn-sm" onclick="toggleMobileFilters()">View More</button>
         <div id="advancedFilters" class="mobile-hidden-filters">
           <div class="tt-field" style="margin-bottom:16px;">
-            <label class="tt-field-label">Min price (₹)</label>
+            <label class="tt-field-label" for="min_price">Min price (₹)</label>
             <input class="tt-input" type="number" id="min_price" name="min_price" placeholder="e.g. 1,000" min="0" step="500">
           </div>
           <div class="tt-field" style="margin-bottom:16px;">
-            <label class="tt-field-label">Max price (₹)</label>
+            <label class="tt-field-label" for="max_price">Max price (₹)</label>
             <input class="tt-input" type="number" id="max_price" name="max_price" placeholder="e.g. 10,000" min="0" step="500">
           </div>
           <div class="tt-field" style="margin-bottom:16px;">
-            <label class="tt-field-label">Room type</label>
+            <label class="tt-field-label" for="room_type">Room type</label>
             <select class="tt-select" id="room_type" name="room_type">
               <option value="">All types</option>
               <option value="single">Single</option>
@@ -159,7 +159,7 @@
             </select>
           </div>
           <div class="tt-field" style="margin-bottom:24px;">
-            <label class="tt-field-label">Sort by</label>
+            <label class="tt-field-label" for="sort">Sort by</label>
             <select class="tt-select" id="sort" name="sort">
               <option value="">Recommended</option>
               <option value="price_asc">Price: Low to High</option>
@@ -207,7 +207,7 @@
   const LOGIN_PAGE_URL  = "{% url 'accounts:login-page' %}";
   const CSRF_TOKEN      = '{{ csrf_token }}';
 
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(globalThis.location.search);
 
   // Read initial search params from URL — apply safe defaults so we never send nulls
   let searchParams = {
@@ -216,7 +216,7 @@
     check_in:    urlParams.get('check_in') || '',
     check_out:   urlParams.get('check_out') || '',
     // guests: parse as int, fall back to 1 if missing/zero/NaN
-    guests:      Math.max(1, parseInt(urlParams.get('guests')) || 1),
+    guests:      Math.max(1, Number.parseInt(urlParams.get('guests')) || 1),
   };
 
   // ── Date helpers ───────────────────────────────────────────────
@@ -225,7 +225,7 @@
 
   function stepGuests(delta) {
     const input = document.getElementById('guests');
-    const next = Math.min(10, Math.max(1, parseInt(input.value) + delta));
+    const next = Math.min(10, Math.max(1, Number.parseInt(input.value) + delta));
     input.value = next;
     searchParams.guests = next;
     liveRefetch();
@@ -245,8 +245,8 @@
     if (co) searchParams.check_out = co;
 
     // guests from stepper — must be ≥ 1
-    const gVal = parseInt(fd.get('guests'));
-    searchParams.guests = (!isNaN(gVal) && gVal >= 1) ? gVal : searchParams.guests;
+    const gVal = Number.parseInt(fd.get('guests'));
+    searchParams.guests = (!Number.isNaN(gVal) && gVal >= 1) ? gVal : searchParams.guests;
 
     ['min_price', 'max_price', 'room_type', 'sort'].forEach(k => {
       const v = fd.get(k);
@@ -443,15 +443,12 @@
         const numNights = searchParams.check_in && searchParams.check_out
           ? Math.max(1, Math.ceil((new Date(searchParams.check_out) - new Date(searchParams.check_in)) / 86400000))
           : 1;
-        const totalPrice = room.dynamic_total_price
-          ? Number(room.dynamic_total_price)
-          : Number(room.price_per_night) * numNights;
 
         const card = document.createElement('div');
         card.className = 'tt-card';
         card.onclick = (e) => {
           if (e.target.closest('button') || e.target.closest('a')) return;
-          window.location.href = detailUrl;
+          globalThis.location.href = detailUrl;
         };
         card.innerHTML = `
           <div class="tt-card-image-wrap">
@@ -477,6 +474,7 @@
       });
 
     } catch (err) {
+      console.error(err);
       errorBox.innerHTML = `<strong>Network error.</strong> Could not reach the server. Please check your connection and try again.`;
       errorBox.style.display = 'block';
       resultsDiv.innerHTML = '';
