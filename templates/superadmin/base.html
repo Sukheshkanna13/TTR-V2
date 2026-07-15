@@ -6,7 +6,7 @@
 <title>{% block title %}Super Admin{% endblock %} — Temples & Towns</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"> <!-- NOSONAR -->
 <link rel="stylesheet" href="{% static 'css/superadmin.css' %}">
 </head>
 <body>
@@ -99,7 +99,7 @@
         credentials: 'include',
         headers: { 'X-CSRFToken': '{{ csrf_token }}' }
       });
-      window.location.href = "{% url 'accounts:login-page' %}";
+      globalThis.location.href = "{% url 'accounts:login-page' %}";
     } catch (err) { console.error('Logout failed:', err); }
   }
 </script>

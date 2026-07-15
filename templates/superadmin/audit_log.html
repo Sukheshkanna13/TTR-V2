@@ -6,8 +6,8 @@
 <div class="sa-card" style="margin-bottom:1rem;">
   <form method="get" class="sa-toolbar">
     <div class="sa-filter">
-      <label class="sa-filter-label">Filter by action</label>
-      <select class="sa-input" name="action">
+      <label class="sa-filter-label" for="action">Filter by action</label>
+      <select class="sa-input" id="action" name="action">
         <option value="">All actions</option>
         {% for val, label in action_choices %}
         <option value="{{ val }}" {% if selected_action == val %}selected{% endif %}>{{ label }}</option>
