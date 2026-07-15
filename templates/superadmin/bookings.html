@@ -6,12 +6,12 @@
 <div class="sa-card" style="margin-bottom:1rem">
   <form method="get" class="sa-toolbar">
     <div class="sa-filter">
-      <label class="sa-filter-label">Search</label>
-      <input class="sa-input" type="text" name="q" value="{{ q }}" placeholder="Name / email / ref">
+      <label class="sa-filter-label" for="search_q">Search</label>
+      <input class="sa-input" type="text" id="search_q" name="q" value="{{ q }}" placeholder="Name / email / ref">
     </div>
     <div class="sa-filter">
-      <label class="sa-filter-label">Status</label>
-      <select class="sa-input" name="status">
+      <label class="sa-filter-label" for="filter_status">Status</label>
+      <select class="sa-input" id="filter_status" name="status">
         <option value="">All</option>
         {% for val, label in status_choices %}
         <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
@@ -19,8 +19,8 @@
       </select>
     </div>
     <div class="sa-filter">
-      <label class="sa-filter-label">Property</label>
-      <select class="sa-input" name="property">
+      <label class="sa-filter-label" for="filter_property">Property</label>
+      <select class="sa-input" id="filter_property" name="property">
         <option value="">All</option>
         {% for p in properties %}
         <option value="{{ p.id }}" {% if property_filter == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
@@ -28,12 +28,12 @@
       </select>
     </div>
     <div class="sa-filter">
-      <label class="sa-filter-label">From</label>
-      <input class="sa-input" type="date" name="from" value="{{ date_from }}">
+      <label class="sa-filter-label" for="filter_from">From</label>
+      <input class="sa-input" type="date" id="filter_from" name="from" value="{{ date_from }}">
     </div>
     <div class="sa-filter">
-      <label class="sa-filter-label">To</label>
-      <input class="sa-input" type="date" name="to" value="{{ date_to }}">
+      <label class="sa-filter-label" for="filter_to">To</label>
+      <input class="sa-input" type="date" id="filter_to" name="to" value="{{ date_to }}">
     </div>
     <div class="sa-toolbar-end">
       <button class="sa-btn sa-btn-primary" type="submit">Filter</button>
