@@ -84,7 +84,7 @@ async function refreshBoard() {
     });
     const ts = document.getElementById('board-refresh-ts');
     if (ts) ts.textContent = 'Synced ' + new Date().toLocaleTimeString();
-  } catch (_) {}
+  } catch (_) { console.error(_); }
 }
 
 setInterval(refreshBoard, 60_000);
