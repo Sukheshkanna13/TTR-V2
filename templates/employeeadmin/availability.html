@@ -7,8 +7,8 @@
 <div class="ea-card">
   <form method="get" style="display:flex;gap:.75rem;align-items:flex-end;">
     <div>
-      <label class="ea-label">Select Room</label>
-      <select class="ea-input" name="room">
+      <label class="ea-label" for="roomSelect">Select Room</label>
+      <select class="ea-input" name="room" id="roomSelect">
         <option value="">— Choose a room —</option>
         {% for r in rooms %}
         <option value="{{ r.id }}" {% if selected_room and selected_room.id == r.id %}selected{% endif %}>
@@ -50,16 +50,16 @@
     <h3 class="ea-sub-title">Add Block</h3>
     <form id="addBlockForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
       <div>
-        <label class="ea-label">Start</label>
-        <input class="ea-input" type="date" name="start_date" required>
+        <label class="ea-label" for="blockStart">Start</label>
+        <input class="ea-input" type="date" name="start_date" id="blockStart" required>
       </div>
       <div>
-        <label class="ea-label">End</label>
-        <input class="ea-input" type="date" name="end_date" required>
+        <label class="ea-label" for="blockEnd">End</label>
+        <input class="ea-input" type="date" name="end_date" id="blockEnd" required>
       </div>
       <div>
-        <label class="ea-label">Reason</label>
-        <input class="ea-input" type="text" name="reason" placeholder="e.g. OTA booking" value="Manual Block">
+        <label class="ea-label" for="blockReason">Reason</label>
+        <input class="ea-input" type="text" name="reason" id="blockReason" placeholder="e.g. OTA booking" value="Manual Block">
       </div>
       <button class="ea-btn ea-btn-primary" type="submit">Add Block</button>
     </form>
@@ -91,16 +91,16 @@
     <h3 class="ea-sub-title">Add Rate</h3>
     <form id="addRateForm" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
       <div>
-        <label class="ea-label">Start</label>
-        <input class="ea-input" type="date" name="start_date" required>
+        <label class="ea-label" for="rateStart">Start</label>
+        <input class="ea-input" type="date" name="start_date" id="rateStart" required>
       </div>
       <div>
-        <label class="ea-label">End</label>
-        <input class="ea-input" type="date" name="end_date" required>
+        <label class="ea-label" for="rateEnd">End</label>
+        <input class="ea-input" type="date" name="end_date" id="rateEnd" required>
       </div>
       <div>
-        <label class="ea-label">Price (₹)</label>
-        <input class="ea-input" type="number" name="price" step="1" min="1" required style="width:120px;">
+        <label class="ea-label" for="ratePrice">Price (₹)</label>
+        <input class="ea-input" type="number" name="price" id="ratePrice" step="1" min="1" required style="width:120px;">
       </div>
       <button class="ea-btn ea-btn-primary" type="submit">Add Rate</button>
     </form>
