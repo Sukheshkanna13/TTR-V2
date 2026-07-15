@@ -84,20 +84,20 @@
       {% csrf_token %}
       <input type="hidden" name="action" value="save_tier">
       <div class="sa-field">
-        <label class="sa-label">Name</label>
-        <input class="sa-input" type="text" name="name" placeholder="e.g. Gold" required>
+        <label class="sa-label" for="tier_name">Name</label>
+        <input class="sa-input" type="text" id="tier_name" name="name" placeholder="e.g. Gold" required>
       </div>
       <div class="sa-field">
-        <label class="sa-label">Min Points</label>
-        <input class="sa-input" type="number" name="min_pts" value="0" style="width:100px;">
+        <label class="sa-label" for="tier_min_pts">Min Points</label>
+        <input class="sa-input" type="number" id="tier_min_pts" name="min_pts" value="0" style="width:100px;">
       </div>
       <div class="sa-field">
-        <label class="sa-label">Discount %</label>
-        <input class="sa-input" type="number" name="discount_pct" step="0.1" value="0" style="width:90px;">
+        <label class="sa-label" for="tier_discount">Discount %</label>
+        <input class="sa-input" type="number" id="tier_discount" name="discount_pct" step="0.1" value="0" style="width:90px;">
       </div>
       <div class="sa-field">
-        <label class="sa-label">Sort Order</label>
-        <input class="sa-input" type="number" name="sort_order" value="0" style="width:80px;">
+        <label class="sa-label" for="tier_sort">Sort Order</label>
+        <input class="sa-input" type="number" id="tier_sort" name="sort_order" value="0" style="width:80px;">
       </div>
       <button class="sa-btn sa-btn-primary" type="submit">Add Tier</button>
     </form>
@@ -144,20 +144,20 @@
       {% csrf_token %}
       <input type="hidden" name="action" value="save_campaign">
       <div class="sa-field">
-        <label class="sa-label">Name</label>
-        <input class="sa-input" type="text" name="name" placeholder="e.g. Diwali Bonus" required>
+        <label class="sa-label" for="campaign_name">Name</label>
+        <input class="sa-input" type="text" id="campaign_name" name="name" placeholder="e.g. Diwali Bonus" required>
       </div>
       <div class="sa-field">
-        <label class="sa-label">Start</label>
-        <input class="sa-input" type="date" name="start_date" required>
+        <label class="sa-label" for="campaign_start">Start</label>
+        <input class="sa-input" type="date" id="campaign_start" name="start_date" required>
       </div>
       <div class="sa-field">
-        <label class="sa-label">End</label>
-        <input class="sa-input" type="date" name="end_date" required>
+        <label class="sa-label" for="campaign_end">End</label>
+        <input class="sa-input" type="date" id="campaign_end" name="end_date" required>
       </div>
       <div class="sa-field">
-        <label class="sa-label">Multiplier</label>
-        <input class="sa-input" type="number" name="multiplier" step="0.1" value="1.5" style="width:90px;">
+        <label class="sa-label" for="campaign_mult">Multiplier</label>
+        <input class="sa-input" type="number" id="campaign_mult" name="multiplier" step="0.1" value="1.5" style="width:90px;">
       </div>
       <button class="sa-btn sa-btn-primary" type="submit">Add Campaign</button>
     </form>
