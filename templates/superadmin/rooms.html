@@ -8,8 +8,8 @@
   <h2 class="sa-section-title">Add Room</h2>
   <form id="createRoomForm" class="sa-form-grid">
     <div class="sa-field">
-      <label class="sa-label">Property</label>
-      <select class="sa-input" name="property_id" required>
+      <label class="sa-label" for="add_property">Property</label>
+      <select class="sa-input" id="add_property" name="property_id" required>
         <option value="">Select property</option>
         {% for p in properties %}
         <option value="{{ p.id }}">{{ p.name }}</option>
@@ -17,12 +17,12 @@
       </select>
     </div>
     <div class="sa-field">
-      <label class="sa-label">Room Name</label>
-      <input class="sa-input" type="text" name="name" required placeholder="e.g. Ocean View 301">
+      <label class="sa-label" for="add_name">Room Name</label>
+      <input class="sa-input" type="text" id="add_name" name="name" required placeholder="e.g. Ocean View 301">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Type</label>
-      <select class="sa-input" name="room_type">
+      <label class="sa-label" for="add_type">Type</label>
+      <select class="sa-input" id="add_type" name="room_type">
         {% for val, label in operational_choices %}{% endfor %}
         <option value="single">Single</option>
         <option value="double">Double</option>
@@ -30,21 +30,21 @@
       </select>
     </div>
     <div class="sa-field">
-      <label class="sa-label">Price / Night (₹)</label>
-      <input class="sa-input" type="number" name="price_per_night" step="1" min="1" required>
+      <label class="sa-label" for="add_price">Price / Night (₹)</label>
+      <input class="sa-input" type="number" id="add_price" name="price_per_night" step="1" min="1" required>
     </div>
     <div class="sa-field">
-      <label class="sa-label">Capacity</label>
-      <input class="sa-input" type="number" name="capacity" value="2" min="1">
+      <label class="sa-label" for="add_capacity">Capacity</label>
+      <input class="sa-input" type="number" id="add_capacity" name="capacity" value="2" min="1">
     </div>
     <div class="sa-field" style="position:relative;">
-      <label class="sa-label">Amenities</label>
+      <div class="sa-label">Amenities</div>
       <input type="hidden" name="amenities" id="create-amenities-hidden" value="">
       <div id="create-amenities-dropdown" class="custom-multiselect-container"></div>
     </div>
     <div class="sa-field">
-      <label class="sa-label">Rating (0–5)</label>
-      <input class="sa-input" type="number" name="rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" required value="4.5">
+      <label class="sa-label" for="add_rating">Rating (0–5)</label>
+      <input class="sa-input" type="number" id="add_rating" name="rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" required value="4.5">
     </div>
     <button class="sa-btn sa-btn-primary sa-form-submit" type="submit">Create Room</button>
   </form>
@@ -110,7 +110,7 @@
       </td>
       <td style="white-space:nowrap;">
         <div class="sa-actions">
-          <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="openEditModal('{{ r.id }}', '{{ r.name|escapejs }}', '{{ r.room_type }}', '{{ r.price_per_night }}', '{{ r.capacity }}', '{{ r.amenities|escapejs }}', '{{ r.description|escapejs }}', '{{ r.property_id }}', '{{ r.rating|default_if_none:"" }}')">Edit</button>
+          <button class="sa-btn sa-btn-sm sa-btn-primary" onclick="openEditModal({ id: '{{ r.id }}', name: '{{ r.name|escapejs }}', type: '{{ r.room_type }}', price: '{{ r.price_per_night }}', capacity: '{{ r.capacity }}', amenities: '{{ r.amenities|escapejs }}', description: '{{ r.description|escapejs }}', propId: '{{ r.property_id }}', rating: '{{ r.rating|default_if_none:"" }}' })">Edit</button>
           <button class="sa-btn sa-btn-sm" onclick="toggleActive('{{ r.id }}', this)">
             {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
           </button>
@@ -138,11 +138,11 @@
       <input type="hidden" id="edit-room-id">
       <div class="sa-field-row">
         <div class="sa-field" style="flex:1;">
-          <label class="sa-label">Name</label>
+          <label class="sa-label" for="edit-name">Name</label>
           <input class="sa-input" type="text" id="edit-name" style="width:100%;">
         </div>
         <div class="sa-field">
-          <label class="sa-label">Type</label>
+          <label class="sa-label" for="edit-type">Type</label>
           <select class="sa-input" id="edit-type">
             <option value="single">Single</option>
             <option value="double">Double</option>
@@ -152,15 +152,15 @@
       </div>
       <div class="sa-field-row">
         <div class="sa-field">
-          <label class="sa-label">Price / Night (₹)</label>
+          <label class="sa-label" for="edit-price">Price / Night (₹)</label>
           <input class="sa-input" type="number" id="edit-price" step="1" style="width:120px;">
         </div>
         <div class="sa-field">
-          <label class="sa-label">Capacity</label>
+          <label class="sa-label" for="edit-capacity">Capacity</label>
           <input class="sa-input" type="number" id="edit-capacity" min="1" style="width:80px;">
         </div>
         <div class="sa-field" style="flex:1;">
-          <label class="sa-label">Property</label>
+          <label class="sa-label" for="edit-property">Property</label>
           <select class="sa-input" id="edit-property" style="width:100%;">
             {% for p in properties %}
             <option value="{{ p.id }}">{{ p.name }}</option>
@@ -169,17 +169,17 @@
         </div>
       </div>
       <div class="sa-field" style="position:relative;">
-        <label class="sa-label">Amenities</label>
+        <div class="sa-label">Amenities</div>
         <input type="hidden" id="edit-amenities" style="width:100%;">
         <div id="edit-amenities-dropdown" class="custom-multiselect-container"></div>
       </div>
       <div class="sa-field-row">
         <div class="sa-field" style="flex:1;">
-          <label class="sa-label">Description</label>
+          <label class="sa-label" for="edit-description">Description</label>
           <textarea class="sa-input" id="edit-description" rows="3" style="width:100%;resize:vertical;"></textarea>
         </div>
         <div class="sa-field">
-          <label class="sa-label">Rating (0–5)</label>
+          <label class="sa-label" for="edit-rating">Rating (0–5)</label>
           <input class="sa-input" type="number" id="edit-rating" step="0.1" min="0" max="5" placeholder="e.g. 4.5" style="width:90px;" required>
         </div>
       </div>
@@ -360,17 +360,17 @@ function setupAmenitiesDropdown(containerId, hiddenInputId, initialValue = '') {
   renderOptions();
 }
 
-function openEditModal(id, name, type, price, capacity, amenities, description, propId, rating) {
-  document.getElementById('edit-room-id').value = id;
-  document.getElementById('edit-name').value = name;
-  document.getElementById('edit-type').value = type;
-  document.getElementById('edit-price').value = price;
-  document.getElementById('edit-capacity').value = capacity;
-  document.getElementById('edit-amenities').value = amenities;
-  setupAmenitiesDropdown('edit-amenities-dropdown', 'edit-amenities', amenities);
-  document.getElementById('edit-description').value = description;
-  document.getElementById('edit-property').value = propId;
-  document.getElementById('edit-rating').value = rating || '';
+function openEditModal(roomData) {
+  document.getElementById('edit-room-id').value = roomData.id;
+  document.getElementById('edit-name').value = roomData.name;
+  document.getElementById('edit-type').value = roomData.type;
+  document.getElementById('edit-price').value = roomData.price;
+  document.getElementById('edit-capacity').value = roomData.capacity;
+  document.getElementById('edit-amenities').value = roomData.amenities;
+  setupAmenitiesDropdown('edit-amenities-dropdown', 'edit-amenities', roomData.amenities);
+  document.getElementById('edit-description').value = roomData.description;
+  document.getElementById('edit-property').value = roomData.propId;
+  document.getElementById('edit-rating').value = roomData.rating || '';
   document.getElementById('editModal').style.display = 'flex';
 }
 function closeEditModal() {
