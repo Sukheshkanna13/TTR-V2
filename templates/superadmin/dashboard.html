@@ -243,7 +243,7 @@ async function pollDashboard() {
     const data = await res.json();
     updateKpis(data);
     refreshHoldsTable(data.pending_holds);
-  } catch (_) {}
+  } catch (_) { console.error(_); }
 }
 
 setInterval(pollDashboard, 30_000);

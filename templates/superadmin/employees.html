@@ -8,23 +8,23 @@
   <h2 class="sa-section-title">Create Employee</h2>
   <form id="createForm" class="sa-field-row" style="align-items:flex-end;">
     <div class="sa-field">
-      <label class="sa-label">Email</label>
-      <input class="sa-input" type="email" name="email" required placeholder="employee@hotel.com">
+      <label class="sa-label" for="add_email">Email</label>
+      <input class="sa-input" type="email" id="add_email" name="email" required placeholder="employee@hotel.com">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Full Name</label>
-      <input class="sa-input" type="text" name="full_name" required placeholder="Full name">
+      <label class="sa-label" for="add_full_name">Full Name</label>
+      <input class="sa-input" type="text" id="add_full_name" name="full_name" required placeholder="Full name">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Financial Level</label>
-      <select class="sa-input" name="fin_level">
+      <label class="sa-label" for="add_fin_level">Financial Level</label>
+      <select class="sa-input" id="add_fin_level" name="fin_level">
         <option value="C">C — No Financial Access</option>
         <option value="B">B — Limited Financial Access</option>
         <option value="A">A — Full Financial Access</option>
       </select>
     </div>
     <div class="sa-field" style="position:relative;">
-      <label class="sa-label">Properties</label>
+      <div class="sa-label">Properties</div>
       <div id="prop-select-box" style="display:flex; justify-content:space-between; align-items:center; background:var(--c-surface); border:1px solid var(--c-border); padding:6px 10px; border-radius:6px; font-size:13px; color:var(--c-text); cursor:pointer; min-width:200px; min-height:34px;">
         <span id="prop-selected-text">Select properties</span>
         <span style="font-size:10px; color:var(--c-text-muted);">▼</span>
