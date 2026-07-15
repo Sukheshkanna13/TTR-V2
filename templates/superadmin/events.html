@@ -31,36 +31,36 @@
   <h2 class="sa-section-title">Add Event / Attraction</h2>
   <form id="createEventForm" class="sa-form-grid">
     <div class="sa-field">
-      <label class="sa-label">Name</label>
-      <input class="sa-input" type="text" name="name" required placeholder="e.g. Clay Art Workshop" style="width:100%;">
+      <label class="sa-label" for="add_name">Name</label>
+      <input class="sa-input" type="text" id="add_name" name="name" required placeholder="e.g. Clay Art Workshop" style="width:100%;">
     </div>
     <div class="sa-field">
-      <label class="sa-label">City</label>
-      <input class="sa-input" type="text" name="city" required placeholder="e.g. Pondicherry" style="width:100%;">
+      <label class="sa-label" for="add_city">City</label>
+      <input class="sa-input" type="text" id="add_city" name="city" required placeholder="e.g. Pondicherry" style="width:100%;">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Category</label>
-      <select class="sa-input" name="category" style="width:100%;">
+      <label class="sa-label" for="add_category">Category</label>
+      <select class="sa-input" id="add_category" name="category" style="width:100%;">
         {% for val, lbl in category_choices %}
           <option value="{{ val }}">{{ lbl }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="sa-field">
-      <label class="sa-label">Address</label>
-      <input class="sa-input" type="text" name="address" placeholder="e.g. White Town" style="width:100%;">
+      <label class="sa-label" for="add_address">Address</label>
+      <input class="sa-input" type="text" id="add_address" name="address" placeholder="e.g. White Town" style="width:100%;">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Opening Hours / Timing</label>
-      <input class="sa-input" type="text" name="opening_hrs" placeholder="e.g. Sat 6:00 AM" style="width:100%;">
+      <label class="sa-label" for="add_opening_hrs">Opening Hours / Timing</label>
+      <input class="sa-input" type="text" id="add_opening_hrs" name="opening_hrs" placeholder="e.g. Sat 6:00 AM" style="width:100%;">
     </div>
     <div class="sa-field">
-      <label class="sa-label">Link</label>
-      <input class="sa-input" type="url" name="whatsapp_link" placeholder="e.g. https://..." style="width:100%;">
+      <label class="sa-label" for="add_link">Link</label>
+      <input class="sa-input" type="url" id="add_link" name="whatsapp_link" placeholder="e.g. https://..." style="width:100%;">
     </div>
     <div class="sa-field" style="grid-column: 1 / -1;">
-      <label class="sa-label">Description</label>
-      <textarea class="sa-input" name="description" placeholder="Write description here..." rows="2" style="width:100%;resize:vertical;"></textarea>
+      <label class="sa-label" for="add_description">Description</label>
+      <textarea class="sa-input" id="add_description" name="description" placeholder="Write description here..." rows="2" style="width:100%;resize:vertical;"></textarea>
     </div>
     <button class="sa-btn sa-btn-primary sa-form-submit" type="submit">Create</button>
   </form>
@@ -145,13 +145,13 @@ const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 
 // Filter events by Category/City
 function filterEvents(param, val) {
-  const url = new URL(window.location.href);
+  const url = new URL(globalThis.location.href);
   if (val) {
     url.searchParams.set(param, val);
   } else {
     url.searchParams.delete(param);
   }
-  window.location.href = url.toString();
+  globalThis.location.href = url.toString();
 }
 
 // Create Event
