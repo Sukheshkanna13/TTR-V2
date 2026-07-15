@@ -71,7 +71,7 @@
     <div class="tt-grid-3">
       {% for room in featured_rooms %}
       {% with p=room.property %}
-      <div class="tt-card{% if forloop.counter > 3 %} tt-featured-extra{% endif %}" onclick="location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'">
+      <div class="tt-card{% if forloop.counter > 3 %} tt-featured-extra{% endif %}" role="button" tabindex="0" onclick="location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'; }">
         <div class="tt-card-media home-carousel" data-idx="0">
           {% with imgs=room.images.all %}
           <div class="tt-slider-track">
@@ -79,7 +79,7 @@
             <img src="{{ img.image.url }}" alt="{{ room.name }}" class="tt-slider-img" loading="lazy" draggable="false">
             {% endif %}{% endfor %}
             {% if not imgs %}
-            <div class="tt-slider-img tt-no-photo-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#f8f9fa;color:#bdbdbd;font-size:12px;letter-spacing:.04em;">
+            <div class="tt-slider-img tt-no-photo-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#f8f9fa;color:#78716C;font-size:12px;letter-spacing:.04em;">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8.5 3.5v1M15.5 3.5v1"/></svg>
               <span>No photo yet</span>
             </div>
@@ -220,11 +220,11 @@
     let raf = null;
     const update = () => {
       raf = null;
-      const op = Math.max(0, 1 - (window.scrollY || 0) / 150);
+      const op = Math.max(0, 1 - (globalThis.scrollY || 0) / 150);
       el.style.opacity = op;
       el.style.pointerEvents = op < 0.1 ? 'none' : 'auto';
     };
-    window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(update); }, { passive: true });
+    globalThis.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(update); }, { passive: true });
     update();
   })();
 
@@ -232,7 +232,7 @@
   function carGo(media, dir) {
     const imgs = media.querySelectorAll('.tt-slider-img');
     const dots = media.querySelectorAll('.tt-dot');
-    let idx = parseInt(media.dataset.idx || '0', 10);
+    let idx = Number.parseInt(media.dataset.idx || '0', 10);
     idx = (idx + dir + imgs.length) % imgs.length;
     media.dataset.idx = idx;
     media.querySelector('.tt-slider-track').style.transform = `translateX(-${idx * 100}%)`;
@@ -250,7 +250,8 @@
     let sx = 0, dragging = false;
     media.addEventListener('touchstart', e => { sx = e.touches[0].clientX; dragging = true; }, { passive: true });
     media.addEventListener('touchend', e => {
-      if (!dragging) return; dragging = false;
+      if (!dragging) return;
+      dragging = false;
       const dx = e.changedTouches[0].clientX - sx;
       if (Math.abs(dx) > 40) carGo(media, dx < 0 ? 1 : -1);
     });
@@ -265,7 +266,7 @@
     // Duplicate children to create a seamless infinite loop
     track.innerHTML += track.innerHTML;
 
-    let raf, paused = false, isDown = false, startX = 0, startScroll = 0;
+    let paused = false, isDown = false, startX = 0, startScroll = 0;
     const speed = 0.6;
     const step = () => {
       if (!paused) {
@@ -275,13 +276,13 @@
           el.scrollLeft -= track.scrollWidth / 2;
         }
       }
-      raf = requestAnimationFrame(step);
+      requestAnimationFrame(step);
     };
     step();
     el.addEventListener('mouseenter', () => paused = true);
     el.addEventListener('mouseleave', () => { if (!isDown) paused = false; });
     el.addEventListener('mousedown', e => { isDown = true; paused = true; startX = e.pageX; startScroll = el.scrollLeft; el.style.cursor = 'grabbing'; });
-    window.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; paused = false; });
+    globalThis.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; paused = false; });
     el.addEventListener('mousemove', e => { 
       if (!isDown) return; 
       e.preventDefault(); 
