@@ -70,7 +70,7 @@ async function refreshBoard() {
     });
     const ts = document.getElementById('board-refresh-ts');
     if (ts) ts.textContent = 'Synced ' + new Date().toLocaleTimeString();
-  } catch (_) {}
+  } catch (err) { console.error('Status board poll error:', err); }
 }
 
 setInterval(refreshBoard, 60_000);

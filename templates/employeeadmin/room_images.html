@@ -11,12 +11,12 @@
   <h2 class="ea-section-title">Upload Image</h2>
   <form id="uploadForm" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
     <div>
-      <label class="ea-label">Image File</label>
-      <input class="ea-input" type="file" name="image" accept="image/*" multiple required style="padding:4px;">
+      <label class="ea-label" for="imageFile">Image File</label>
+      <input class="ea-input" type="file" name="image" id="imageFile" accept="image/*" multiple required style="padding:4px;">
     </div>
     <div>
-      <label class="ea-label">Caption</label>
-      <input class="ea-input" type="text" name="caption" placeholder="Optional caption" style="width:200px;">
+      <label class="ea-label" for="imageCaption">Caption</label>
+      <input class="ea-input" type="text" name="caption" id="imageCaption" placeholder="Optional caption" style="width:200px;">
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
       <input type="checkbox" name="is_primary" id="isPrimary">

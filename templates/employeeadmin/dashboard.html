@@ -86,7 +86,7 @@ async function pollDashboard() {
       const el = document.querySelector(`[data-kpi="${key}"]`);
       if (el) el.textContent = data[key];
     });
-  } catch (_) {}
+  } catch (err) { console.error('Dashboard poll error:', err); }
 }
 
 setInterval(pollDashboard, 30_000);
