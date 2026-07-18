@@ -71,7 +71,7 @@
     <div class="tt-grid-3">
       {% for room in featured_rooms %}
       {% with p=room.property %}
-      <div class="tt-card{% if forloop.counter > 3 %} tt-featured-extra{% endif %}" role="button" tabindex="0" onclick="location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'; }">
+      <div class="tt-card{% if forloop.counter > 3 %} tt-featured-extra{% endif %}" role="button" tabindex="0" onclick="location.href=`{% url 'rooms:room-detail-page' %}?id={{ room.id }}`" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); location.href=`{% url 'rooms:room-detail-page' %}?id={{ room.id }}`; }">
         <div class="tt-card-media home-carousel" data-idx="0">
           {% with imgs=room.images.all %}
           <div class="tt-slider-track">
@@ -100,7 +100,7 @@
             <span class="tt-tag tt-tag-dark" style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px;">
               <span style="position:relative;display:inline-flex;line-height:1;color:#64748b;font-size:11px;letter-spacing:1px;">
                 <span>★★★★★</span>
-                <span style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:{{ room.rating_pct|floatformat:0 }}%;">★★★★★</span>
+                <span class="tt-rating-filled" data-width="{{ room.rating_pct|floatformat:0 }}%" style="position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap;width:0;">★★★★★</span>
               </span>
               <span style="font-size:11px;font-weight:600;">{{ room.rating }}</span>
             </span>
@@ -109,7 +109,7 @@
         <div class="tt-card-body">
           <div class="tt-card-row" style="align-items:center;">
             <span class="tt-card-name">{{ room.name }}</span>
-            <button type="button" class="tt-btn-card-cta" onclick="event.stopPropagation();location.href='{% url 'rooms:room-detail-page' %}?id={{ room.id }}'">Book now</button>
+            <button type="button" class="tt-btn-card-cta" onclick="event.stopPropagation();location.href=`{% url 'rooms:room-detail-page' %}?id={{ room.id }}`">Book now</button>
           </div>
           <div class="tt-card-area">{{ p.address|default:p.name|default:room.city }}</div>
         </div>
@@ -213,6 +213,11 @@
 
 {% block extra_js %}
 <script>
+  // ── Set rating star widths from data attributes (prevents editor warnings) ──
+  document.querySelectorAll('.tt-rating-filled').forEach(el => {
+    el.style.width = el.dataset.width;
+  });
+
   // ── Hero floating title: fade out within 150px of scroll (home.jsx) ──
   (function heroFloat() {
     const el = document.getElementById('heroFloat');
