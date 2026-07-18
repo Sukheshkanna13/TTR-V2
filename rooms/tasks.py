@@ -1,5 +1,8 @@
 import logging
+from datetime import timedelta
+
 from django.utils import timezone
+
 from .models import Booking
 
 logger = logging.getLogger(__name__)
@@ -47,5 +50,35 @@ def auto_complete_bookings():
     
     if completed_count > 0:
         logger.info(f"Auto-completed {completed_count} past bookings and marked rooms for cleaning.")
-        
+
     return completed_count
+
+def award_loyalty_for_completed_stays():
+    """
+    Scheduled task: credit loyalty points 24h after checkout, but only for
+    stays that weren't cancelled in that window.
+
+    Eligible bookings are CONFIRMED or COMPLETED (auto_complete_bookings may
+    have already flipped status by the time this runs), with check_out at
+    least 24h in the past, and not yet awarded. A cancellation moves status
+    to "cancelled" before this task ever sees the booking, so cancelled
+    stays are naturally excluded rather than needing a separate check.
+    """
+    from loyalty.services import award_booking_points
+
+    cutoff = timezone.now() - timedelta(hours=24)
+    eligible = Booking.objects.filter(
+        status__in=("confirmed", "completed"),
+        loyalty_awarded=False,
+        check_out__lte=cutoff.date(),
+    )
+
+    awarded_count = 0
+    for booking in eligible:
+        award_booking_points(booking.pk)
+        awarded_count += 1
+
+    if awarded_count > 0:
+        logger.info(f"Awarded loyalty points for {awarded_count} completed stays.")
+
+    return awarded_count

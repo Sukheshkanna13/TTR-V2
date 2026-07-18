@@ -399,6 +399,10 @@ class Booking(models.Model):
         unique=True,
         help_text="Human-readable booking reference (e.g., TT-2026-00001).",
     )
+    loyalty_awarded = models.BooleanField(
+        default=False,
+        help_text="Set once loyalty points have been credited (24h after checkout, stay not cancelled).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

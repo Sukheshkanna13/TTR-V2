@@ -23,7 +23,6 @@ from core.constants import BOOKING_NOT_FOUND_MSG
 from .models import Payment
 from .serializers import CreateOrderSerializer, VerifyPaymentSerializer
 from .utils import (
-    award_loyalty_points,
     create_razorpay_order,
     send_booking_confirmation_email,
     send_invoice_email,
@@ -258,11 +257,10 @@ class VerifyPaymentView(APIView):
         # Send confirmation email (async-safe, won't block on failure)
         send_booking_confirmation_email(booking)
 
-        # Send invoice email and award loyalty points (both wrapped in try/except)
+        # Send invoice email. Loyalty points are credited later — 24h after
+        # checkout, only if the stay wasn't cancelled — via the periodic
+        # rooms.tasks.award_loyalty_for_completed_stays sweep.
         send_invoice_email(booking)
-        award_loyalty_points(booking)
-
-
 
         return Response(
             {
@@ -364,39 +362,81 @@ class WebhookView(APIView):
             logger.info("Webhook: Booking %s already confirmed, skipping.", booking.id)
             return Response({"status": "already_confirmed"}, status=status.HTTP_200_OK)
 
-        # Only process PENDING bookings
-        if booking.status == "pending":
-            booking.status = "confirmed"
-            booking.hold_expires_at = None
-            booking.save(update_fields=["status", "hold_expires_at"])
+        # A cancellation is a deliberate, later action (by the guest or an
+        # admin, possibly already refunded). Never silently re-confirm over
+        # it — this is almost certainly a late/duplicate webhook for a
+        # payment that's since been refunded. Flag loudly for manual review.
+        if booking.status == "cancelled":
+            logger.error(
+                "RECONCILIATION NEEDED: payment.captured for CANCELLED booking %s "
+                "(order=%s, payment=%s, Rs.%s). Payment may need a manual refund check.",
+                booking.id, order_id, payment_id, booking.total_price,
+            )
+            return Response({"status": "flagged_cancelled_booking"}, status=status.HTTP_200_OK)
 
-            # Generate booking reference and compute GST
-            booking.generate_booking_reference()
-            booking.compute_tax()
+        # PENDING, EXPIRED, or FAILED all reach here — Razorpay has verified,
+        # captured money. The guest paid; honor it unless the room has since
+        # been re-sold to someone else for these dates in the gap between
+        # the hold expiring and this webhook arriving.
+        was_pending = booking.status == "pending"
 
-            # Update payment record
-            Payment.objects.filter(
-                razorpay_order_id=order_id,
-            ).update(
-                razorpay_payment_id=payment_id,
-                status="captured",
+        if not was_pending:
+            conflict = Booking.objects.filter(
+                room=booking.room,
+                status="confirmed",
+                check_in__lt=booking.check_out,
+                check_out__gt=booking.check_in,
+            ).exclude(pk=booking.pk).exists()
+
+            if conflict:
+                logger.error(
+                    "RECONCILIATION NEEDED: payment.captured for booking %s (status=%s) "
+                    "but the room was re-booked for overlapping dates before this webhook "
+                    "arrived (order=%s, payment=%s, Rs.%s). Needs manual refund/reassignment.",
+                    booking.id, booking.status, order_id, payment_id, booking.total_price,
+                )
+                Payment.objects.filter(razorpay_order_id=order_id).update(
+                    razorpay_payment_id=payment_id, status="captured",
+                )
+                return Response({"status": "flagged_room_conflict"}, status=status.HTTP_200_OK)
+
+            logger.error(
+                "Webhook re-confirming booking %s that had lapsed to '%s' before payment "
+                "capture arrived (order=%s, payment=%s). Room was still free — honoring the "
+                "guest's payment.",
+                booking.id, booking.status, order_id, payment_id,
             )
 
-            logger.info(
-                "Webhook confirmed booking %s (order: %s, ref: %s)",
-                booking.id,
-                order_id,
-                booking.booking_reference,
-            )
+        booking.status = "confirmed"
+        booking.hold_expires_at = None
+        booking.save(update_fields=["status", "hold_expires_at"])
 
-            # Send confirmation email
-            send_booking_confirmation_email(booking)
+        # Generate booking reference and compute GST
+        booking.generate_booking_reference()
+        booking.compute_tax()
 
-            # Send invoice email and award loyalty points (both wrapped in try/except)
-            send_invoice_email(booking)
-            award_loyalty_points(booking)
+        # Update payment record
+        Payment.objects.filter(
+            razorpay_order_id=order_id,
+        ).update(
+            razorpay_payment_id=payment_id,
+            status="captured",
+        )
 
+        logger.info(
+            "Webhook confirmed booking %s (order: %s, ref: %s)",
+            booking.id,
+            order_id,
+            booking.booking_reference,
+        )
 
+        # Send confirmation email
+        send_booking_confirmation_email(booking)
+
+        # Send invoice email. Loyalty points are credited later — 24h after
+        # checkout, only if the stay wasn't cancelled — via the periodic
+        # rooms.tasks.award_loyalty_for_completed_stays sweep.
+        send_invoice_email(booking)
 
         return Response({"status": "processed"}, status=status.HTTP_200_OK)
 

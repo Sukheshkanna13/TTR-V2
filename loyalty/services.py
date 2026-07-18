@@ -17,6 +17,9 @@ def award_booking_points(booking_pk):
       3. ≥2 confirmed bookings this calendar month → apply monthly_repeat_multiplier
       4. Active CampaignRule covering check_in → take highest multiplier
       5. Write LoyaltyLedger, update profile.loyalty_points, recalculate tier
+
+    Called by rooms.tasks.award_loyalty_for_completed_stays 24h after checkout
+    for bookings that are still CONFIRMED (not cancelled) — not at payment time.
     """
     try:
         from rooms.models import Booking
@@ -24,6 +27,8 @@ def award_booking_points(booking_pk):
         from accounts.models import UserProfile
 
         booking = Booking.objects.select_related('user', 'room__property').get(pk=booking_pk)
+        if booking.loyalty_awarded:
+            return
         user = booking.user
 
         # --- Step 1: get config ---
@@ -36,7 +41,7 @@ def award_booking_points(booking_pk):
                 pass
 
         # --- Step 2-4: compute points and multiplier ---
-        base, multiplier = _compute_pts_and_multiplier(booking, user, prop, config)
+        base, multiplier, pts_per_night = _compute_pts_and_multiplier(booking, user, prop, config)
 
         # --- Step 5: finalise and persist ---
         final_pts = int(Decimal(str(base)) * multiplier)
@@ -52,6 +57,9 @@ def award_booking_points(booking_pk):
             reason='BOOKING_CONFIRMED',
             note=f"{booking.num_nights}n × {pts_per_night}pts × {multiplier} multiplier",
         )
+
+        booking.loyalty_awarded = True
+        booking.save(update_fields=['loyalty_awarded'])
 
         _update_tier(profile)
         logger.info("Awarded %d loyalty pts to %s for booking %s", final_pts, user.email, booking_pk)
@@ -105,7 +113,7 @@ def _compute_pts_and_multiplier(booking, user, prop, config):
         if campaign_mult > multiplier:
             multiplier = campaign_mult
 
-    return base, multiplier
+    return base, multiplier, pts_per_night
 
 
 def _update_tier(profile):

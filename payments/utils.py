@@ -209,19 +209,3 @@ def send_invoice_email(booking):
             str(e),
         )
 
-
-# =========================================================================
-# Loyalty: Award points after confirmed booking
-# =========================================================================
-
-def award_loyalty_points(booking):
-    """Delegate to loyalty.services.award_booking_points (config-driven, ledger-tracked)."""
-    try:
-        from loyalty.services import award_booking_points
-        award_booking_points(booking.pk)
-    except Exception as e:
-        logger.error(
-            "award_loyalty_points failed for booking %s: %s",
-            getattr(booking, "booking_reference", "unknown"),
-            str(e),
-        )

@@ -35,6 +35,16 @@ class RoomsConfig(AppConfig):
                     "repeats": -1
                 }
             )
+
+            # Credit loyalty points 24h after checkout, hourly sweep so the
+            # 24h cutoff is caught promptly rather than once a day.
+            Schedule.objects.update_or_create(
+                func="rooms.tasks.award_loyalty_for_completed_stays",
+                defaults={
+                    "schedule_type": Schedule.HOURLY,
+                    "repeats": -1
+                }
+            )
         except Exception:
             # Catch exceptions during migrations or initial setup
             pass
