@@ -44,6 +44,7 @@ from .utils import (
     send_otp_email,
     verify_otp,
 )
+from core.constants import INVALID_EMAIL_MSG
 
 from typing import TYPE_CHECKING
 
@@ -533,7 +534,7 @@ def _request_email_change(user, data):
     from django.core.cache import cache
     new_email = data.get('value', '').strip().lower()
     if not new_email or '@' not in new_email:
-        return JsonResponse({'error': 'Enter a valid email address.'}, status=400)
+        return JsonResponse({'error': INVALID_EMAIL_MSG}, status=400)
     if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
         return JsonResponse({'error': 'That email is already in use.'}, status=400)
     otp_code = create_and_store_otp(new_email)

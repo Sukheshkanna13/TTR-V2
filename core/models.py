@@ -1,6 +1,7 @@
 import uuid
 from django.conf import settings
 from django.db import models
+from core.constants import REQ_TO_BOOK
 
 
 class Attraction(models.Model):
@@ -115,7 +116,7 @@ class Activity(models.Model):
     title = models.CharField(max_length=200)
     category = models.CharField(max_length=100)  # e.g. "Outdoor", "Wellness", "Crafts"
     description = models.TextField(blank=True, default='')
-    price = models.CharField(max_length=100, default='Request to book')
+    price = models.CharField(max_length=100, default=REQ_TO_BOOK)
     image = models.ImageField(upload_to='activities/', blank=True, null=True)
     whatsapp_link = models.URLField(
         max_length=2000,

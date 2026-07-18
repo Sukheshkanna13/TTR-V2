@@ -1495,7 +1495,7 @@ img {
     padding-right: 32px;
   }
 
-  .tt-hero-grid {
+  div.tt-hero-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2101,10 +2101,6 @@ img {
     /* Full viewport minus mobile nav height */
   }
 
-  .tt-moments-carousel-item {
-    width: 220px;
-    height: 300px;
-  }
 }
 
 /* ---------- Property Slider / Carousel ---------- */
@@ -2271,7 +2267,7 @@ img {
     border-radius: 50%;
   }
 
-  .tt-hamburger {
+  button.tt-hamburger {
     display: inline-flex;
     /* Show hamburger on mobile */
   }
@@ -2345,7 +2341,7 @@ img {
     justify-content: center !important;
   }
 
-  .tt-nav-search-pill {
+  a.tt-nav-search-pill {
     display: flex;
     align-items: center;
     background: #fff;
@@ -2489,9 +2485,7 @@ img {
     display: none;
   }
 
-  .tt-hamburger {
-    display: inline-flex;
-  }
+
 
   .tt-logo-img {
     height: 54px; /* Slightly increased mobile logo height */
@@ -2503,7 +2497,7 @@ img {
   }
 
   /* ---- mobile menu — smooth animation ---- */
-  .tt-mobile-menu {
+  div.tt-mobile-menu {
     overflow: hidden;
     animation: tt-menu-slide 0.3s var(--ease) forwards;
     padding: 12px 16px 24px;
@@ -2537,7 +2531,7 @@ img {
   }
 
   /* ---- hero ---- */
-  .tt-hero-grid {
+  body .tt-hero-grid {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -3108,7 +3102,7 @@ img {
 
 /* Mobile responsive scaling */
 @media (max-width: 768px) {
-  .tt-moments-carousel-item {
+  div.tt-moments-carousel-item {
     width: 200px;
     height: 250px;
   }

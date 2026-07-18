@@ -1,0 +1,313 @@
+Rename this local variable "User" to match the regular expression ^[_a-z][a-z0-9_]*$.,File
+Refactor this function to reduce its Cognitive Complexity from 22 to the 15 allowed.,tt:accounts/management/commands/bootstrap_superadmin.py
+Remove this "null=True" flag.,tt:accounts/middleware.py
+Define a constant instead of duplicating this literal "Enter a valid email address." 5 times.,tt:accounts/models.py
+Define a constant instead of duplicating this literal "Email is required." 5 times.,tt:accounts/serializers.py
+"""password"" detected here, review this potentially hard-coded credential.",tt:accounts/serializers.py
+"""password"" detected here, review this potentially hard-coded credential.",tt:accounts/tests.py
+"""password"" detected here, review this potentially hard-coded credential.",tt:accounts/tests.py
+"""password"" detected here, review this potentially hard-coded credential.",tt:accounts/tests.py
+"""password"" detected here, review this potentially hard-coded credential.",tt:accounts/tests.py
+Define a constant instead of duplicating this literal "accounts.backends.EmailBackend" 3 times.,tt:accounts/tests.py
+Refactor this function to reduce its Cognitive Complexity from 21 to the 15 allowed.,tt:accounts/views.py
+Remove this redundant Exception class; it derives from another which is already caught.,tt:accounts/views.py
+A form label must be associated with a control and have accessible text.,tt:accounts/views.py
+A form label must be associated with a control and have accessible text.,tt:employeeadmin/templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:employeeadmin/templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:employeeadmin/templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:employeeadmin/templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:employeeadmin/templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:employeeadmin/templates/employeeadmin/availability.html
+"""password"" detected here, review this potentially hard-coded credential.",tt:employeeadmin/templates/employeeadmin/availability.html
+"""password"" detected here, review this potentially hard-coded credential.",tt:employeeadmin/tests.py
+Refactor this function to reduce its Cognitive Complexity from 27 to the 15 allowed.,tt:employeeadmin/tests.py
+Define a constant instead of duplicating this literal 'Not assigned.' 4 times.,tt:employeeadmin/views.py
+"""password"" detected here, review this potentially hard-coded credential.",tt:employeeadmin/views.py
+Import only needed names or import the module and then use its members.,tt:hotel_booking/settings/base.py
+Import only needed names or import the module and then use its members.,tt:hotel_booking/settings/dev.py
+Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.,tt:hotel_booking/settings/prod.py
+Remove this "null=True" flag.,tt:loyalty/services.py
+Define a constant instead of duplicating this literal "Enter a valid date (YYYY-MM-DD)." 4 times.,tt:rooms/models.py
+"""password"" detected here, review this potentially hard-coded credential.",tt:rooms/serializers.py
+Refactor this function to reduce its Cognitive Complexity from 35 to the 15 allowed.,tt:rooms/tests.py
+Define a constant instead of duplicating this literal "Booking not found." 5 times.,tt:rooms/views.py
+Text does not meet the minimal contrast requirement with its background.,tt:rooms/views.py
+"Unexpected duplicate selector "".tt-nav"", first used at line 341",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-hamburger"", first used at line 1637",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-hamburger:hover"", first used at line 1652",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-mobile-menu"", first used at line 1657",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-nav-search-pill"", first used at line 1720",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-logo"", first used at line 356",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-card"", first used at line 892",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-card-media"", first used at line 906",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-hero-grid"", first used at line 2471",tt:static/css/style.css
+"Unexpected duplicate selector "".tt-moments-carousel-item"", first used at line 2133",tt:static/css/style.css
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:static/css/style.css
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:static/css/superadmin.css
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:static/css/superadmin.css
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:static/css/superadmin.css
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:static/css/superadmin.css
+Prefer `globalThis` over `window`.,tt:static/css/superadmin.css
+A form label must be associated with a control and have accessible text.,tt:static/js/auth.js
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/tax_config.html
+A form label must be associated with a control and have accessible text.,tt:superadmin/templates/superadmin/tax_config.html
+"""password"" detected here, review this potentially hard-coded credential.",tt:superadmin/templates/superadmin/tax_config.html
+"""password"" detected here, review this potentially hard-coded credential.",tt:superadmin/tests.py
+Replace the unused local variable "emp" with "_".,tt:superadmin/tests.py
+Refactor this function to reduce its Cognitive Complexity from 21 to the 15 allowed.,tt:superadmin/tests.py
+Define a constant instead of duplicating this literal 'Unknown action.' 6 times.,tt:superadmin/views.py
+Refactor this function to reduce its Cognitive Complexity from 30 to the 15 allowed.,tt:superadmin/views.py
+Refactor this function to reduce its Cognitive Complexity from 30 to the 15 allowed.,tt:superadmin/views.py
+Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.,tt:superadmin/views.py
+Define a constant instead of duplicating this literal 'Request to book' 3 times.,tt:superadmin/views.py
+Refactor this function to reduce its Cognitive Complexity from 31 to the 15 allowed.,tt:superadmin/views.py
+DOM elements should use the "autocomplete" attribute correctly.,tt:superadmin/views.py
+A form label must be associated with a control and have accessible text.,tt:templates/accounts/change_password.html
+A form label must be associated with a control and have accessible text.,tt:templates/accounts/edit_profile.html
+A form label must be associated with a control and have accessible text.,tt:templates/accounts/edit_profile.html
+A form label must be associated with a control and have accessible text.,tt:templates/accounts/edit_profile.html
+Text does not meet the minimal contrast requirement with its background.,tt:templates/accounts/edit_profile.html
+Text does not meet the minimal contrast requirement with its background.,tt:templates/accounts/forgot_password.html
+Text does not meet the minimal contrast requirement with its background.,tt:templates/accounts/forgot_password_set.html
+Prefer `globalThis` over `window`.,tt:templates/accounts/forgot_password_verify.html
+Prefer `globalThis` over `window`.,tt:templates/accounts/login.html
+Handle this exception or don't catch it at all.,tt:templates/accounts/login.html
+Prefer `globalThis` over `window`.,tt:templates/accounts/login.html
+Text does not meet the minimal contrast requirement with its background.,tt:templates/accounts/login.html
+Handle this exception or don't catch it at all.,tt:templates/accounts/register.html
+Unexpected negated condition.,tt:templates/accounts/register.html
+Prefer `globalThis` over `window`.,tt:templates/accounts/register.html
+Handle this exception or don't catch it at all.,tt:templates/accounts/register.html
+Prefer `globalThis` over `window`.,tt:templates/accounts/register.html
+Prefer `globalThis` over `window`.,tt:templates/accounts/register.html
+Handle this exception or don't catch it at all.,tt:templates/accounts/register.html
+Meta viewport disables zoom via user-scalable=no.,tt:templates/accounts/register.html
+Unexpected shorthand "margin" after "margin-left",tt:templates/base.html
+Add a 'onKeyPress|onKeyDown|onKeyUp' attribute to this <span> tag.,tt:templates/base.html
+"Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.",tt:templates/base.html
+Add a 'onKeyPress|onKeyDown|onKeyUp' attribute to this <span> tag.,tt:templates/base.html
+"Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.",tt:templates/base.html
+Prefer `globalThis` over `window`.,tt:templates/base.html
+Prefer `globalThis` over `window`.,tt:templates/base.html
+Prefer `globalThis` over `window`.,tt:templates/base.html
+Prefer `globalThis` over `window`.,tt:templates/base.html
+Prefer top-level await over an async function `loadConfirmation` call.,tt:templates/bookings/confirmation.html
+Add "lang" and/or "xml:lang" attributes to this "<html>" element,tt:templates/bookings/confirmation.html
+Add a <title> tag to this page.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "width" attribute.,tt:templates/emails/booking_confirmation.html
+Use <img> instead of the presentation role to ensure accessibility across all devices.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "cellpadding" attribute.,tt:templates/emails/booking_confirmation.html
+Replace this layout table with a CSS layout.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "cellspacing" attribute.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "align" attribute.,tt:templates/emails/booking_confirmation.html
+Replace this layout table with a CSS layout.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "width" attribute.,tt:templates/emails/booking_confirmation.html
+Use <img> instead of the presentation role to ensure accessibility across all devices.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "cellpadding" attribute.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "cellspacing" attribute.,tt:templates/emails/booking_confirmation.html
+Add "<th>" headers to this "<table>".,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "width" attribute.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "cellpadding" attribute.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "cellspacing" attribute.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "cellspacing" attribute.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "width" attribute.,tt:templates/emails/booking_confirmation.html
+Remove this deprecated "cellpadding" attribute.,tt:templates/emails/booking_confirmation.html
+Add "<th>" headers to this "<table>".,tt:templates/emails/booking_confirmation.html
+Add "lang" and/or "xml:lang" attributes to this "<html>" element,tt:templates/emails/booking_confirmation.html
+Add a <title> tag to this page.,tt:templates/emails/invoice.html
+Non-interactive elements should not be assigned mouse or keyboard event listeners.,tt:templates/emails/invoice.html
+Add "<th>" headers to this "<table>".,tt:templates/emails/invoice.html
+Add "<th>" headers to this "<table>".,tt:templates/emails/invoice.html
+Add "lang" and/or "xml:lang" attributes to this "<html>" element,tt:templates/emails/invoice.html
+Add a <title> tag to this page.,tt:templates/emails/otp_email.html
+Use <img> instead of the presentation role to ensure accessibility across all devices.,tt:templates/emails/otp_email.html
+Remove this deprecated "cellpadding" attribute.,tt:templates/emails/otp_email.html
+Remove this deprecated "width" attribute.,tt:templates/emails/otp_email.html
+Remove this deprecated "cellspacing" attribute.,tt:templates/emails/otp_email.html
+Replace this layout table with a CSS layout.,tt:templates/emails/otp_email.html
+Remove this deprecated "align" attribute.,tt:templates/emails/otp_email.html
+Remove this deprecated "cellpadding" attribute.,tt:templates/emails/otp_email.html
+Use <img> instead of the presentation role to ensure accessibility across all devices.,tt:templates/emails/otp_email.html
+Remove this deprecated "width" attribute.,tt:templates/emails/otp_email.html
+Remove this deprecated "cellspacing" attribute.,tt:templates/emails/otp_email.html
+Replace this layout table with a CSS layout.,tt:templates/emails/otp_email.html
+Remove this deprecated "align" attribute.,tt:templates/emails/otp_email.html
+Remove this deprecated "align" attribute.,tt:templates/emails/otp_email.html
+A form label must be associated with a control and have accessible text.,tt:templates/emails/otp_email.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/availability.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/availability.html
+Make sure not using resource integrity feature is safe here.,tt:templates/employeeadmin/availability.html
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:templates/employeeadmin/base.html
+Text does not meet the minimal contrast requirement with its background.,tt:templates/employeeadmin/base.html
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:templates/employeeadmin/base.html
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:templates/employeeadmin/base.html
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:templates/employeeadmin/base.html
+Increase this value or remove '!important' from letter-spacing to allow accessibility adjustments.,tt:templates/employeeadmin/base.html
+Prefer `globalThis` over `window`.,tt:templates/employeeadmin/base.html
+Handle this exception or don't catch it at all.,tt:templates/employeeadmin/base.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/dashboard.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/room_images.html
+Handle this exception or don't catch it at all.,tt:templates/employeeadmin/room_images.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/room_status_board.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/employeeadmin/rooms.html
+Function 'openEditModal' has too many parameters (9). Maximum allowed is 7.,tt:templates/employeeadmin/rooms.html
+Add a 'onKeyPress|onKeyDown|onKeyUp' attribute to this <div> tag.,tt:templates/employeeadmin/rooms.html
+"Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.",tt:templates/pages/cause.html
+"Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.",tt:templates/pages/cause.html
+Add a 'onKeyPress|onKeyDown|onKeyUp' attribute to this <div> tag.,tt:templates/pages/events.html
+Add a 'onKeyPress|onKeyDown|onKeyUp' attribute to this <div> tag.,tt:templates/pages/events.html
+"Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.",tt:templates/pages/events.html
+Add a 'onKeyPress|onKeyDown|onKeyUp' attribute to this <div> tag.,tt:templates/pages/events.html
+"Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.",tt:templates/pages/index.html
+Text does not meet the minimal contrast requirement with its background.,tt:templates/pages/index.html
+Prefer `Number.parseInt` over `parseInt`.,tt:templates/pages/index.html
+This statement will not be executed conditionally; only the first statement will be. The rest will execute unconditionally.,tt:templates/pages/index.html
+Remove this useless assignment to variable "raf".,tt:templates/pages/index.html
+Prefer `globalThis` over `window`.,tt:templates/pages/index.html
+"Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.",tt:templates/pages/index.html
+Add a 'onKeyPress|onKeyDown|onKeyUp' attribute to this <div> tag.,tt:templates/pages/things_to_do.html
+"Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.",tt:templates/pages/things_to_do.html
+Add a 'onKeyPress|onKeyDown|onKeyUp' attribute to this <div> tag.,tt:templates/pages/things_to_do.html
+Use <dialog> instead of the dialog role to ensure accessibility across all devices.,tt:templates/pages/things_to_do.html
+Make sure not using resource integrity feature is safe here.,tt:templates/payments/checkout.html
+Prefer `globalThis` over `window`.,tt:templates/payments/checkout.html
+Prefer `globalThis` over `window`.,tt:templates/payments/checkout.html
+Prefer `globalThis` over `window`.,tt:templates/payments/checkout.html
+Prefer top-level await over an async function `loadBooking` call.,tt:templates/payments/checkout.html
+Use <dialog> instead of the dialog role to ensure accessibility across all devices.,tt:templates/payments/checkout.html
+Headings must have content and the content must be accessible by a screen reader.,tt:templates/rooms/room_details.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/room_details.html
+This conditional operation returns the same value whether the condition is "true" or "false".,tt:templates/rooms/room_details.html
+Unexpected negated condition.,tt:templates/rooms/room_details.html
+Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.,tt:templates/rooms/room_details.html
+Use `new Array()` instead of `Array()`.,tt:templates/rooms/room_details.html
+Prefer `Number.parseFloat` over `parseFloat`.,tt:templates/rooms/room_details.html
+Prefer `Number.parseInt` over `parseInt`.,tt:templates/rooms/room_details.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/room_details.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/room_details.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/room_details.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/room_details.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/room_details.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/room_details.html
+Prefer top-level await over an async function `loadRoom` call.,tt:templates/rooms/room_details.html
+Text does not meet the minimal contrast requirement with its background.,tt:templates/rooms/room_details.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/search.html
+Prefer `Number.parseInt` over `parseInt`.,tt:templates/rooms/search.html
+Prefer `Number.parseInt` over `parseInt`.,tt:templates/rooms/search.html
+Prefer `Number.parseInt` over `parseInt`.,tt:templates/rooms/search.html
+Prefer `Number.isNaN` over `isNaN`.,tt:templates/rooms/search.html
+Remove this useless assignment to variable "totalPrice".,tt:templates/rooms/search.html
+Remove the declaration of the unused 'totalPrice' variable.,tt:templates/rooms/search.html
+Prefer `globalThis` over `window`.,tt:templates/rooms/search.html
+Handle this exception or don't catch it at all.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/rooms/search.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/activities.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/activities.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/activities.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/activities.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/activities.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/activities.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/activities.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/analytics.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/analytics.html
+Make sure not using resource integrity feature is safe here.,tt:templates/superadmin/audit_log.html
+Prefer `globalThis` over `window`.,tt:templates/superadmin/base.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/base.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/bookings.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/bookings.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/bookings.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/bookings.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/bookings.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/causes.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/causes.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/causes.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/causes.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/causes.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/causes.html
+Handle this exception or don't catch it at all.,tt:templates/superadmin/causes.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/dashboard.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/employees.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/employees.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/employees.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/employees.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/event_images.html
+Remove redundant word "photo" from the "alt" attribute of your "img" tag.,tt:templates/superadmin/event_images.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/event_images.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/events.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/events.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/events.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/events.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/events.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/events.html
+Prefer `globalThis` over `window`.,tt:templates/superadmin/events.html
+Prefer `globalThis` over `window`.,tt:templates/superadmin/events.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/events.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/guests.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/loyalty_config.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/properties.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/properties.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/properties.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/properties.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/room_images.html
+Handle this exception or don't catch it at all.,tt:templates/superadmin/room_images.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/room_status_board.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+A form label must be associated with a control and have accessible text.,tt:templates/superadmin/rooms.html
+Function 'openEditModal' has too many parameters (9). Maximum allowed is 7.,tt:templates/superadmin/rooms.html
+,tt:templates/superadmin/rooms.html

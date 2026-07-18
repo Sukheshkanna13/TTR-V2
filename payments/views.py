@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rooms.models import Booking
 from rooms.serializers import BookingSerializer
+from core.constants import BOOKING_NOT_FOUND_MSG
 
 from .models import Payment
 from .serializers import CreateOrderSerializer, VerifyPaymentSerializer
@@ -65,7 +66,7 @@ class CreateOrderView(APIView):
             )
         except Booking.DoesNotExist:
             return Response(
-                {"error": "Booking not found."},
+                {"error": BOOKING_NOT_FOUND_MSG},
                 status=status.HTTP_404_NOT_FOUND,
             )
 

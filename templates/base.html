@@ -100,7 +100,7 @@
             {% if user.is_authenticated %}
               <a href="{% url 'accounts:folio' %}">Profile</a>
 
-              <span role="button" tabindex="0" onclick="logout()" onkeydown="if(event.key==='Enter'||event.key===' ')logout()">Log Out</span>
+              <span role="button" tabindex="0" onclick="logout()" onkeypress="if(event.key==='Enter'||event.key===' ')logout()">Log Out</span>
             {% else %}
               <a href="{% url 'accounts:login-page' %}">Log In</a>
             {% endif %}
@@ -141,7 +141,7 @@
           <div class="tt-profile-dropdown tt-mobile-dropdown">
             {% if user.is_authenticated %}
               <a href="{% url 'accounts:folio' %}">Profile</a>
-              <span role="button" tabindex="0" onclick="logout()" onkeydown="if(event.key==='Enter'||event.key===' ')logout()">Log Out</span>
+              <span role="button" tabindex="0" onclick="logout()" onkeypress="if(event.key==='Enter'||event.key===' ')logout()">Log Out</span>
             {% else %}
               <a href="{% url 'accounts:login-page' %}">Log In</a>
             {% endif %}

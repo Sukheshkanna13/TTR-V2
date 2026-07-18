@@ -263,7 +263,7 @@
   }
 
   function fmtDate(d) {
-    if (!d) return '—';
+    if (d == null) return '—';
     return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
   }
   function placeholderDiv(size) {
@@ -271,11 +271,11 @@
     return `<div style="${s}width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#f8f9fa;color:#bdbdbd;font-size:12px;letter-spacing:.04em;"><svg xmlns="http://www.w3.org/2000/svg" width="${size==='thumb'?20:36}" height="${size==='thumb'?20:36}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8.5 3.5v1M15.5 3.5v1"/></svg>${size === 'thumb' ? '' : '<span>No photos yet</span>'}</div>`;
   }
 
-  async function loadRoom() {
-    if (!roomId) { showError(); return; }
+  const loadRoom = async () => {
+    if (roomId == null || roomId === '') { showError(); return; }
     try {
       const res = await fetch(`${ROOM_API_BASE}${roomId}/`);
-      if (!res.ok) { showError(); return; }
+      if (res.ok === false) { showError(); return; }
       const data = await res.json();
       roomData = data.room;
       renderRoom();
@@ -302,13 +302,15 @@
         `<div class="main"><img src="${main}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy"></div>` +
         thumbs.map(src => `<div class="thumb" style="overflow:hidden;"><img src="${src}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy"></div>`).join('');
         
+      let galleryImgs = null;
       if (isMobile && imgs.length >= 2) {
-        expandedGallery.innerHTML = imgs.map(src => 
-          `<div style="aspect-ratio:4/3;overflow:hidden;"><img src="${src}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy"></div>`
-        ).join('');
-        actionContainer.style.display = 'block';
-      } else if (!isMobile && extras.length > 0) {
-        expandedGallery.innerHTML = extras.map(src => 
+        galleryImgs = imgs;
+      } else if (isMobile === false && extras.length > 0) {
+        galleryImgs = extras;
+      }
+
+      if (galleryImgs) {
+        expandedGallery.innerHTML = galleryImgs.map(src => 
           `<div style="aspect-ratio:4/3;overflow:hidden;"><img src="${src}" alt="${room.name}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy"></div>`
         ).join('');
         actionContainer.style.display = 'block';
@@ -371,7 +373,7 @@
     const sp = document.getElementById('stickyPrice'); if (sp) sp.textContent = inr(room.price_per_night);
   }
 
-  async function bookRoom() {
+  const bookRoom = async () => {
     const btns = ['sidebarBookBtn','stickyBookBtn'].map(id => document.getElementById(id)).filter(Boolean);
     const errorBox = document.getElementById('bookErrorBox');
     btns.forEach(b => { b.disabled = true; b.textContent = 'Reserving…'; });
@@ -425,13 +427,13 @@
     }
   }
 
-  async function checkAvailability() {
+  const checkAvailability = async () => {
     const newIn = document.getElementById('editCheckin').value;
     const newOut = document.getElementById('editCheckout').value;
     const errorBox = document.getElementById('bookErrorBox');
     const btn = document.getElementById('updateDatesBtn');
     
-    if (!newIn || !newOut) {
+    if (newIn === '' || newOut === '') {
       errorBox.textContent = 'Please select both dates.';
       errorBox.classList.remove('hidden');
       return;

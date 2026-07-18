@@ -216,15 +216,20 @@
   // ── Hero floating title: fade out within 150px of scroll (home.jsx) ──
   (function heroFloat() {
     const el = document.getElementById('heroFloat');
-    if (!el) return;
-    let raf = null;
+    if (!el) { return; }
+    let ticking = false;
     const update = () => {
-      raf = null;
       const op = Math.max(0, 1 - (globalThis.scrollY || 0) / 150);
       el.style.opacity = op;
       el.style.pointerEvents = op < 0.1 ? 'none' : 'auto';
+      ticking = false;
     };
-    globalThis.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(update); }, { passive: true });
+    globalThis.addEventListener('scroll', () => { 
+      if (!ticking) {
+        requestAnimationFrame(update);
+        ticking = true;
+      }
+    }, { passive: true });
     update();
   })();
 
@@ -250,10 +255,10 @@
     let sx = 0, dragging = false;
     media.addEventListener('touchstart', e => { sx = e.touches[0].clientX; dragging = true; }, { passive: true });
     media.addEventListener('touchend', e => {
-      if (!dragging) return;
+      if (!dragging) { return; }
       dragging = false;
       const dx = e.changedTouches[0].clientX - sx;
-      if (Math.abs(dx) > 40) carGo(media, dx < 0 ? 1 : -1);
+      if (Math.abs(dx) > 40) { carGo(media, dx < 0 ? 1 : -1); }
     });
   });
 
@@ -261,7 +266,7 @@
   (function moments() {
     const el = document.getElementById('momentsCarousel');
     const track = document.getElementById('momentsTrack');
-    if (!el || !track) return;
+    if (!el || !track) { return; }
 
     // Duplicate children to create a seamless infinite loop
     track.innerHTML += track.innerHTML;
@@ -280,22 +285,22 @@
     };
     step();
     el.addEventListener('mouseenter', () => paused = true);
-    el.addEventListener('mouseleave', () => { if (!isDown) paused = false; });
+    el.addEventListener('mouseleave', () => { if (!isDown) { paused = false; } });
     el.addEventListener('mousedown', e => { isDown = true; paused = true; startX = e.pageX; startScroll = el.scrollLeft; el.style.cursor = 'grabbing'; });
     globalThis.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; paused = false; });
     el.addEventListener('mousemove', e => { 
-      if (!isDown) return; 
+      if (!isDown) { return; }
       e.preventDefault(); 
       el.scrollLeft = startScroll - (e.pageX - startX); 
       // Handle manual drag wrapping
-      if (el.scrollLeft >= track.scrollWidth / 2) el.scrollLeft -= track.scrollWidth / 2;
-      if (el.scrollLeft <= 0) el.scrollLeft += track.scrollWidth / 2;
+      if (el.scrollLeft >= track.scrollWidth / 2) { el.scrollLeft -= track.scrollWidth / 2; }
+      if (el.scrollLeft <= 0) { el.scrollLeft += track.scrollWidth / 2; }
     });
     el.addEventListener('touchstart', e => { paused = true; startX = e.touches[0].pageX; startScroll = el.scrollLeft; }, { passive: true });
     el.addEventListener('touchmove', e => { 
       el.scrollLeft = startScroll - (e.touches[0].pageX - startX);
-      if (el.scrollLeft >= track.scrollWidth / 2) el.scrollLeft -= track.scrollWidth / 2;
-      if (el.scrollLeft <= 0) el.scrollLeft += track.scrollWidth / 2;
+      if (el.scrollLeft >= track.scrollWidth / 2) { el.scrollLeft -= track.scrollWidth / 2; }
+      if (el.scrollLeft <= 0) { el.scrollLeft += track.scrollWidth / 2; }
     }, { passive: true });
     el.addEventListener('touchend', () => paused = false);
   })();

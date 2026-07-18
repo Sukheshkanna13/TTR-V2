@@ -56,38 +56,34 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script type="module">
   const params = new URLSearchParams(globalThis.location.search);
   const ref    = params.get('ref');
 
-  async function loadConfirmation() {
-    if (!ref) {
-      document.getElementById('loadingMsg').innerHTML = '<p style="color:var(--text-muted);">Invalid booking reference.</p>';
-      return;
-    }
+  if (!ref) {
+    document.getElementById('loadingMsg').innerHTML = '<p style="color:var(--text-muted);">Invalid booking reference.</p>';
+  } else {
     try {
       const res  = await fetch(`/bookings/ref/${ref}/confirmation/`, { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) {
         document.getElementById('loadingMsg').innerHTML = `<p style="color:var(--text-muted);">${data.error || 'Failed to load confirmation.'}</p>`;
-        return;
-      }
-      document.getElementById('loadingMsg').classList.add('hidden');
-      document.getElementById('successCard').classList.remove('hidden');
+      } else {
+        document.getElementById('loadingMsg').classList.add('hidden');
+        document.getElementById('successCard').classList.remove('hidden');
 
-      const c = data.confirmation;
-      document.getElementById('emailTo').textContent  = c.email_sent_to;
-      document.getElementById('refText').textContent  = c.booking_reference;
-      document.getElementById('roomText').textContent = `${c.room_name} (${c.city})`;
-      document.getElementById('inText').textContent   = c.check_in;
-      document.getElementById('outText').textContent  = c.check_out;
-      document.getElementById('guestText').textContent = `${c.guests} guest${c.guests > 1 ? 's' : ''}`;
-      document.getElementById('amountText').textContent = `₹${Number(c.total_paid).toLocaleString('en-IN')}`;
+        const c = data.confirmation;
+        document.getElementById('emailTo').textContent  = c.email_sent_to;
+        document.getElementById('refText').textContent  = c.booking_reference;
+        document.getElementById('roomText').textContent = `${c.room_name} (${c.city})`;
+        document.getElementById('inText').textContent   = c.check_in;
+        document.getElementById('outText').textContent  = c.check_out;
+        document.getElementById('guestText').textContent = `${c.guests} guest${c.guests > 1 ? 's' : ''}`;
+        document.getElementById('amountText').textContent = `₹${Number(c.total_paid).toLocaleString('en-IN')}`;
+      }
     } catch {
       document.getElementById('loadingMsg').innerHTML = '<p style="color:var(--text-muted);">Network error.</p>';
     }
   }
-
-  document.addEventListener('DOMContentLoaded', loadConfirmation);
 </script>
 {% endblock %}

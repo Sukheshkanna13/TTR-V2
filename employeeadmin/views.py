@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 
 from rooms.models import Booking, Room, RoomImage, OTABlock, RoomRate, Property
 from .decorators import require_employee
+from core.constants import UNKNOWN_ACTION_ERR
 NOT_ASSIGNED_MSG = 'Not assigned.'
 
 
@@ -330,7 +331,7 @@ def room_edit(request, room_id):
             'is_featured': room.is_featured,
         })
 
-    return JsonResponse({'error': 'Unknown action.'}, status=400)
+    return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
 
 # ── Room Image Management (Scoped) ─────────────────────────────────────────────

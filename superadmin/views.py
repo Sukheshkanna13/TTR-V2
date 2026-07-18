@@ -14,9 +14,7 @@ from .decorators import require_super_admin
 from .models import AuditLog, PropertyTaxConfig
 
 from accounts.models import User
-
-UNKNOWN_ACTION_ERR = "Unknown action."
-REQ_TO_BOOK = "Request to book"
+from core.constants import UNKNOWN_ACTION_ERR, REQ_TO_BOOK
 
 
 def _log(request, action, target_user=None, detail=''):
@@ -408,6 +406,54 @@ def tax_config(request):
 
 # ── Loyalty Config ─────────────────────────────────────────────────────────────
 
+def _handle_save_config(request):
+    from loyalty.models import LoyaltyConfig
+    prop_id = request.POST.get('property_id')
+    prop = get_object_or_404(Property, pk=prop_id)
+    cfg, _ = LoyaltyConfig.objects.get_or_create(property=prop)
+    cfg.first_booking_pts = int(request.POST.get('first_booking_pts', 200))
+    cfg.pts_per_night = int(request.POST.get('pts_per_night', 100))
+    cfg.monthly_repeat_multiplier = Decimal(request.POST.get('monthly_repeat_multiplier', '1.5'))
+    cfg.save()
+    _log(request, 'LOYALTY_CONFIG_UPDATED', detail=f"property={prop.name}")
+
+
+def _handle_save_tier(request):
+    from loyalty.models import LoyaltyTier
+    tier_id = request.POST.get('tier_id')
+    name = request.POST.get('name', '').strip()
+    min_pts = int(request.POST.get('min_pts', 0))
+    discount = Decimal(request.POST.get('discount_pct', '0'))
+    sort_order = int(request.POST.get('sort_order', 0))
+    if tier_id:
+        LoyaltyTier.objects.filter(pk=tier_id).update(
+            name=name, min_pts=min_pts, discount_pct=discount, sort_order=sort_order)
+    else:
+        LoyaltyTier.objects.create(
+            name=name, min_pts=min_pts, discount_pct=discount, sort_order=sort_order)
+
+
+def _handle_delete_tier(request):
+    from loyalty.models import LoyaltyTier
+    LoyaltyTier.objects.filter(pk=request.POST.get('tier_id')).delete()
+
+
+def _handle_save_campaign(request):
+    from loyalty.models import CampaignRule
+    CampaignRule.objects.create(
+        name=request.POST.get('name'),
+        start_date=request.POST.get('start_date'),
+        end_date=request.POST.get('end_date'),
+        multiplier=Decimal(request.POST.get('multiplier', '1')),
+        is_active=True,
+    )
+
+
+def _handle_delete_campaign(request):
+    from loyalty.models import CampaignRule
+    CampaignRule.objects.filter(pk=request.POST.get('campaign_id')).delete()
+
+
 @require_super_admin
 def loyalty_config(request):
     from loyalty.models import LoyaltyConfig, LoyaltyTier, CampaignRule
@@ -418,45 +464,16 @@ def loyalty_config(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-
-        if action == 'save_config':
-            prop_id = request.POST.get('property_id')
-            prop = get_object_or_404(Property, pk=prop_id)
-            cfg, _ = LoyaltyConfig.objects.get_or_create(property=prop)
-            cfg.first_booking_pts = int(request.POST.get('first_booking_pts', 200))
-            cfg.pts_per_night = int(request.POST.get('pts_per_night', 100))
-            cfg.monthly_repeat_multiplier = Decimal(request.POST.get('monthly_repeat_multiplier', '1.5'))
-            cfg.save()
-            _log(request, 'LOYALTY_CONFIG_UPDATED', detail=f"property={prop.name}")
-
-        elif action == 'save_tier':
-            tier_id = request.POST.get('tier_id')
-            name = request.POST.get('name', '').strip()
-            min_pts = int(request.POST.get('min_pts', 0))
-            discount = Decimal(request.POST.get('discount_pct', '0'))
-            sort_order = int(request.POST.get('sort_order', 0))
-            if tier_id:
-                LoyaltyTier.objects.filter(pk=tier_id).update(
-                    name=name, min_pts=min_pts, discount_pct=discount, sort_order=sort_order)
-            else:
-                LoyaltyTier.objects.create(
-                    name=name, min_pts=min_pts, discount_pct=discount, sort_order=sort_order)
-
-        elif action == 'delete_tier':
-            LoyaltyTier.objects.filter(pk=request.POST.get('tier_id')).delete()
-
-        elif action == 'save_campaign':
-            CampaignRule.objects.create(
-                name=request.POST.get('name'),
-                start_date=request.POST.get('start_date'),
-                end_date=request.POST.get('end_date'),
-                multiplier=Decimal(request.POST.get('multiplier', '1')),
-                is_active=True,
-            )
-
-        elif action == 'delete_campaign':
-            CampaignRule.objects.filter(pk=request.POST.get('campaign_id')).delete()
-
+        handlers = {
+            'save_config': _handle_save_config,
+            'save_tier': _handle_save_tier,
+            'delete_tier': _handle_delete_tier,
+            'save_campaign': _handle_save_campaign,
+            'delete_campaign': _handle_delete_campaign,
+        }
+        handler = handlers.get(action)
+        if handler:
+            handler(request)
         return redirect('superadmin:loyalty-config')
 
     return render(request, 'superadmin/loyalty_config.html', {
@@ -513,19 +530,23 @@ def _room_toggle_featured(request, room, data):
     _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
     return JsonResponse({'message': f'Room {state}.', 'is_featured': room.is_featured})
 
+_ROOM_FIELD_CONVERTERS = {
+    'price_per_night': lambda v: Decimal(str(v)),
+    'capacity': lambda v: int(v),
+    'rating': lambda v: Decimal(str(round(float(v), 1))) if v else Decimal("4.5"),
+}
+
 def _room_update_details(request, room, data):
     fields_changed = []
     for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description', 'rating'):
         val = data.get(field)
-        if val is not None:
-            if field == 'price_per_night':
-                val = Decimal(str(val))
-            elif field == 'capacity':
-                val = int(val)
-            elif field == 'rating':
-                val = Decimal(str(round(float(val), 1))) if val else Decimal("4.5")
-            setattr(room, field, val)
-            fields_changed.append(field)
+        if val is None:
+            continue
+        converter = _ROOM_FIELD_CONVERTERS.get(field)
+        if converter:
+            val = converter(val)
+        setattr(room, field, val)
+        fields_changed.append(field)
     prop_id = data.get('property_id')
     if prop_id:
         room.property = get_object_or_404(Property, pk=prop_id)
