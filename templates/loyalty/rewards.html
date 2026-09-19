@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Rewards & Loyalty — Temple and Towns Resorts{% endblock %}
+
+{% block extra_css %}
+<style>
+  .tt-rewards-hero {
+    background: linear-gradient(135deg, #0a1628 0%, #15253d 100%);
+    color: #fff;
+    padding: 48px 20px 40px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .tt-tier-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .tier-bronze { background: rgba(180, 83, 9, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+  .tier-silver { background: rgba(148, 163, 184, 0.2); color: #e2e8f0; border: 1px solid rgba(226, 232, 240, 0.4); }
+  .tier-gold   { background: rgba(234, 179, 8, 0.25); color: #fef08a; border: 1px solid rgba(250, 204, 21, 0.6); }
+
+  .tt-rewards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+  .tt-voucher-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md, 8px);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .tt-voucher-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(10, 22, 40, 0.08);
+  }
+  .tt-voucher-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--accent, #a67c52);
+  }
+  .tt-code-badge {
+    font-family: monospace;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 6px 12px;
+    background: var(--bg-soft, #f8f9fa);
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tt-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--ink, #0a1628);
+    color: #fff;
+    padding: 14px 22px;
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    z-index: 10000;
+    display: none;
+    font-size: 14px;
+    animation: ttFadeIn 0.25s ease;
+  }
+  @keyframes ttFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Toast Container -->
+<div id="rewardToast" class="tt-toast"></div>
+
+<!-- ============================================================
+     HERO & TIER PROGRESS
+     ============================================================ -->
+<section class="tt-rewards-hero">
+  <div class="tt-page" style="max-width:1100px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:24px;">
+      
+      <!-- Profile & Points -->
+      <div>
+        <div style="margin-bottom:12px;">
+          <span class="tt-tier-pill tier-{{ current_tier.name|lower|default:'bronze' }}">
+            ★ {{ current_tier.name|default:'Bronze' }} Member
+          </span>
+        </div>
+        <h1 style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;margin:0 0 8px;color:#fff;">
+          Wayfarer Rewards
+        </h1>
+        <p style="color:rgba(255,255,255,0.75);margin:0;font-size:15px;">
+          Earn points on every stay, unlock exclusive tier privileges, and redeem discount vouchers.
+        </p>
+      </div>
+
+      <!-- Point Balance Box -->
+      <div style="background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:20px 28px;text-align:right;min-width:200px;">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.7);margin-bottom:4px;">
+          Available Points
+        </div>
+        <div id="displayPoints" style="font-size:38px;font-weight:800;color:#fff;line-height:1;">
+          {{ points }}
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:6px;">
+          Points never expire
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tier Progress Bar -->
+    {% if next_tier %}
+    <div style="margin-top:32px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:16px 20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;">
+        <span style="color:rgba(255,255,255,0.85);font-weight:500;">
+          Progress to <strong>{{ next_tier.name }}</strong> ({{ next_tier.discount_pct }}% off bookings)
+        </span>
+        <span style="color:rgba(255,255,255,0.9);font-weight:600;">
+          {{ pts_to_next }} points to unlock
+        </span>
+      </div>
+      <div style="height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:{{ progress_pct }}%;background:linear-gradient(90deg, #f59e0b, #fbbf24);border-radius:4px;transition:width 0.4s ease;"></div>
+      </div>
+    </div>
+    {% else %}
+    <div style="margin-top:32px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:14px 20px;font-size:13px;color:rgba(255,255,255,0.9);">
+      ★ You have reached our highest tier: <strong>{{ current_tier.name }}</strong>! Enjoy VIP benefits and {{ current_tier.discount_pct }}% automatic discount on all stays.
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<!-- ============================================================
+     MAIN TABS / SECTIONS
+     ============================================================ -->
+<div style="background:var(--bg-soft,#f8f9fa);min-height:60vh;padding:40px 20px 60px;">
+  <div class="tt-page" style="max-width:1100px;margin:0 auto;">
+
+    <!-- SECTION 1: MY ACTIVE VOUCHERS -->
+    <div style="margin-bottom:48px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">
+        <div>
+          <h2 class="tt-h2" style="margin:0 0 4px;font-size:22px;">My Active Vouchers</h2>
+          <p class="tt-muted" style="font-size:14px;margin:0;">Ready to be applied during your next room checkout.</p>
+        </div>
+        <a href="{% url 'rooms:search-page' %}" class="tt-btn tt-btn-ghost tt-btn-sm">Book a Stay &rarr;</a>
+      </div>
+
+      <div class="tt-rewards-grid" id="myVouchersGrid">
+        {% for coupon in active_coupons %}
+        <div class="tt-voucher-card" id="coupon-card-{{ coupon.id }}">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-size:12px;font-weight:600;color:var(--accent,#a67c52);text-transform:uppercase;letter-spacing:0.06em;">Stay Voucher</span>
+              <span style="font-size:11px;background:#dcfce7;color:#166534;padding:2px 8px;font-weight:600;border-radius:3px;">ACTIVE</span>
+            </div>
+            <div style="font-size:24px;font-weight:700;color:var(--ink);margin-bottom:4px;">
+              {{ coupon.discount_display }}
+            </div>
+            <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">
+              {% if coupon.min_booking_amount > 0 %}
+                Valid on bookings of ₹{{ coupon.min_booking_amount|floatformat:0 }} or more.
+              {% else %}
+                Valid on any room booking.
+              {% endif %}
+            </p>
+          </div>
+
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div class="tt-code-badge" id="code-{{ coupon.id }}">{{ coupon.code }}</div>
+              <button type="button" class="tt-btn tt-btn-ghost tt-btn-sm" onclick="copyCode('{{ coupon.code }}')">
+                Copy
+              </button>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);">
+              Expires on {{ coupon.valid_until|date:"j M Y" }}
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div style="grid-column:1/-1;background:#fff;border:1px dashed var(--line);border-radius:8px;padding:36px;text-align:center;">
+          <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:4px;">No active vouchers right now</div>
+          <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">Redeem your points below to get instant discount vouchers.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- SECTION 2: REDEEM POINTS FOR VOUCHERS -->
+    <div style="margin-bottom:48px;">
+      <div style="margin-bottom:16px;">
+        <h2 class="tt-h2" style="margin:0 0 4px;font-size:22px;">Redeem Points for Vouchers</h2>
+        <p class="tt-muted" style="font-size:14px;margin:0;">Convert your accumulated loyalty points into instant savings.</p>
+      </div>
+
+      <div class="tt-rewards-grid">
+        {% for rule in rules %}
+        <div class="tt-voucher-card">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="background:rgba(166, 124, 82, 0.12);color:var(--accent,#a67c52);font-weight:700;font-size:13px;padding:4px 10px;border-radius:4px;">
+                {{ rule.points_cost }} Points
+              </span>
+              {% if rule.property %}
+                <span style="font-size:11px;color:var(--text-muted);">{{ rule.property.name }}</span>
+              {% else %}
+                <span style="font-size:11px;color:var(--text-muted);">All Properties</span>
+              {% endif %}
+            </div>
+
+            <div style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:6px;">
+              {{ rule.name }}
+            </div>
+            <div style="font-size:16px;font-weight:600;color:var(--accent,#a67c52);margin-bottom:10px;">
+              {{ rule.discount_display }}
+            </div>
+
+            <ul style="font-size:12px;color:var(--text-muted);padding-left:18px;margin:0 0 18px;line-height:1.6;">
+              {% if rule.min_booking_amount > 0 %}
+                <li>Min booking total: ₹{{ rule.min_booking_amount|floatformat:0 }}</li>
+              {% endif %}
+              {% if rule.max_discount_amount %}
+                <li>Max discount cap: ₹{{ rule.max_discount_amount|floatformat:0 }}</li>
+              {% endif %}
+              <li>Valid for {{ rule.validity_days }} days from redemption</li>
+            </ul>
+          </div>
+
+          <div>
+            {% if points >= rule.points_cost %}
+            <button type="button" class="tt-btn tt-btn-primary tt-w-full" onclick="redeemVoucher('{{ rule.id }}', '{{ rule.name|escapejs }}', {{ rule.points_cost }})">
+              Redeem for {{ rule.points_cost }} Pts
+            </button>
+            {% else %}
+            <button type="button" class="tt-btn tt-btn-ghost tt-w-full" disabled style="opacity:0.6;cursor:not-allowed;">
+              Need {{ rule.points_cost|add:"-"|add:points|cut:"-" }} more pts
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div style="grid-column:1/-1;background:#fff;border:1px dashed var(--line);border-radius:8px;padding:36px;text-align:center;">
+          <p style="font-size:14px;color:var(--text-muted);margin:0;">No redemption vouchers currently available.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- SECTION 3: RECENT POINT ACTIVITY (LEDGER) -->
+    <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md,8px);padding:24px 28px;">
+      <h3 style="font-size:17px;font-weight:700;color:var(--ink);margin:0 0 16px;">Points Activity History</h3>
+      
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1.5px solid var(--line);text-align:left;color:var(--text-muted);">
+              <th style="padding:10px 12px;">Date</th>
+              <th style="padding:10px 12px;">Activity</th>
+              <th style="padding:10px 12px;">Details</th>
+              <th style="padding:10px 12px;text-align:right;">Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in ledger_entries %}
+            <tr style="border-bottom:1px solid var(--line);">
+              <td style="padding:12px;color:var(--text-muted);">
+                {{ entry.created_at|date:"j M Y, H:i" }}
+              </td>
+              <td style="padding:12px;font-weight:600;color:var(--ink);">
+                {% if entry.reason == 'BOOKING_CONFIRMED' %}
+                  <span style="color:#16a34a;">Stay Completed</span>
+                {% elif entry.reason == 'COUPON_REDEMPTION' %}
+                  <span style="color:#dc2626;">Voucher Redeemed</span>
+                {% elif entry.reason == 'TIER_UPGRADE' %}
+                  <span style="color:#d97706;">Tier Bonus</span>
+                {% else %}
+                  {{ entry.get_reason_display }}
+                {% endif %}
+              </td>
+              <td style="padding:12px;color:var(--text-soft);">
+                {{ entry.note|default:"—" }}
+              </td>
+              <td style="padding:12px;text-align:right;font-weight:700;font-size:14px;">
+                {% if entry.delta > 0 %}
+                  <span style="color:#16a34a;">+{{ entry.delta }}</span>
+                {% else %}
+                  <span style="color:#dc2626;">{{ entry.delta }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" style="padding:32px;text-align:center;color:var(--text-muted);">
+                No point activity recorded yet. Book a stay to begin earning!
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const CSRF_TOKEN = '{{ csrf_token }}';
+
+  function showToast(msg) {
+    const t = document.getElementById('rewardToast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3500);
+  }
+
+  function copyCode(code) {
+    navigator.clipboard.writeText(code).then(() => {
+      showToast('Copied voucher code: ' + code);
+    }).catch(() => {
+      showToast('Code: ' + code);
+    });
+  }
+
+  async function redeemVoucher(ruleId, ruleName, cost) {
+    if (!confirm(`Redeem ${cost} points for "${ruleName}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch("{% url 'loyalty:redeem-api' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: JSON.stringify({ rule_id: ruleId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error || 'Failed to redeem voucher.');
+        return;
+      }
+
+      showToast(`Voucher ${data.coupon.code} unlocked! Reloading...`);
+      setTimeout(() => {
+        globalThis.location.reload();
+      }, 1200);
+
+    } catch (err) {
+      alert('Network error while redeeming voucher.');
+    }
+  }
+</script>
+{% endblock %}

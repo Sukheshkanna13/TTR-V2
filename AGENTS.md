@@ -136,7 +136,7 @@ To add more dev tools (linters, test runners, etc.) append them to `requirements
 - [x] Auto invoice by email + WhatsApp on confirmation
 - [x] Employee admin panel (room management, availability calendar, bookings)
 - [x] Super Admin panel (platform-wide control, financials, employee management)
-- [ ] Loyalty points program (earn per stay, 3 tiers, coupon redemption)
+- [x] Loyalty points program (earn per stay, 3 tiers, coupon redemption)
 
 ---
 

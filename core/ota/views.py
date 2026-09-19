@@ -37,6 +37,20 @@ class ChannexWebhookView(View):
             return HttpResponseBadRequest("Malformed JSON payload")
 
         event_type = payload.get("event") or request.headers.get("X-Channex-Event") or ""
+
+        # Webhook idempotency and replay protection
+        from payments.models import ProcessedWebhookEvent
+        booking_data = payload.get("booking") or payload.get("data", {})
+        ota_id = str(booking_data.get("id") or booking_data.get("ota_reservation_code") or "").strip()
+        event_id = payload.get("event_id") or payload.get("id") or (f"{event_type}_{ota_id}" if ota_id else "")
+
+        if event_id and ProcessedWebhookEvent.objects.filter(source="channex", event_id=event_id).exists():
+            logger.info("Ignoring duplicate Channex webhook event %s", event_id)
+            return JsonResponse({"status": "acknowledged", "already_processed": True}, status=200)
+
         result = process_channex_webhook(event_type, payload)
+
+        if event_id and result.get("success"):
+            ProcessedWebhookEvent.objects.get_or_create(source="channex", event_id=event_id)
 
         return JsonResponse({"status": "acknowledged", "result": result}, status=200)

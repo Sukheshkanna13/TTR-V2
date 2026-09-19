@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -292,3 +293,55 @@ class SuperAdminFeatureToggleTest(TestCase):
         self.assertFalse(res.json()['is_featured'])
         self.room.refresh_from_db()
         self.assertFalse(self.room.is_featured)
+
+
+class SuperAdminLoyaltyConfigTest(TestCase):
+    def setUp(self):
+        self.admin, _ = _make_super_admin()
+        self.client = Client()
+        self.client.force_login(self.admin, backend="accounts.backends.EmailBackend")
+
+    def test_loyalty_config_page_renders(self):
+        url = reverse('superadmin:loyalty-config')
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "Coupon Redemption Rules")
+
+    def test_save_toggle_delete_redemption_rule(self):
+        from loyalty.models import CouponRedemptionRule
+        url = reverse('superadmin:loyalty-config')
+
+        # 1. Create rule
+        res = self.client.post(url, data={
+            'action': 'save_redemption_rule',
+            'name': 'Test Promo Voucher',
+            'points_cost': 150,
+            'discount_type': 'fixed',
+            'discount_value': '300.00',
+            'min_booking_amount': '1500.00',
+            'validity_days': 20,
+        })
+        self.assertEqual(res.status_code, 302)
+        rule = CouponRedemptionRule.objects.filter(name='Test Promo Voucher').first()
+        self.assertIsNotNone(rule)
+        self.assertEqual(rule.points_cost, 150)
+        self.assertEqual(rule.discount_value, Decimal('300.00'))
+        self.assertTrue(rule.is_active)
+
+        # 2. Toggle active
+        res = self.client.post(url, data={
+            'action': 'toggle_redemption_rule',
+            'rule_id': str(rule.id),
+        })
+        self.assertEqual(res.status_code, 302)
+        rule.refresh_from_db()
+        self.assertFalse(rule.is_active)
+
+        # 3. Delete rule
+        res = self.client.post(url, data={
+            'action': 'delete_redemption_rule',
+            'rule_id': str(rule.id),
+        })
+        self.assertEqual(res.status_code, 302)
+        self.assertFalse(CouponRedemptionRule.objects.filter(id=rule.id).exists())
+

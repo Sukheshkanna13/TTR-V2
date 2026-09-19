@@ -216,6 +216,16 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework.renderers.JSONRenderer",
     ),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "120/minute",
+        "user": "600/minute",
+        "otp": "5/minute",
+        "search": "60/minute",
+    },
 }
 
 
@@ -246,6 +256,19 @@ LOGIN_LOCK_DURATION_MINUTES = 15
 
 # Booking hold duration
 HOLD_DURATION_MINUTES = config("HOLD_DURATION_MINUTES", default=10, cast=int)
+
+
+# =============================================================================
+# CACHE CONFIGURATION
+# =============================================================================
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "ttr-default-cache",
+        "TIMEOUT": 300,
+    }
+}
 
 
 # =============================================================================

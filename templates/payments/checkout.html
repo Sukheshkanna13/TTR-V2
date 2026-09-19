@@ -111,6 +111,72 @@
         </div>
       </div>
 
+      <!-- Coupon / Promo code section -->
+      <div id="couponSection" style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:18px 20px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Apply Coupon / Voucher
+          </div>
+          <a href="{% url 'loyalty:rewards-dashboard' %}" target="_blank" style="font-size:12px;color:var(--accent);text-decoration:none;font-weight:500;">
+            View My Rewards &rarr;
+          </a>
+        </div>
+
+        <!-- Available vouchers quick select -->
+        <div id="quickVouchersContainer" class="hidden" style="margin-bottom:12px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Your Active Vouchers:</div>
+          <div id="quickVouchersList" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        </div>
+
+        <!-- Input row -->
+        <div id="couponInputRow" style="display:flex;gap:10px;">
+          <input type="text" id="couponCodeInput" placeholder="Enter coupon code (e.g. TTR-...)" style="flex:1;padding:9px 12px;font-size:13px;border:1px solid var(--line);border-radius:var(--r-sm);text-transform:uppercase;font-family:monospace;letter-spacing:0.04em;">
+          <button type="button" id="applyCouponBtn" onclick="handleApplyCoupon()" class="tt-btn tt-btn-primary tt-btn-sm" style="padding:9px 16px;">
+            Apply
+          </button>
+        </div>
+
+        <!-- Applied status row -->
+        <div id="couponAppliedRow" class="hidden" style="display:flex;justify-content:space-between;align-items:center;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:8px 12px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="appliedCodeLabel" style="font-family:monospace;font-weight:700;color:#166534;font-size:13px;"></span>
+            <span id="appliedSavingsLabel" style="font-size:12px;color:#15803d;font-weight:500;"></span>
+          </div>
+          <button type="button" onclick="handleRemoveCoupon()" style="background:none;border:none;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;padding:0;">
+            Remove
+          </button>
+        </div>
+
+        <div id="couponMsg" style="font-size:12px;margin-top:8px;" class="hidden"></div>
+      </div>
+
+      <!-- Price Breakdown -->
+      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:18px 20px;margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:12px;">Price Breakdown</div>
+        
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-soft);margin-bottom:8px;">
+          <span>Room rate</span>
+          <span id="breakdownBasePrice">₹0</span>
+        </div>
+
+        <div id="discountLine" class="hidden" style="display:flex;justify-content:space-between;font-size:13px;color:#16a34a;margin-bottom:8px;">
+          <span>Coupon discount</span>
+          <span id="breakdownDiscount">- ₹0</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-soft);margin-bottom:12px;">
+          <span>Taxes & GST</span>
+          <span id="breakdownTaxes">₹0</span>
+        </div>
+
+        <div style="border-top:1px dashed var(--line);padding-top:12px;display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-size:15px;font-weight:700;color:var(--ink);">Total Payable</span>
+          <span id="breakdownPayable" style="font-size:22px;font-weight:800;color:var(--accent);">₹0</span>
+        </div>
+      </div>
+
       <!-- Secure payment notice -->
       <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -144,6 +210,9 @@
   const CREATE_ORDER_URL  = "{% url 'payments:create-order' %}";
   const VERIFY_URL        = "{% url 'payments:verify' %}";
   const CONFIRMATION_URL  = "{% url 'bookings:confirmation-page' %}";
+  const APPLY_COUPON_URL  = "{% url 'loyalty:apply-coupon-api' %}";
+  const REMOVE_COUPON_URL = "{% url 'loyalty:remove-coupon-api' %}";
+  const MY_COUPONS_URL    = "{% url 'loyalty:my-coupons-api' %}";
   const CSRF_TOKEN        = '{{ csrf_token }}';
 
   const params    = new URLSearchParams(globalThis.location.search);
@@ -182,8 +251,139 @@
     if (!paymentInProgress) releaseHold(true);
   });
 
+  function renderPriceBreakdown(b) {
+    const base = Number(b.total_price || 0);
+    const disc = Number(b.discount_amount || 0);
+    const tax  = Number(b.tax_amount || 0);
+    const pay  = Number(b.payable_amount || (base - disc + tax));
 
-  async function loadBooking() {
+    document.getElementById('totalPrice').textContent = `₹${pay.toLocaleString('en-IN')}`;
+    document.getElementById('breakdownBasePrice').textContent = `₹${base.toLocaleString('en-IN')}`;
+    document.getElementById('breakdownTaxes').textContent = `₹${tax.toLocaleString('en-IN')}`;
+    document.getElementById('breakdownPayable').textContent = `₹${pay.toLocaleString('en-IN')}`;
+
+    const discLine = document.getElementById('discountLine');
+    const inputRow = document.getElementById('couponInputRow');
+    const appliedRow = document.getElementById('couponAppliedRow');
+
+    if (b.coupon_code || disc > 0) {
+      discLine.classList.remove('hidden');
+      document.getElementById('breakdownDiscount').textContent = `- ₹${disc.toLocaleString('en-IN')}`;
+      inputRow.classList.add('hidden');
+      appliedRow.classList.remove('hidden');
+      document.getElementById('appliedCodeLabel').textContent = b.coupon_code || 'PROMO';
+      document.getElementById('appliedSavingsLabel').textContent = `Saved ₹${disc.toLocaleString('en-IN')}`;
+    } else {
+      discLine.classList.add('hidden');
+      inputRow.classList.remove('hidden');
+      appliedRow.classList.add('hidden');
+    }
+  }
+
+  async function handleApplyCoupon(overrideCode) {
+    const input = document.getElementById('couponCodeInput');
+    const code = (overrideCode || input.value || '').trim();
+    const msgEl = document.getElementById('couponMsg');
+    const btn = document.getElementById('applyCouponBtn');
+
+    if (!code) {
+      msgEl.textContent = 'Please enter a coupon code.';
+      msgEl.style.color = '#dc2626';
+      msgEl.classList.remove('hidden');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Applying...';
+    msgEl.classList.add('hidden');
+
+    try {
+      const res = await fetch(APPLY_COUPON_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        credentials: 'include',
+        body: JSON.stringify({ booking_id: bookingId, coupon_code: code })
+      });
+      const data = await res.json();
+      btn.disabled = false;
+      btn.textContent = 'Apply';
+
+      if (!res.ok || !data.success) {
+        msgEl.textContent = data.error || 'Failed to apply coupon.';
+        msgEl.style.color = '#dc2626';
+        msgEl.classList.remove('hidden');
+        return;
+      }
+
+      msgEl.textContent = data.message || 'Coupon applied!';
+      msgEl.style.color = '#16a34a';
+      msgEl.classList.remove('hidden');
+
+      // Reload fresh booking data to update breakdown
+      await loadBooking(false);
+
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Apply';
+      msgEl.textContent = 'Network error applying coupon.';
+      msgEl.style.color = '#dc2626';
+      msgEl.classList.remove('hidden');
+    }
+  }
+
+  async function handleRemoveCoupon() {
+    const msgEl = document.getElementById('couponMsg');
+    try {
+      const res = await fetch(REMOVE_COUPON_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        credentials: 'include',
+        body: JSON.stringify({ booking_id: bookingId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        msgEl.textContent = 'Coupon removed.';
+        msgEl.style.color = 'var(--text-soft)';
+        msgEl.classList.remove('hidden');
+        document.getElementById('couponCodeInput').value = '';
+        await loadBooking(false);
+      } else {
+        alert(data.error || 'Failed to remove coupon.');
+      }
+    } catch (err) {
+      alert('Network error removing coupon.');
+    }
+  }
+
+  async function loadQuickVouchers() {
+    try {
+      const res = await fetch(MY_COUPONS_URL, { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok || !data.coupons || data.coupons.length === 0) return;
+
+      const container = document.getElementById('quickVouchersContainer');
+      const list = document.getElementById('quickVouchersList');
+      list.innerHTML = '';
+
+      data.coupons.forEach(c => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.style.cssText = 'background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:3px 8px;font-size:11px;font-family:monospace;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;';
+        chip.innerHTML = `<span style="color:#0f172a;">${c.code}</span> <span style="color:#16a34a;font-weight:700;">(${c.discount_display})</span>`;
+        chip.onclick = () => {
+          document.getElementById('couponCodeInput').value = c.code;
+          handleApplyCoupon(c.code);
+        };
+        list.appendChild(chip);
+      });
+
+      container.classList.remove('hidden');
+    } catch (e) {
+      // Non-critical, ignore
+    }
+  }
+
+  async function loadBooking(isInitial = true) {
     if (!bookingId) {
       document.getElementById('loadingMsg').innerHTML = '<p style="color:var(--text-muted);">Invalid booking ID.</p>';
       return;
@@ -208,7 +408,12 @@
       document.getElementById('roomName').textContent  = b.room.name;
       document.getElementById('dates').textContent     = `${b.check_in} → ${b.check_out} (${b.num_nights} night${b.num_nights > 1 ? 's' : ''})`;
       document.getElementById('guestLine').textContent = `${b.guests} guest${b.guests > 1 ? 's' : ''}`;
-      document.getElementById('totalPrice').textContent = `₹${Number(b.total_price).toLocaleString('en-IN')}`;
+      
+      // Detailed price breakdown & coupon state
+      renderPriceBreakdown(b);
+      if (isInitial) {
+        loadQuickVouchers();
+      }
 
       // Room image — use the actual primary image from the DB, fallback to placeholder
       const FALLBACK_IMG = 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400&q=80';

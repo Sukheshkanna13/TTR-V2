@@ -464,13 +464,71 @@ def _handle_delete_campaign(request):
     CampaignRule.objects.filter(pk=request.POST.get('campaign_id')).delete()
 
 
+def _handle_save_redemption_rule(request):
+    from loyalty.models import CouponRedemptionRule
+    rule_id = request.POST.get('rule_id')
+    name = request.POST.get('name', '').strip()
+    points_cost = int(request.POST.get('points_cost', 100))
+    discount_type = request.POST.get('discount_type', 'fixed')
+    discount_value = Decimal(request.POST.get('discount_value', '0.00'))
+    min_booking_amount = Decimal(request.POST.get('min_booking_amount', '0.00'))
+    max_discount_str = request.POST.get('max_discount_amount', '').strip()
+    max_discount_amount = Decimal(max_discount_str) if max_discount_str else None
+    validity_days = int(request.POST.get('validity_days', 30))
+    prop_id = request.POST.get('property_id') or None
+    prop = Property.objects.filter(pk=prop_id).first() if prop_id else None
+
+    if rule_id:
+        CouponRedemptionRule.objects.filter(pk=rule_id).update(
+            name=name,
+            points_cost=points_cost,
+            discount_type=discount_type,
+            discount_value=discount_value,
+            min_booking_amount=min_booking_amount,
+            max_discount_amount=max_discount_amount,
+            validity_days=validity_days,
+            property=prop,
+        )
+    else:
+        CouponRedemptionRule.objects.create(
+            name=name,
+            points_cost=points_cost,
+            discount_type=discount_type,
+            discount_value=discount_value,
+            min_booking_amount=min_booking_amount,
+            max_discount_amount=max_discount_amount,
+            validity_days=validity_days,
+            property=prop,
+            is_active=True,
+        )
+    _log(request, 'REDEMPTION_RULE_SAVED', detail=f"name={name}, pts={points_cost}")
+
+
+def _handle_delete_redemption_rule(request):
+    from loyalty.models import CouponRedemptionRule
+    rule_id = request.POST.get('rule_id')
+    CouponRedemptionRule.objects.filter(pk=rule_id).delete()
+    _log(request, 'REDEMPTION_RULE_DELETED', detail=f"rule_id={rule_id}")
+
+
+def _handle_toggle_redemption_rule(request):
+    from loyalty.models import CouponRedemptionRule
+    rule = CouponRedemptionRule.objects.filter(pk=request.POST.get('rule_id')).first()
+    if rule:
+        rule.is_active = not rule.is_active
+        rule.save(update_fields=['is_active'])
+        _log(request, 'REDEMPTION_RULE_TOGGLED', detail=f"rule_id={rule.id}, is_active={rule.is_active}")
+
+
 @require_super_admin
 def loyalty_config(request):
-    from loyalty.models import LoyaltyConfig, LoyaltyTier, CampaignRule
+    from loyalty.models import LoyaltyConfig, LoyaltyTier, CampaignRule, CouponRedemptionRule, Coupon
     properties = Property.objects.filter(is_active=True).prefetch_related('loyalty_config')
     tiers = LoyaltyTier.objects.all()
     campaigns = CampaignRule.objects.all()[:20]
     configs = {getattr(c, 'property_id'): c for c in LoyaltyConfig.objects.all()}
+    redemption_rules = CouponRedemptionRule.objects.select_related('property').order_by('points_cost')
+    recent_coupons = Coupon.objects.select_related('user', 'redemption_rule').order_by('-created_at')[:20]
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -480,6 +538,9 @@ def loyalty_config(request):
             'delete_tier': _handle_delete_tier,
             'save_campaign': _handle_save_campaign,
             'delete_campaign': _handle_delete_campaign,
+            'save_redemption_rule': _handle_save_redemption_rule,
+            'delete_redemption_rule': _handle_delete_redemption_rule,
+            'toggle_redemption_rule': _handle_toggle_redemption_rule,
         }
         handler = handlers.get(action)
         if handler:
@@ -491,6 +552,8 @@ def loyalty_config(request):
         'tiers': tiers,
         'campaigns': campaigns,
         'configs': configs,
+        'redemption_rules': redemption_rules,
+        'recent_coupons': recent_coupons,
     })
 
 
@@ -1435,6 +1498,9 @@ def banner_create(request):
         mobile_image=mobile_image,
         is_active=True,
     )
+    from django.core.cache import cache
+    cache.delete('ttr_site_banners_map')
+
     _log(request, 'PROPERTY_UPDATED', detail=f"Created banner: {banner.title} for {banner.target_page}")
     messages.success(request, f'Banner "{banner.title}" created successfully.')
     return redirect('superadmin:banners-list')
@@ -1444,9 +1510,11 @@ def banner_create(request):
 @require_POST
 def banner_toggle(request, banner_id):
     from core.models import SiteBanner
+    from django.core.cache import cache
     banner = get_object_or_404(SiteBanner, pk=banner_id)
     banner.is_active = not banner.is_active
     banner.save(update_fields=['is_active'])
+    cache.delete('ttr_site_banners_map')
     return JsonResponse({'message': 'Status updated.', 'is_active': banner.is_active})
 
 
@@ -1454,9 +1522,11 @@ def banner_toggle(request, banner_id):
 @require_POST
 def banner_delete(request, banner_id):
     from core.models import SiteBanner
+    from django.core.cache import cache
     banner = get_object_or_404(SiteBanner, pk=banner_id)
     title = banner.title
     banner.delete()
+    cache.delete('ttr_site_banners_map')
     return JsonResponse({'message': f'Banner "{title}" deleted.'})
 
 

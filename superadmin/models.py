@@ -92,3 +92,9 @@ class PropertyTaxConfig(models.Model):
         if Decimal(str(nightly_rate)) >= self.threshold:
             return self.high_rate_pct
         return self.low_rate_pct
+
+    def save(self, *args, **kwargs):
+        from django.core.cache import cache
+        super().save(*args, **kwargs)
+        if self.property_id:
+            cache.delete(f"ttr_tax_config_prop_{self.property_id}")

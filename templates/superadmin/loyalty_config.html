@@ -164,4 +164,154 @@
   </div>
 </div>
 
+<!-- Coupon Redemption Rules -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Coupon Redemption Rules</h2>
+  <p style="color:var(--c-text-faint);font-size:13px;margin-bottom:16px;">
+    Define how guests can convert loyalty points into discount vouchers.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Points Cost</th>
+        <th>Discount</th>
+        <th>Min Booking</th>
+        <th>Validity</th>
+        <th>Scope</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in redemption_rules %}
+    <tr>
+      <td style="font-weight:600;">{{ r.name }}</td>
+      <td><span class="badge badge-amber">{{ r.points_cost }} pts</span></td>
+      <td><strong>{{ r.discount_display }}</strong></td>
+      <td>₹{{ r.min_booking_amount }}</td>
+      <td>{{ r.validity_days }} days</td>
+      <td>
+        {% if r.property %}{{ r.property.name }}{% else %}<span style="color:var(--c-text-faint);">Platform-wide</span>{% endif %}
+      </td>
+      <td>
+        {% if r.is_active %}<span class="badge badge-green">Active</span>
+        {% else %}<span class="badge badge-slate">Disabled</span>{% endif %}
+      </td>
+      <td style="display:flex;gap:6px;">
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="toggle_redemption_rule">
+          <input type="hidden" name="rule_id" value="{{ r.id }}">
+          <button class="sa-btn sa-btn-sm sa-btn-ghost" type="submit">
+            {% if r.is_active %}Disable{% else %}Enable{% endif %}
+          </button>
+        </form>
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_redemption_rule">
+          <input type="hidden" name="rule_id" value="{{ r.id }}">
+          <button class="sa-btn sa-btn-sm sa-btn-danger" type="submit" onclick="return confirm('Delete this redemption rule?')">
+            Delete
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8" class="sa-empty">No redemption rules configured yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Add Redemption Rule Form -->
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--c-border);">
+    <h3 style="font-size:13px;color:var(--c-text-faint);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Add Voucher Rule</h3>
+    <form method="post" class="sa-field-row" style="align-items:flex-end;flex-wrap:wrap;gap:12px;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_redemption_rule">
+      
+      <div class="sa-field">
+        <label class="sa-label" for="rule_name">Name</label>
+        <input class="sa-input" type="text" id="rule_name" name="name" placeholder="e.g. ₹250 Off Stay" required style="width:160px;">
+      </div>
+
+      <div class="sa-field">
+        <label class="sa-label" for="rule_pts">Points Cost</label>
+        <input class="sa-input" type="number" id="rule_pts" name="points_cost" value="100" min="1" required style="width:95px;">
+      </div>
+
+      <div class="sa-field">
+        <label class="sa-label" for="rule_type">Discount Type</label>
+        <select class="sa-input" id="rule_type" name="discount_type" style="width:130px;">
+          <option value="fixed">Fixed (₹)</option>
+          <option value="percentage">Percentage (%)</option>
+        </select>
+      </div>
+
+      <div class="sa-field">
+        <label class="sa-label" for="rule_val">Discount Value</label>
+        <input class="sa-input" type="number" id="rule_val" name="discount_value" step="0.01" value="250.00" required style="width:110px;">
+      </div>
+
+      <div class="sa-field">
+        <label class="sa-label" for="rule_min">Min Booking (₹)</label>
+        <input class="sa-input" type="number" id="rule_min" name="min_booking_amount" step="0.01" value="0.00" style="width:110px;">
+      </div>
+
+      <div class="sa-field">
+        <label class="sa-label" for="rule_days">Validity (Days)</label>
+        <input class="sa-input" type="number" id="rule_days" name="validity_days" value="30" style="width:90px;">
+      </div>
+
+      <div class="sa-field">
+        <label class="sa-label" for="rule_prop">Property</label>
+        <select class="sa-input" id="rule_prop" name="property_id" style="width:140px;">
+          <option value="">All Properties</option>
+          {% for p in properties %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button class="sa-btn sa-btn-primary" type="submit">Create Rule</button>
+    </form>
+  </div>
+</div>
+
+<!-- Issued Coupons Audit -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Recent Issued Vouchers & Promo Codes</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Guest</th>
+        <th>Discount</th>
+        <th>Status</th>
+        <th>Valid Until</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for cp in recent_coupons %}
+    <tr>
+      <td style="font-family:monospace;font-weight:700;">{{ cp.code }}</td>
+      <td>{{ cp.user.email|default:"Public / Generic" }}</td>
+      <td>{{ cp.discount_display }}</td>
+      <td>
+        {% if cp.status == 'active' %}<span class="badge badge-green">Active</span>
+        {% elif cp.status == 'applied' %}<span class="badge badge-amber">Applied</span>
+        {% elif cp.status == 'redeemed' %}<span class="badge badge-blue">Redeemed</span>
+        {% else %}<span class="badge badge-slate">{{ cp.status }}</span>{% endif %}
+      </td>
+      <td>{{ cp.valid_until|date:"j M Y" }}</td>
+      <td>{{ cp.created_at|date:"j M Y, H:i" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6" class="sa-empty">No vouchers issued yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 {% endblock %}

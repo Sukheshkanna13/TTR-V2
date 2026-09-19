@@ -87,11 +87,12 @@ class RoomSerializer(serializers.ModelSerializer):
         return None
 
     def get_primary_image(self, obj):
-        """Return the URL of the primary image, or the first image, or None."""
+        """Return the URL of the primary image, or the first image, or None using prefetched cache."""
         request = self.context.get("request")
-        primary = obj.images.filter(is_primary=True).first()
-        if not primary:
-            primary = obj.images.first()
+        all_imgs = list(obj.images.all())
+        primary = next((img for img in all_imgs if img.is_primary), None)
+        if not primary and all_imgs:
+            primary = all_imgs[0]
         if primary and primary.image:
             if request:
                 return request.build_absolute_uri(primary.image.url)
@@ -223,6 +224,11 @@ class BookingSerializer(serializers.ModelSerializer):
     num_nights = serializers.ReadOnlyField()
     is_hold_expired = serializers.ReadOnlyField()
 
+    discount_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    tax_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    payable_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    coupon_code = serializers.CharField(source="coupon.code", read_only=True, default=None)
+
     class Meta:
         model = Booking
         fields = [
@@ -234,6 +240,10 @@ class BookingSerializer(serializers.ModelSerializer):
             "guests",
             "num_nights",
             "total_price",
+            "discount_amount",
+            "tax_amount",
+            "payable_amount",
+            "coupon_code",
             "status",
             "hold_expires_at",
             "is_hold_expired",

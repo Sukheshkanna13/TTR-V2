@@ -36,6 +36,7 @@ urlpatterns = [
     path("rooms/", include("rooms.urls")),
     path("bookings/", include("rooms.booking_urls")),
     path("payments/", include("payments.urls")),
+    path("loyalty/", include("loyalty.urls")),
     path("api/ota/channex/webhook/", ChannexWebhookView.as_view(), name="ota-channex-webhook"),
 
     # Admin portals

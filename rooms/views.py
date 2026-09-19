@@ -23,7 +23,12 @@ from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+
+
+class RoomSearchThrottle(ScopedRateThrottle):
+    scope = "search"
 
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -87,12 +92,15 @@ def _build_search_queryset(data):
 
     unavailable_ids = Room.objects.get_unavailable_room_ids(check_in, check_out)
 
-    rooms = Room.objects.filter(
-        is_active=True,
-        operational_status="available",
-        capacity__gte=guests,
-    ).exclude(
-        id__in=unavailable_ids,
+    rooms = (
+        Room.objects.filter(
+            is_active=True,
+            operational_status="available",
+            capacity__gte=guests,
+        )
+        .exclude(id__in=unavailable_ids)
+        .select_related("property")
+        .prefetch_related("images", "rates")
     )
 
     is_all_properties = not property_id or str(property_id).lower() in ["0", "all", "none", ""]
@@ -139,6 +147,7 @@ class SearchRoomsView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_classes = [RoomSearchThrottle]
 
     def get(self, request):
         # Form data comes as URL query params (redirect from homepage search form)
@@ -213,7 +222,11 @@ class RoomDetailView(APIView):
 
     def get(self, request, room_id):
         try:
-            room = Room.objects.prefetch_related("images").get(id=room_id, is_active=True)
+            room = (
+                Room.objects.select_related("property")
+                .prefetch_related("images", "rates")
+                .get(id=room_id, is_active=True)
+            )
         except Room.DoesNotExist:
             return Response(
                 {"error": "Room not found."},
@@ -760,13 +773,13 @@ class MyBookingsView(APIView):
         today = timezone.now().date()
         cutoff_24h = timezone.now() + timedelta(hours=24)
 
-        upcoming = Booking.objects.select_related("room").filter(
+        upcoming = Booking.objects.select_related("room__property").prefetch_related("room__images").filter(
             user=request.user,
             status__in=SHOW_STATUSES,
             check_in__gte=today,
         ).order_by("check_in")
 
-        past = Booking.objects.select_related("room").filter(
+        past = Booking.objects.select_related("room__property").prefetch_related("room__images").filter(
             user=request.user,
             status__in=SHOW_STATUSES,
             check_in__lt=today,

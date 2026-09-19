@@ -86,10 +86,11 @@ class CreateOrderView(APIView):
                 status=status.HTTP_410_GONE,
             )
 
-        # Create Razorpay order
+        # Create Razorpay order using payable_amount (reflecting discounts and taxes)
+        payable = booking.payable_amount
         try:
             order = create_razorpay_order(
-                amount_inr=booking.total_price,
+                amount_inr=payable,
                 booking_id=booking.id,
             )
         except Exception as e:
@@ -107,15 +108,16 @@ class CreateOrderView(APIView):
         Payment.objects.create(
             booking=booking,
             razorpay_order_id=order["id"],
-            amount=booking.total_price,
+            amount=payable,
             status="created",
         )
 
         logger.info(
-            "Razorpay order %s created for booking %s (Rs.%s)",
+            "Razorpay order %s created for booking %s (Rs.%s, payable Rs.%s)",
             order["id"],
             booking.id,
             booking.total_price,
+            payable,
         )
 
         return Response(
@@ -133,6 +135,9 @@ class CreateOrderView(APIView):
                     "check_in": str(booking.check_in),
                     "check_out": str(booking.check_out),
                     "total_price": str(booking.total_price),
+                    "discount_amount": str(booking.discount_amount),
+                    "tax_amount": str(booking.tax_amount),
+                    "payable_amount": str(payable),
                 },
             },
             status=status.HTTP_201_CREATED,
@@ -314,6 +319,13 @@ class WebhookView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Webhook idempotency & replay protection
+        from payments.models import ProcessedWebhookEvent
+        event_id = event.get("id") or f"{event_type}_{order_id}_{payment_id}"
+        if event_id and ProcessedWebhookEvent.objects.filter(source="razorpay", event_id=event_id).exists():
+            logger.info("Ignoring duplicate Razorpay webhook event %s", event_id)
+            return Response({"status": "already_processed"}, status=status.HTTP_200_OK)
+
         # payment.failed → release the hold so the room frees immediately.
         if event_type == "payment.failed":
             try:
@@ -325,6 +337,8 @@ class WebhookView(APIView):
             )
             failed_booking.release_hold("payment_failed")
             logger.info("Webhook released hold for failed payment, order %s", order_id)
+            if event_id:
+                ProcessedWebhookEvent.objects.get_or_create(source="razorpay", event_id=event_id)
             return Response({"status": "released"}, status=status.HTTP_200_OK)
 
         # Find the booking
@@ -348,6 +362,9 @@ class WebhookView(APIView):
         if not res["success"]:
             logger.warning("Webhook confirmation issue for order %s: %s", order_id, res.get("error"))
             return Response({"status": "skipped", "reason": res.get("code")}, status=status.HTTP_200_OK)
+
+        if event_id:
+            ProcessedWebhookEvent.objects.get_or_create(source="razorpay", event_id=event_id)
 
         return Response({"status": "processed", "booking_id": str(res["booking"].id)}, status=status.HTTP_200_OK)
 

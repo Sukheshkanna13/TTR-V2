@@ -79,3 +79,25 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment {self.razorpay_order_id} - {self.status} - Rs.{self.amount}"
+
+
+class ProcessedWebhookEvent(models.Model):
+    """
+    Tracks processed webhook event IDs across payment gateways and channel managers
+    to guarantee idempotency and prevent duplicate execution / replay attacks.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    source = models.CharField(max_length=50, db_index=True)
+    event_id = models.CharField(max_length=150, db_index=True)
+    processed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "processed webhook event"
+        verbose_name_plural = "processed webhook events"
+        ordering = ["-processed_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["source", "event_id"], name="unique_webhook_event")
+        ]
+
+    def __str__(self):
+        return f"Webhook [{self.source}] {self.event_id} at {self.processed_at}"

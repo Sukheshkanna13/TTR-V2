@@ -39,7 +39,7 @@ def confirm_booking_and_payment(
             return {"success": False, "error": "Booking is cancelled.", "code": "CANCELLED"}
 
         # 3. Amount verification (PAY-01)
-        expected_paise = int(booking.total_price * 100)
+        expected_paise = int(booking.payable_amount * 100)
         if captured_amount_paise is not None and captured_amount_paise != expected_paise:
             logger.error(
                 "PAYMENT RECONCILIATION FAILED for booking %s: expected %s paise, received %s paise",
@@ -79,6 +79,14 @@ def confirm_booking_and_payment(
         booking.generate_booking_reference()
         booking.compute_tax()
 
+        # Mark applied coupon as redeemed
+        if booking.coupon:
+            from django.utils import timezone
+            from loyalty.models import Coupon
+            booking.coupon.status = Coupon.STATUS_REDEEMED
+            booking.coupon.used_at = timezone.now()
+            booking.coupon.save(update_fields=["status", "used_at"])
+
         Payment.objects.filter(razorpay_order_id=order_id).update(
             razorpay_payment_id=payment_id,
             razorpay_signature=signature,
@@ -86,22 +94,25 @@ def confirm_booking_and_payment(
             status="captured",
         )
 
-    # 6. Dispatches outside atomic block
+    # 6. Dispatches outside atomic block (Async background task execution for sub-80ms response)
     try:
-        send_booking_confirmation_email(booking)
-        send_invoice_email(booking)
-        try:
-            from django_q.tasks import async_task
-            async_task(
-                "rooms.tasks.sync_ota_inventory_for_dates",
-                booking.room.room_type,
-                booking.check_in.isoformat(),
-                booking.check_out.isoformat(),
-                booking.room.property_id,
-            )
-        except Exception as q_err:
-            logger.warning("Could not enqueue OTA inventory sync: %s", q_err)
+        from django_q.tasks import async_task
+        async_task("payments.utils.send_booking_confirmation_email", str(booking.id))
+        async_task("payments.utils.send_invoice_email", str(booking.id))
+        async_task(
+            "rooms.tasks.sync_ota_inventory_for_dates",
+            booking.room.room_type,
+            booking.check_in.isoformat(),
+            booking.check_out.isoformat(),
+            booking.room.property_id,
+        )
     except Exception as e:
-        logger.warning("Error dispatching confirmation emails for booking %s: %s", booking.id, e)
+        logger.warning("Error enqueueing post-confirmation async tasks for booking %s: %s", booking.id, e)
+        # Fallback to direct synchronous execution in case django-q is unavailable
+        try:
+            send_booking_confirmation_email(booking)
+            send_invoice_email(booking)
+        except Exception as direct_err:
+            logger.error("Direct email dispatch fallback failed: %s", direct_err)
 
     return {"success": True, "already_confirmed": False, "booking": booking}

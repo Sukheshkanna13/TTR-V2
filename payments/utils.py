@@ -127,10 +127,27 @@ def verify_webhook_signature(body, signature, webhook_secret):
 # Email: Booking Confirmation
 # =========================================================================
 
-def send_booking_confirmation_email(booking):
+def _resolve_booking(booking_or_id):
+    if not booking_or_id:
+        return None
+    from rooms.models import Booking
+    if isinstance(booking_or_id, Booking):
+        return booking_or_id
+    try:
+        return Booking.objects.select_related("room__property", "user").get(id=booking_or_id)
+    except Exception as e:
+        logger.error("Could not load booking %s for email dispatch: %s", booking_or_id, e)
+        return None
+
+
+def send_booking_confirmation_email(booking_or_id):
     """
-    Send booking confirmation email via Gmail SMTP.
+    Send booking confirmation email via Gmail SMTP (supports async task by UUID string).
     """
+    booking = _resolve_booking(booking_or_id)
+    if not booking:
+        return
+
     try:
         subject = f"Booking Confirmed - {booking.booking_reference}"
 
@@ -165,14 +182,18 @@ def send_booking_confirmation_email(booking):
 # Email: Invoice (post-payment)
 # =========================================================================
 
-def send_invoice_email(booking):
+def send_invoice_email(booking_or_id):
     """
-    Send an HTML invoice email after payment is confirmed.
+    Send an HTML invoice email after payment is confirmed (supports async task by UUID string).
 
     Renders templates/emails/invoice.html and delivers it via Gmail SMTP.
     Failures are logged but never re-raised — they must not break the
     payment confirmation response.
     """
+    booking = _resolve_booking(booking_or_id)
+    if not booking:
+        return
+
     try:
         num_nights = (booking.check_out - booking.check_in).days
         subject = (
