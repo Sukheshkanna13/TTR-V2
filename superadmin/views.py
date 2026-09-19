@@ -159,6 +159,8 @@ def employee_create(request):
     email = request.POST.get('email', '').strip().lower()
     full_name = request.POST.get('full_name', '').strip()
     fin_level = request.POST.get('fin_level', 'C')
+    if fin_level not in ('A', 'B', 'C'):
+        fin_level = 'C'
     property_ids = request.POST.getlist('properties')
 
     errors = []
@@ -240,6 +242,8 @@ def _emp_reset_password(request, employee, data):
 
 def _emp_update_fin(request, employee, data):
     fin = data.get('fin_level', 'C')
+    if fin not in ('A', 'B', 'C'):
+        fin = 'C'
     if hasattr(employee, 'userprofile'):
         employee.userprofile.fin_level = fin
         employee.userprofile.save(update_fields=['fin_level'])
@@ -264,6 +268,10 @@ def employee_update(request, user_id):
 
     if employee == request.user and action in ('lock', 'revoke'):
         return JsonResponse({'error': 'You cannot disable your own account.'}, status=400)
+
+    profile = getattr(employee, 'userprofile', None)
+    if profile and profile.role != 'employee':
+        return JsonResponse({'error': 'Cannot manage non-employee users.'}, status=403)
 
     handlers = {
         'revoke': _emp_revoke,
@@ -292,6 +300,8 @@ def employee_delete(request, user_id):
         return JsonResponse({'error': 'You cannot delete your own account.'}, status=400)
 
     profile = getattr(employee, 'userprofile', None)
+    if profile and profile.role != 'employee':
+        return JsonResponse({'error': 'Cannot delete non-employee users.'}, status=403)
     if profile and not profile.can_hard_delete:
         return JsonResponse(
             {'error': 'Account has activity — revoke instead of deleting.'},
@@ -642,13 +652,15 @@ def bookings_list(request):
 
     properties = Property.objects.filter(is_active=True).order_by('name')
     
-    paginator = Paginator(qs, 50)
-    page_obj = paginator.get_page(request.GET.get('page'))
-    
+    from payments.models import Payment
+    all_rooms = Room.objects.filter(is_active=True).select_related('property').order_by('property__name', 'name')
+
     return render(request, 'superadmin/bookings.html', {
         'bookings': page_obj,
         'page_obj': page_obj,
         'properties': properties,
+        'all_rooms': all_rooms,
+        'payment_methods': Payment.METHOD_CHOICES,
         'status_choices': Booking.STATUS_CHOICES,
         'status_filter': status_filter,
         'property_filter': property_filter,
@@ -656,6 +668,73 @@ def bookings_list(request):
         'date_to': date_to,
         'q': q,
     })
+
+
+@require_super_admin
+@require_POST
+def walk_in_booking_create(request):
+    from rooms.services import create_walk_in_booking
+    from payments.models import Payment
+    from datetime import datetime
+    from decimal import Decimal, InvalidOperation
+
+    room_id = request.POST.get('room_id')
+    room = get_object_or_404(Room, pk=room_id)
+
+    try:
+        check_in = datetime.strptime(request.POST.get('check_in', ''), '%Y-%m-%d').date()
+        check_out = datetime.strptime(request.POST.get('check_out', ''), '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'error': 'Invalid check-in or check-out date format.'}, status=400)
+
+    guest_name = request.POST.get('guest_name', '').strip()
+    guest_phone = request.POST.get('guest_phone', '').strip()
+    if not guest_name or not guest_phone:
+        return JsonResponse({'error': 'Guest name and phone number are required.'}, status=400)
+
+    try:
+        guests = int(request.POST.get('guests', 1))
+    except ValueError:
+        guests = 1
+
+    payment_method = request.POST.get('payment_method', Payment.METHOD_CASH)
+    price_override = None
+    override_val = request.POST.get('price_override', '').strip()
+    if override_val:
+        try:
+            price_override = Decimal(override_val)
+        except InvalidOperation:
+            return JsonResponse({'error': 'Invalid price override.'}, status=400)
+
+    try:
+        booking = create_walk_in_booking(
+            room=room,
+            check_in=check_in,
+            check_out=check_out,
+            guests=guests,
+            guest_name=guest_name,
+            guest_phone=guest_phone,
+            guest_email=request.POST.get('guest_email', '').strip(),
+            guest_id_type=request.POST.get('guest_id_type', '').strip(),
+            guest_id_number=request.POST.get('guest_id_number', '').strip(),
+            payment_method=payment_method,
+            price_override=price_override,
+            created_by_staff=request.user,
+            operational_notes=request.POST.get('operational_notes', '').strip(),
+        )
+        _log(request, 'BOOKING_COMPLETED', target_user=booking.user,
+             detail=f"Walk-in booking: ref={booking.booking_reference}, room={room.name}, method={payment_method}")
+        return JsonResponse({
+            'message': f'Walk-in booking created successfully. Ref: {booking.booking_reference}',
+            'booking_reference': booking.booking_reference,
+            'booking_id': str(booking.id),
+        })
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        logger.exception("Error creating walk-in booking: %s", e)
+        return JsonResponse({'error': 'Internal server error while creating booking.'}, status=500)
+
 
 
 @require_super_admin
@@ -1312,5 +1391,73 @@ def activity_update(request, activity_id):
         return handler(request, activity, data)
 
     return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
+
+
+# ── Site Banners ───────────────────────────────────────────────────────────────
+
+@require_super_admin
+def banners_list(request):
+    from core.models import SiteBanner
+    banners = SiteBanner.objects.all().order_by('target_page', 'sort_order', '-created_at')
+    return render(request, 'superadmin/banners.html', {
+        'banners': banners,
+        'page_choices': SiteBanner.PAGE_CHOICES,
+    })
+
+
+@require_super_admin
+@require_POST
+def banner_create(request):
+    from core.models import SiteBanner
+    from django.contrib import messages
+    title = request.POST.get('title', '').strip()
+    target_page = request.POST.get('target_page', 'home')
+    subtitle = request.POST.get('subtitle', '').strip()
+    cta_label = request.POST.get('cta_label', 'Explore Stays').strip()
+    cta_url = request.POST.get('cta_url', '/rooms/search/').strip()
+    sort_order = int(request.POST.get('sort_order', 0) or 0)
+    image = request.FILES.get('image')
+
+    if not title or not image:
+        messages.error(request, 'Title and hero image are required.')
+        return redirect('superadmin:banners-list')
+
+    mobile_image = request.FILES.get('mobile_image')
+
+    banner = SiteBanner.objects.create(
+        title=title,
+        target_page=target_page,
+        subtitle=subtitle,
+        cta_label=cta_label,
+        cta_url=cta_url,
+        sort_order=sort_order,
+        image=image,
+        mobile_image=mobile_image,
+        is_active=True,
+    )
+    _log(request, 'PROPERTY_UPDATED', detail=f"Created banner: {banner.title} for {banner.target_page}")
+    messages.success(request, f'Banner "{banner.title}" created successfully.')
+    return redirect('superadmin:banners-list')
+
+
+@require_super_admin
+@require_POST
+def banner_toggle(request, banner_id):
+    from core.models import SiteBanner
+    banner = get_object_or_404(SiteBanner, pk=banner_id)
+    banner.is_active = not banner.is_active
+    banner.save(update_fields=['is_active'])
+    return JsonResponse({'message': 'Status updated.', 'is_active': banner.is_active})
+
+
+@require_super_admin
+@require_POST
+def banner_delete(request, banner_id):
+    from core.models import SiteBanner
+    banner = get_object_or_404(SiteBanner, pk=banner_id)
+    title = banner.title
+    banner.delete()
+    return JsonResponse({'message': f'Banner "{title}" deleted.'})
+
 
 

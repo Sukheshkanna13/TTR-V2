@@ -91,6 +91,18 @@ class OTP(models.Model):
     tracks attempts, and expires after a configurable duration.
     """
 
+    PURPOSE_LOGIN = "login"
+    PURPOSE_REGISTRATION = "registration"
+    PURPOSE_PASSWORD_RESET = "password_reset"
+    PURPOSE_EMAIL_CHANGE = "email_change"
+
+    PURPOSE_CHOICES = [
+        (PURPOSE_LOGIN, "Login"),
+        (PURPOSE_REGISTRATION, "Registration"),
+        (PURPOSE_PASSWORD_RESET, "Password Reset"),
+        (PURPOSE_EMAIL_CHANGE, "Email Change"),
+    ]
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -101,6 +113,12 @@ class OTP(models.Model):
     )
     code = models.CharField(
         max_length=6,
+    )
+    purpose = models.CharField(
+        max_length=20,
+        choices=PURPOSE_CHOICES,
+        default=PURPOSE_LOGIN,
+        db_index=True,
     )
     attempts = models.PositiveSmallIntegerField(
         default=0,

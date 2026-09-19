@@ -16,6 +16,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from core.ota.views import ChannexWebhookView
+
 # Customise the standard Django admin site header/title
 admin.site.site_header = "Temples & Towns"
 admin.site.site_title = "T&T Admin"
@@ -34,6 +36,7 @@ urlpatterns = [
     path("rooms/", include("rooms.urls")),
     path("bookings/", include("rooms.booking_urls")),
     path("payments/", include("payments.urls")),
+    path("api/ota/channex/webhook/", ChannexWebhookView.as_view(), name="ota-channex-webhook"),
 
     # Admin portals
     path("admin-portal/login/", RedirectView.as_view(url="/accounts/login/page/", permanent=False), name="admin-portal-login"),

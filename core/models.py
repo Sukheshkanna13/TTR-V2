@@ -142,3 +142,36 @@ class Activity(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.category})"
+
+
+class SiteBanner(models.Model):
+    PAGE_CHOICES = [
+        ('home', 'Homepage Hero'),
+        ('pondicherry', 'Pondicherry Retreat'),
+        ('auroville', 'Auroville Retreat'),
+        ('bengaluru', 'Bengaluru Retreat'),
+    ]
+
+    objects = models.Manager()
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    target_page = models.CharField(max_length=50, choices=PAGE_CHOICES, default='home', db_index=True)
+    title = models.CharField(max_length=200, help_text="Headline / floating title text")
+    subtitle = models.CharField(max_length=300, blank=True, default="", help_text="Supporting tagline")
+    image = models.ImageField(upload_to='banners/', help_text="Desktop hero image")
+    mobile_image = models.ImageField(upload_to='banners/mobile/', blank=True, null=True, help_text="Optional mobile crop image")
+    cta_label = models.CharField(max_length=50, default="Explore Stays", help_text="Call to action button text")
+    cta_url = models.CharField(max_length=255, default="/rooms/search/", help_text="Link destination for button")
+    is_active = models.BooleanField(default=True, db_index=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', '-created_at']
+        verbose_name = 'site banner'
+        verbose_name_plural = 'site banners'
+
+    def __str__(self):
+        return f"{self.get_target_page_display()} — {self.title}"
+

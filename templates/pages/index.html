@@ -8,7 +8,11 @@
 {% url 'rooms:search-page' as search_url %}
 {% with hero_q=search_url|add:'?check_in='|add:hero.check_in_iso|add:'&check_out='|add:hero.check_out_iso|add:'&guests=1' %}
 <section class="tt-hero-full">
-  <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full" loading="lazy">
+  {% if home_hero_banner and home_hero_banner.image %}
+    <img src="{{ home_hero_banner.image.url }}" alt="{{ home_hero_banner.title|default:'Temple and Towns Resorts' }}" class="tt-hero-bg-full" loading="lazy">
+  {% else %}
+    <img src="{% static 'images/hero_resort.png' %}" alt="Temple and Towns Resorts" class="tt-hero-bg-full" loading="lazy">
+  {% endif %}
   <div class="tt-hero-overlay-white"></div>
 
   <!-- Sticky floating search pill -->
@@ -47,11 +51,18 @@
 <!-- Floating overlay — fixed to bottom-center of viewport, fades on scroll -->
 <div class="tt-hero-float-overlay" id="heroFloat">
   <h1 class="tt-display tt-text-c tt-hero-float-title">
-    Explore stays that feel <span class="tt-italic-soft">modern,</span><br class="hide-mobile">
-    calm, and unmistakably Indian.
+    {% if home_hero_banner and home_hero_banner.title %}
+      {{ home_hero_banner.title }}
+      {% if home_hero_banner.subtitle %}
+        <br class="hide-mobile"><span style="font-size: 0.65em; font-weight: 400; opacity: 0.9;">{{ home_hero_banner.subtitle }}</span>
+      {% endif %}
+    {% else %}
+      Explore stays that feel <span class="tt-italic-soft">modern,</span><br class="hide-mobile">
+      calm, and unmistakably Indian.
+    {% endif %}
   </h1>
-  <a href="{{ hero_q }}" class="tt-btn tt-btn-primary tt-btn-lg tt-hero-float-btn">
-    Find a stay
+  <a href="{% if home_hero_banner and home_hero_banner.cta_url %}{{ home_hero_banner.cta_url }}{% else %}{{ hero_q }}{% endif %}" class="tt-btn tt-btn-primary tt-btn-lg tt-hero-float-btn">
+    {% if home_hero_banner and home_hero_banner.cta_label %}{{ home_hero_banner.cta_label }}{% else %}Find a stay{% endif %}
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
   </a>
 </div>

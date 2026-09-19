@@ -91,6 +91,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "loyalty.context_processors.loyalty_context",
+                "core.context_processors.site_banners",
             ],
         },
     },
@@ -103,16 +104,16 @@ WSGI_APPLICATION = "hotel_booking.wsgi.application"
 # DATABASE
 # =============================================================================
 
-# Default to SQLite for local dev; Render/prod sets DATABASE_URL automatically.
+# Default to MySQL for local dev; Render/Hostinger prod sets DATABASE_URL automatically.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ttr_v2',
-        'USER': 'root',
-        'PASSWORD': 'vengeance',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-    }
+    "default": dj_database_url.config(
+        env="DATABASE_URL",
+        default=config(
+            "DATABASE_URL",
+            default="mysql://root:vengeance@127.0.0.1:3306/ttr_v2",
+        ),
+        conn_max_age=600,
+    )
 }
 
 # =============================================================================
@@ -254,6 +255,14 @@ HOLD_DURATION_MINUTES = config("HOLD_DURATION_MINUTES", default=10, cast=int)
 RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
 RAZORPAY_WEBHOOK_SECRET = config("RAZORPAY_WEBHOOK_SECRET", default="")
+
+# =============================================================================
+# OTA CHANNEL MANAGER CONFIGURATION (CHANNEX)
+# =============================================================================
+
+CHANNEX_API_KEY = config("CHANNEX_API_KEY", default="")
+CHANNEX_API_URL = config("CHANNEX_API_URL", default="https://api.channex.io/api/v1")
+CHANNEX_WEBHOOK_SECRET = config("CHANNEX_WEBHOOK_SECRET", default="")
 
 
 # =============================================================================

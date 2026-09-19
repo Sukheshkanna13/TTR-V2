@@ -225,47 +225,26 @@ class VerifyPaymentView(APIView):
             )
 
         # ----------------------------------------------------------------
-        # PAYMENT VERIFIED — Confirm booking
+        # PAYMENT VERIFIED — Confirm booking via atomic idempotent service
         # ----------------------------------------------------------------
-
-        # Update booking
-        booking.status = "confirmed"
-        booking.hold_expires_at = None
-        booking.save(update_fields=["status", "hold_expires_at"])
-
-        # Generate booking reference and compute GST
-        booking.generate_booking_reference()
-        booking.compute_tax()
-
-        # Update payment record
-        Payment.objects.filter(
-            razorpay_order_id=order_id,
-        ).update(
-            razorpay_payment_id=payment_id,
-            razorpay_signature=signature,
-            status="captured",
+        from payments.services import confirm_booking_and_payment
+        res = confirm_booking_and_payment(
+            order_id=order_id,
+            payment_id=payment_id,
+            signature=signature,
+            caller="browser",
         )
+        if not res["success"]:
+            return Response(
+                {"error": res["error"], "code": res.get("code")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        logger.info(
-            "Payment verified: order=%s, payment=%s, booking=%s, ref=%s",
-            order_id,
-            payment_id,
-            booking.id,
-            booking.booking_reference,
-        )
-
-        # Send confirmation email (async-safe, won't block on failure)
-        send_booking_confirmation_email(booking)
-
-        # Send invoice email. Loyalty points are credited later — 24h after
-        # checkout, only if the stay wasn't cancelled — via the periodic
-        # rooms.tasks.award_loyalty_for_completed_stays sweep.
-        send_invoice_email(booking)
-
+        confirmed_booking = res["booking"]
         return Response(
             {
                 "message": "Payment successful! Your booking is confirmed.",
-                "booking": BookingSerializer(booking).data,
+                "booking": BookingSerializer(confirmed_booking).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -357,88 +336,20 @@ class WebhookView(APIView):
             logger.warning("Webhook: No booking found for order %s", order_id)
             return Response(status=status.HTTP_200_OK)
 
-        # Already confirmed? Don't double-process
-        if booking.status == "confirmed":
-            logger.info("Webhook: Booking %s already confirmed, skipping.", booking.id)
-            return Response({"status": "already_confirmed"}, status=status.HTTP_200_OK)
-
-        # A cancellation is a deliberate, later action (by the guest or an
-        # admin, possibly already refunded). Never silently re-confirm over
-        # it — this is almost certainly a late/duplicate webhook for a
-        # payment that's since been refunded. Flag loudly for manual review.
-        if booking.status == "cancelled":
-            logger.error(
-                "RECONCILIATION NEEDED: payment.captured for CANCELLED booking %s "
-                "(order=%s, payment=%s, Rs.%s). Payment may need a manual refund check.",
-                booking.id, order_id, payment_id, booking.total_price,
-            )
-            return Response({"status": "flagged_cancelled_booking"}, status=status.HTTP_200_OK)
-
-        # PENDING, EXPIRED, or FAILED all reach here — Razorpay has verified,
-        # captured money. The guest paid; honor it unless the room has since
-        # been re-sold to someone else for these dates in the gap between
-        # the hold expiring and this webhook arriving.
-        was_pending = booking.status == "pending"
-
-        if not was_pending:
-            conflict = Booking.objects.filter(
-                room=booking.room,
-                status="confirmed",
-                check_in__lt=booking.check_out,
-                check_out__gt=booking.check_in,
-            ).exclude(pk=booking.pk).exists()
-
-            if conflict:
-                logger.error(
-                    "RECONCILIATION NEEDED: payment.captured for booking %s (status=%s) "
-                    "but the room was re-booked for overlapping dates before this webhook "
-                    "arrived (order=%s, payment=%s, Rs.%s). Needs manual refund/reassignment.",
-                    booking.id, booking.status, order_id, payment_id, booking.total_price,
-                )
-                Payment.objects.filter(razorpay_order_id=order_id).update(
-                    razorpay_payment_id=payment_id, status="captured",
-                )
-                return Response({"status": "flagged_room_conflict"}, status=status.HTTP_200_OK)
-
-            logger.error(
-                "Webhook re-confirming booking %s that had lapsed to '%s' before payment "
-                "capture arrived (order=%s, payment=%s). Room was still free — honoring the "
-                "guest's payment.",
-                booking.id, booking.status, order_id, payment_id,
-            )
-
-        booking.status = "confirmed"
-        booking.hold_expires_at = None
-        booking.save(update_fields=["status", "hold_expires_at"])
-
-        # Generate booking reference and compute GST
-        booking.generate_booking_reference()
-        booking.compute_tax()
-
-        # Update payment record
-        Payment.objects.filter(
-            razorpay_order_id=order_id,
-        ).update(
-            razorpay_payment_id=payment_id,
-            status="captured",
+        # Confirm booking via atomic idempotent service with amount reconciliation (PAY-01/02/03)
+        from payments.services import confirm_booking_and_payment
+        amount_paise = payment_entity.get("amount")
+        res = confirm_booking_and_payment(
+            order_id=order_id,
+            payment_id=payment_id,
+            captured_amount_paise=amount_paise,
+            caller="webhook",
         )
+        if not res["success"]:
+            logger.warning("Webhook confirmation issue for order %s: %s", order_id, res.get("error"))
+            return Response({"status": "skipped", "reason": res.get("code")}, status=status.HTTP_200_OK)
 
-        logger.info(
-            "Webhook confirmed booking %s (order: %s, ref: %s)",
-            booking.id,
-            order_id,
-            booking.booking_reference,
-        )
-
-        # Send confirmation email
-        send_booking_confirmation_email(booking)
-
-        # Send invoice email. Loyalty points are credited later — 24h after
-        # checkout, only if the stay wasn't cancelled — via the periodic
-        # rooms.tasks.award_loyalty_for_completed_stays sweep.
-        send_invoice_email(booking)
-
-        return Response({"status": "processed"}, status=status.HTTP_200_OK)
+        return Response({"status": "processed", "booking_id": str(res["booking"].id)}, status=status.HTTP_200_OK)
 
 
 # ============================================================================

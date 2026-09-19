@@ -347,6 +347,26 @@ class Booking(models.Model):
         ("cancelled", "Cancelled"),
     ]
 
+    SOURCE_WEB = "web"
+    SOURCE_WALK_IN = "walk_in"
+    SOURCE_PHONE = "phone"
+    SOURCE_OTA_BOOKING_COM = "ota_booking_com"
+    SOURCE_OTA_AGODA = "ota_agoda"
+    SOURCE_OTA_MAKEMYTRIP = "ota_makemytrip"
+    SOURCE_OTA_AIRBNB = "ota_airbnb"
+    SOURCE_OTA_OTHER = "ota_other"
+
+    SOURCE_CHOICES = [
+        (SOURCE_WEB, "Direct Website"),
+        (SOURCE_WALK_IN, "Walk-In Front Desk"),
+        (SOURCE_PHONE, "Phone Reservation"),
+        (SOURCE_OTA_BOOKING_COM, "Booking.com"),
+        (SOURCE_OTA_AGODA, "Agoda"),
+        (SOURCE_OTA_MAKEMYTRIP, "MakeMyTrip"),
+        (SOURCE_OTA_AIRBNB, "Airbnb"),
+        (SOURCE_OTA_OTHER, "Other OTA"),
+    ]
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -362,6 +382,30 @@ class Booking(models.Model):
         on_delete=models.CASCADE,
         related_name="bookings",
     )
+    source = models.CharField(
+        max_length=30,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_WEB,
+        db_index=True,
+    )
+    guest_name = models.CharField(max_length=150, blank=True, default="")
+    guest_phone = models.CharField(max_length=30, blank=True, default="")
+    guest_email = models.EmailField(blank=True, default="")
+    guest_id_type = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="e.g. Aadhaar, Passport, Driving License",
+    )
+    guest_id_number = models.CharField(max_length=100, blank=True, default="")
+    created_by_staff = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="staff_bookings_created",
+    )
+    operational_notes = models.TextField(blank=True, default="")
     check_in = models.DateField()
     check_out = models.DateField()
     guests = models.PositiveSmallIntegerField()
@@ -391,6 +435,13 @@ class Booking(models.Model):
         blank=True,
         default="",
         help_text="Razorpay order ID for this booking.",
+    )
+    ota_reservation_id = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Channel Manager / OTA Reservation ID (e.g. Channex/Booking.com/Agoda ID).",
     )
     booking_reference = models.CharField(
         max_length=20,

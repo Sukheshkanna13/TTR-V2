@@ -1,29 +1,197 @@
 {% extends "employeeadmin/base.html" %}
 {% block title %}Bookings{% endblock %}
 {% block content %}
-<h1 class="ea-page-title">Bookings</h1>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+  <h1 class="ea-page-title" style="margin:0;">Bookings</h1>
+  <button class="ea-btn ea-btn-primary" type="button" onclick="openWalkInModal()" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; background:#0F766E; color:#FFFFFF; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    + New Walk-In Booking
+  </button>
+</div>
+
 <div class="ea-card">
   <table>
-    <thead><tr><th>Ref</th><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Ref</th>
+        <th>Guest</th>
+        <th>Room</th>
+        <th>Check-in</th>
+        <th>Check-out</th>
+        <th>Status</th>
+      </tr>
+    </thead>
     <tbody>
     {% for b in bookings %}
     <tr>
       <td style="font-family:monospace;font-size:11px;">{{ b.booking_reference }}</td>
-      <td>{{ b.user.full_name|default:b.user.email }}</td>
+      <td>
+        <div style="font-weight:600;">{{ b.guest_name|default:b.user.full_name|default:b.user.email }}</div>
+        {% if b.guest_phone %}<div style="font-size:11px; color:#78716C;">{{ b.guest_phone }}</div>{% endif %}
+      </td>
       <td>{{ b.room.name }}</td>
       <td>{{ b.check_in }}</td>
       <td>{{ b.check_out }}</td>
       <td>
-        {% if b.status == 'CONFIRMED' %}<span class="badge badge-green">{{ b.status }}</span>
-        {% elif b.status == 'CANCELLED' %}<span class="badge badge-red">{{ b.status }}</span>
+        {% if b.status == 'confirmed' or b.status == 'CONFIRMED' %}<span class="badge badge-green">Confirmed</span>
+        {% elif b.status == 'cancelled' or b.status == 'CANCELLED' %}<span class="badge badge-red">Cancelled</span>
+        {% elif b.status == 'completed' or b.status == 'COMPLETED' %}<span class="badge badge-slate">Completed</span>
         {% else %}<span class="badge badge-slate">{{ b.status }}</span>{% endif %}
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="6" style="color:#5eead4;padding:24px 12px;">No bookings found.</td></tr>
+    <tr><td colspan="6" style="color:#78716C;padding:24px 12px; text-align:center;">No bookings found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
 {% include 'partials/pagination.html' %}
+
+<!-- Walk-In Booking Modal -->
+<div id="walkInModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center; padding:16px;">
+  <div class="ea-card" style="max-width:550px; width:100%; max-height:90vh; overflow-y:auto; position:relative; background:#FFFFFF; border-radius:8px; padding:24px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h2 style="margin:0; font-size:18px; font-weight:700; color:#1C1917;">New Front-Desk Walk-In</h2>
+      <button type="button" onclick="closeWalkInModal()" style="border:none; background:none; font-size:20px; cursor:pointer; color:#78716C;">&times;</button>
+    </div>
+    <form id="walkInForm" onsubmit="submitWalkInBooking(event)">
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_room">Assigned Room</label>
+        <select style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" id="wi_room" name="room_id" required>
+          <option value="">-- Choose Assigned Room --</option>
+          {% for r in assigned_rooms %}
+          <option value="{{ r.id }}">{{ r.property.name }} — {{ r.name }} (₹{{ r.price_per_night }}/night)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_check_in">Check-in Date</label>
+          <input style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" type="date" id="wi_check_in" name="check_in" required>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_check_out">Check-out Date</label>
+          <input style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" type="date" id="wi_check_out" name="check_out" required>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_guest_name">Guest Name</label>
+          <input style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" type="text" id="wi_guest_name" name="guest_name" required placeholder="Guest Name">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_guests">Guests</label>
+          <input style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" type="number" id="wi_guests" name="guests" value="1" min="1" max="10" required>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_guest_phone">Mobile Number</label>
+          <input style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" type="text" id="wi_guest_phone" name="guest_phone" required placeholder="+91...">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_guest_email">Email (Optional)</label>
+          <input style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" type="email" id="wi_guest_email" name="guest_email" placeholder="guest@email.com">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_id_type">ID Proof Type</label>
+          <select style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" id="wi_id_type" name="guest_id_type">
+            <option value="Aadhaar">Aadhaar Card</option>
+            <option value="Passport">Passport</option>
+            <option value="Driving License">Driving License</option>
+            <option value="Voter ID">Voter ID</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_id_number">ID Proof Number</label>
+          <input style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" type="text" id="wi_id_number" name="guest_id_number" placeholder="XXXX-XXXX-XXXX">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_payment_method">Payment Mode</label>
+          <select style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" id="wi_payment_method" name="payment_method">
+            {% for val, label in payment_methods %}
+            <option value="{{ val }}" {% if val == 'cash' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_price_override">Rate Override (₹, optional)</label>
+          <input style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" type="number" step="0.01" id="wi_price_override" name="price_override" placeholder="Standard price">
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#44403C;" for="wi_notes">Front-Desk Remarks</label>
+        <textarea style="width:100%; padding:8px 12px; border:1px solid #D6D3D1; border-radius:6px; font-size:13px;" id="wi_notes" name="operational_notes" rows="2" placeholder="Notes on arrival, payment, or room instructions"></textarea>
+      </div>
+      <div id="wiResult" style="display:none; margin-bottom:12px; padding:10px; border-radius:6px; font-size:13px;"></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" onclick="closeWalkInModal()" style="padding:8px 16px; border:1px solid #D6D3D1; background:#FFFFFF; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;">Cancel</button>
+        <button type="submit" id="wiSubmitBtn" style="padding:8px 16px; border:none; background:#0F766E; color:#FFFFFF; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;">Confirm Reservation</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+function openWalkInModal() {
+  document.getElementById('walkInModal').style.display = 'flex';
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('wi_check_in').value = today;
+  document.getElementById('wi_check_out').value = tomorrow;
+}
+
+function closeWalkInModal() {
+  document.getElementById('walkInModal').style.display = 'none';
+  document.getElementById('wiResult').style.display = 'none';
+}
+
+async function submitWalkInBooking(e) {
+  e.preventDefault();
+  const form = document.getElementById('walkInForm');
+  const btn = document.getElementById('wiSubmitBtn');
+  const resDiv = document.getElementById('wiResult');
+  const fd = new FormData(form);
+
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  resDiv.style.display = 'none';
+
+  try {
+    const res = await fetch("{% url 'employeeadmin:walk-in-booking-create' %}", {
+      method: 'POST',
+      headers: {'X-CSRFToken': csrf},
+      body: fd
+    });
+    const data = await res.json();
+    if (res.ok) {
+      resDiv.style.display = 'block';
+      resDiv.style.background = '#F0FDF4';
+      resDiv.style.color = '#15803D';
+      resDiv.textContent = data.message;
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      resDiv.style.display = 'block';
+      resDiv.style.background = '#FEF2F2';
+      resDiv.style.color = '#B91C1C';
+      resDiv.textContent = data.error || 'Failed to create booking.';
+      btn.disabled = false;
+      btn.textContent = 'Confirm Reservation';
+    }
+  } catch (err) {
+    resDiv.style.display = 'block';
+    resDiv.style.background = '#FEF2F2';
+    resDiv.style.color = '#B91C1C';
+    resDiv.textContent = 'Network error.';
+    btn.disabled = false;
+    btn.textContent = 'Confirm Reservation';
+  }
+}
+</script>
 {% endblock %}

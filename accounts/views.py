@@ -22,7 +22,11 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import PendingRegistration
+from .models import (
+    OTP,
+    PendingRegistration,
+    User,
+)
 from .role_routing import (
     CENTRAL_LOGIN_URL,
     get_post_login_redirect,
@@ -39,6 +43,7 @@ from .serializers import (
 from .utils import (
     check_login_lock,
     create_and_store_otp,
+    is_otp_throttled,
     record_failed_login,
     reset_login_attempts,
     send_otp_email,
@@ -91,8 +96,15 @@ class RegisterView(APIView):
             phone=phone,
         )
 
+        # Check throttling
+        if is_otp_throttled(email, purpose=OTP.PURPOSE_REGISTRATION):
+            return Response(
+                {"error": "A verification code was recently sent. Please wait before requesting another."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
         # Send OTP
-        otp_code = create_and_store_otp(email)
+        otp_code = create_and_store_otp(email, purpose=OTP.PURPOSE_REGISTRATION)
         email_sent = send_otp_email(email, otp_code)
 
         logger.info("Registration initiated for %s — OTP sent: %s", email, email_sent)
@@ -131,8 +143,10 @@ class VerifyOTPView(APIView):
         email = serializer.validated_data["email"]
         submitted_otp = serializer.validated_data["otp"]
 
-        # Verify OTP
-        result = verify_otp(email, submitted_otp)
+        # Verify OTP (check registration first, fallback to login for legacy compatibility)
+        result = verify_otp(email, submitted_otp, purpose=OTP.PURPOSE_REGISTRATION)
+        if not result["success"] and result.get("code") == "OTP_NOT_FOUND":
+            result = verify_otp(email, submitted_otp, purpose=OTP.PURPOSE_LOGIN)
 
         if not result["success"]:
             code = result["code"]
@@ -332,7 +346,10 @@ class ResendOTPView(APIView):
         if not pending_exists and not legacy_user_exists:
             return Response({"message": generic_msg}, status=status.HTTP_200_OK)
 
-        otp_code = create_and_store_otp(email)
+        if is_otp_throttled(email, purpose=OTP.PURPOSE_REGISTRATION):
+            return Response({"message": generic_msg}, status=status.HTTP_200_OK)
+
+        otp_code = create_and_store_otp(email, purpose=OTP.PURPOSE_REGISTRATION)
         send_otp_email(email, otp_code)
 
         logger.info("OTP resent for: %s", email)
@@ -537,7 +554,7 @@ def _request_email_change(user, data):
         return JsonResponse({'error': INVALID_EMAIL_MSG}, status=400)
     if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
         return JsonResponse({'error': 'That email is already in use.'}, status=400)
-    otp_code = create_and_store_otp(new_email)
+    otp_code = create_and_store_otp(new_email, purpose=OTP.PURPOSE_EMAIL_CHANGE)
     send_otp_email(new_email, otp_code)
     cache.set(f'email_change:{user.pk}:{new_email}', True, timeout=600)
     return JsonResponse({'message': f'Verification code sent to {new_email}. Enter it below.'})
@@ -550,7 +567,7 @@ def _verify_email_change(user, data):
     otp = data.get('otp', '').strip()
     if not cache.get(f'email_change:{user.pk}:{new_email}'):
         return JsonResponse({'error': 'OTP expired or not initiated. Request a new one.'}, status=400)
-    result = verify_otp(new_email, otp)
+    result = verify_otp(new_email, otp, purpose=OTP.PURPOSE_EMAIL_CHANGE)
     if not result['success']:
         return JsonResponse({'error': result['error']}, status=400)
     if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
@@ -603,7 +620,7 @@ def forgot_password(request):
         else:
             user_exists = User.objects.filter(email=email, is_active=True).exists()
             if user_exists:
-                otp_code = create_and_store_otp(email)
+                otp_code = create_and_store_otp(email, purpose=OTP.PURPOSE_PASSWORD_RESET)
                 send_otp_email(email, otp_code)
             # Always show success to avoid user enumeration
             request.session['pw_reset_email'] = email
@@ -620,7 +637,7 @@ def forgot_password_verify(request):
     error = None
     if request.method == 'POST':
         code = request.POST.get('otp', '').strip()
-        result = verify_otp(email, code)
+        result = verify_otp(email, code, purpose=OTP.PURPOSE_PASSWORD_RESET)
         if result['success']:
             request.session['pw_reset_verified'] = True
             return redirect('accounts:forgot-password-set')

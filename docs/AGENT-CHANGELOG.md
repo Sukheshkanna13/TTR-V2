@@ -6,6 +6,38 @@ context without re-deriving it.
 
 ---
 
+## 2026-09-19 — Core Hardening, Walk-In Engine, Hero Banners & OTA Channel Manager
+
+### 1. Security & Authentication Hardening
+- `hotel_booking/settings/prod.py` & `base.py`: Enforced `DEBUG=False` default in production with startup assertions for `SECRET_KEY` and `DATABASE_URL`. Refactored `DATABASES` to parse `DATABASE_URL` via `dj_database_url.config`.
+- `accounts/models.py` & `utils.py`: Added explicit `purpose` field to `OTP` model (`login`, `registration`, `password_reset`, `email_change`). Implemented purpose-bound OTP creation/verification, `is_otp_throttled()`, and constant-time token comparison with `hmac.compare_digest()`.
+- `accounts/adapter.py`: Added email verification check (`sociallogin.account.extra_data.get('email_verified')`) before auto-merging Google accounts.
+- `superadmin/views.py`: Enforced strict `fin_level` validation (`['A', 'B', 'C']`), scoped employee mutations to `role='employee'`, preserving self-disable and superadmin demotion guards.
+
+### 2. Dynamic Hero Banners (Super Admin Controlled)
+- `core/models.py`: Created `SiteBanner` model with `target_page`, `title`, `subtitle`, `image`, `mobile_image`, `cta_label`, `cta_url`, `is_active`, and `sort_order`.
+- `core/context_processors.py`: Registered `site_banners` processor providing `home_hero_banner` to templates.
+- `templates/pages/index.html`: Bound hero image, heading, subheading, and CTA to dynamic database values with graceful static fallbacks.
+- `superadmin/views.py` & `templates/superadmin/banners.html`: Created complete CRUD management interface with toggle-active and delete controls.
+
+### 3. Front-Desk / Walk-In Reservation Engine
+- `rooms/models.py`: Added `source`, `guest_name`, `guest_phone`, `guest_email`, `guest_id_type`, `guest_id_number`, `created_by_staff`, and `operational_notes` to `Booking`.
+- `payments/models.py`: Added `payment_method` to `Payment` (`cash`, `card_pos`, `upi_pos`, `pay_at_checkout`, `razorpay`). Made `razorpay_order_id` nullable/blank for offline receipts.
+- `rooms/services.py`: Implemented atomic `create_walk_in_booking()` with row locking, date conflict checks, guest user resolution, GST computation, and async receipt dispatches.
+- `superadmin` & `employeeadmin`: Added "+ New Walk-In Booking" modal in `bookings.html` with AJAX validation and instant table reload.
+
+### 4. Razorpay Production Hardening
+- `payments/services.py`: Centralized payment capture in `confirm_booking_and_payment()` with atomic database transaction, `select_for_update()`, strict paise-amount reconciliation, conflicting hold detection, and idempotent returns.
+- `payments/views.py`: Refactored `VerifyPaymentView` and `WebhookView` to delegate to `confirm_booking_and_payment()`.
+
+### 5. OTA Channel Manager (Channex 2-Way Sync)
+- Hospitality Contract Rule: Respecting global OTA legal boundaries where OTAs own contract dates. Front desk stay extensions log as direct walk-in bookings (0% OTA commission) and decrement OTA availability.
+- `core/ota/`: Created abstract `ChannelManager`, concrete `ChannexManager`, and `processor.py` webhook dispatcher.
+- Inbound Webhook (`POST /api/ota/channex/webhook/`): Validates HMAC-SHA256 signature (`X-Channex-Signature`), processes `booking.created`, `booking.modified` (with automatic room reallocation if original room is conflicted on new dates), and `booking.cancelled`.
+- Outbound Inventory Sync: Implemented `rooms.tasks.sync_ota_inventory_for_dates`, enqueued automatically on website, walk-in, and OTA reservation events.
+
+---
+
 ## 2026-06-23 — Super Admin Minimalist UI Redesign
 
 ### UI/UX Refinement — Dark to Minimal Light Theme Redesign

@@ -7,6 +7,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from rooms.models import Room, Property, Booking, RoomImage
+from rooms.services import create_walk_in_booking
+from payments.models import Payment
+from payments.services import confirm_booking_and_payment
 
 User = get_user_model()
 
@@ -228,3 +231,144 @@ class BookingReferenceTest(TestCase):
                          f"TT-{year}-00001")
         self.assertEqual(self._booking().generate_booking_reference(),
                          f"TT-{year}-00002")
+
+
+class WalkInBookingServiceTest(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            email='staff@test.com', full_name='Staff Member', phone='8888888888', password=TEST_PASSWORD, is_active=True,
+        )
+        self.room = _room()
+
+    def test_create_walk_in_booking_success(self):
+        today = timezone.now().date()
+        ci = today + timedelta(days=10)
+        co = today + timedelta(days=12)
+
+        booking = create_walk_in_booking(
+            room=self.room,
+            check_in=ci,
+            check_out=co,
+            guests=2,
+            guest_name="Walkin Guest",
+            guest_phone="9876543210",
+            guest_email="walkin@example.com",
+            payment_method=Payment.METHOD_CASH,
+            created_by_staff=self.staff,
+        )
+
+        self.assertEqual(booking.status, "confirmed")
+        self.assertEqual(booking.source, Booking.SOURCE_WALK_IN)
+        self.assertEqual(booking.guest_name, "Walkin Guest")
+        self.assertIsNotNone(booking.booking_reference)
+        self.assertTrue(booking.booking_reference.startswith(f"TT-{timezone.now().year}-"))
+
+        # Verify payment record
+        payment = Payment.objects.get(booking=booking)
+        self.assertEqual(payment.payment_method, Payment.METHOD_CASH)
+        self.assertEqual(payment.status, "captured")
+
+    def test_create_walk_in_rejects_overlap(self):
+        today = timezone.now().date()
+        ci = today + timedelta(days=10)
+        co = today + timedelta(days=12)
+
+        create_walk_in_booking(
+            room=self.room,
+            check_in=ci,
+            check_out=co,
+            guests=1,
+            guest_name="Guest 1",
+            guest_phone="9876543210",
+            created_by_staff=self.staff,
+        )
+
+        with self.assertRaises(ValueError):
+            create_walk_in_booking(
+                room=self.room,
+                check_in=ci,
+                check_out=co,
+                guests=1,
+                guest_name="Guest 2",
+                guest_phone="9876543211",
+                created_by_staff=self.staff,
+            )
+
+
+class PaymentConfirmationServiceTest(TestCase):
+    def setUp(self):
+        self.user = _guest()
+        self.room = _room()
+
+    def test_confirm_booking_and_payment_success(self):
+        today = timezone.now().date()
+        ci = today + timedelta(days=15)
+        co = today + timedelta(days=17)
+        booking = Booking.objects.create(
+            room=self.room, user=self.user, check_in=ci, check_out=co,
+            guests=1, total_price=Decimal('4000.00'), status='pending',
+            razorpay_order_id='order_test_123',
+            hold_expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        Payment.objects.create(
+            booking=booking,
+            razorpay_order_id='order_test_123',
+            amount=Decimal('4000.00'),
+            status='created',
+        )
+
+        res = confirm_booking_and_payment(
+            order_id='order_test_123',
+            payment_id='pay_test_456',
+            signature='sig_test_789',
+            captured_amount_paise=400000,
+        )
+
+        self.assertTrue(res['success'])
+        self.assertFalse(res['already_confirmed'])
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, 'confirmed')
+        self.assertIsNone(booking.hold_expires_at)
+        self.assertIsNotNone(booking.booking_reference)
+
+        payment = Payment.objects.get(razorpay_order_id='order_test_123')
+        self.assertEqual(payment.status, 'captured')
+        self.assertEqual(payment.razorpay_payment_id, 'pay_test_456')
+
+        # Idempotent repeat call
+        res_repeat = confirm_booking_and_payment(
+            order_id='order_test_123',
+            payment_id='pay_test_456',
+            captured_amount_paise=400000,
+        )
+        self.assertTrue(res_repeat['success'])
+        self.assertTrue(res_repeat['already_confirmed'])
+
+    def test_confirm_booking_rejects_amount_mismatch(self):
+        today = timezone.now().date()
+        ci = today + timedelta(days=20)
+        co = today + timedelta(days=22)
+        booking = Booking.objects.create(
+            room=self.room, user=self.user, check_in=ci, check_out=co,
+            guests=1, total_price=Decimal('5000.00'), status='pending',
+            razorpay_order_id='order_mismatch_123',
+            hold_expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        Payment.objects.create(
+            booking=booking,
+            razorpay_order_id='order_mismatch_123',
+            amount=Decimal('5000.00'),
+            status='created',
+        )
+
+        res = confirm_booking_and_payment(
+            order_id='order_mismatch_123',
+            payment_id='pay_mismatch_456',
+            captured_amount_paise=10000,  # ₹100 instead of ₹5000
+        )
+
+        self.assertFalse(res['success'])
+        self.assertEqual(res['code'], 'AMOUNT_MISMATCH')
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, 'failed')
+

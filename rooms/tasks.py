@@ -82,3 +82,24 @@ def award_loyalty_for_completed_stays():
         logger.info(f"Awarded loyalty points for {awarded_count} completed stays.")
 
     return awarded_count
+
+
+def sync_ota_inventory_for_dates(room_type: str, check_in_str: str, check_out_str: str, property_id=None):
+    """
+    Background worker task to compute remaining available inventory for room_type
+    across the date range and push updates to Channex.
+    """
+    from django.utils.dateparse import parse_date
+    from core.ota.channex import ChannexManager
+
+    ci = parse_date(check_in_str) if isinstance(check_in_str, str) else check_in_str
+    co = parse_date(check_out_str) if isinstance(check_out_str, str) else check_out_str
+
+    if not ci or not co:
+        logger.warning(f"Invalid dates for OTA inventory sync: {check_in_str} to {check_out_str}")
+        return False
+
+    manager = ChannexManager()
+    avail = manager.calculate_available_count(room_type, ci, co, property_id=property_id)
+    res = manager.push_inventory(room_type, ci, co, avail, property_id=property_id)
+    return res.get("success", False)

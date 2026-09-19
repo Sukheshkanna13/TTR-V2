@@ -12,11 +12,17 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         if sociallogin.is_existing:
             return
 
-        # Check if email is provided
-        if 'email' not in sociallogin.account.extra_data:
+        # Check if email is provided and verified by provider
+        extra_data = sociallogin.account.extra_data
+        if 'email' not in extra_data:
             return
 
-        email = sociallogin.account.extra_data['email'].lower()
+        # AUTH-02: Only merge if the OAuth provider asserts the email is verified
+        is_verified = extra_data.get('email_verified') or extra_data.get('verified_email')
+        if not is_verified:
+            return
+
+        email = extra_data['email'].lower()
         try:
             # Check if a user with this email already exists
             user = User.objects.get(email=email)

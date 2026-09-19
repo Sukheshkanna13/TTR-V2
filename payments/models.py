@@ -21,6 +21,22 @@ class Payment(models.Model):
         ("refunded", "Refunded"),
     ]
 
+    METHOD_RAZORPAY = "razorpay"
+    METHOD_CASH = "cash"
+    METHOD_CARD_POS = "card_pos"
+    METHOD_UPI_DIRECT = "upi_direct"
+    METHOD_BANK_TRANSFER = "bank_transfer"
+    METHOD_PAY_AT_CHECKOUT = "pay_at_checkout"
+
+    METHOD_CHOICES = [
+        (METHOD_RAZORPAY, "Razorpay Online"),
+        (METHOD_CASH, "Cash"),
+        (METHOD_CARD_POS, "Card POS Swipe"),
+        (METHOD_UPI_DIRECT, "Direct UPI Transfer"),
+        (METHOD_BANK_TRANSFER, "Direct Bank Transfer"),
+        (METHOD_PAY_AT_CHECKOUT, "Pay at Checkout"),
+    ]
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -31,7 +47,13 @@ class Payment(models.Model):
         on_delete=models.CASCADE,
         related_name="payments",
     )
-    razorpay_order_id = models.CharField(max_length=100)
+    payment_method = models.CharField(
+        max_length=25,
+        choices=METHOD_CHOICES,
+        default=METHOD_RAZORPAY,
+        db_index=True,
+    )
+    razorpay_order_id = models.CharField(max_length=100, blank=True, default="")
     razorpay_payment_id = models.CharField(max_length=100, blank=True, default="")
     razorpay_signature = models.CharField(max_length=256, blank=True, default="")
     amount = models.DecimalField(

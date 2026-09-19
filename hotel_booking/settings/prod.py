@@ -5,7 +5,16 @@ Deployed on Render (free tier — PostgreSQL, no Redis).
 from .base import *  # NOSONAR
 import dj_database_url
 
-DEBUG = True
+DEBUG = config("DEBUG", default=False, cast=bool)
+
+# Production security assertion guards
+if not config("DATABASE_URL", default=None):
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("DATABASE_URL environment variable must be set in production.")
+
+if SECRET_KEY == "django-insecure-hotel-booking-dev-key-change-in-production":
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("SECRET_KEY must be configured with a secure production secret.")
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=".onrender.com", cast=Csv())
 

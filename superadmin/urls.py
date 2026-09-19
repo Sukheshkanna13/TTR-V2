@@ -15,6 +15,7 @@ urlpatterns = [
     path('loyalty-config/', views.loyalty_config, name='loyalty-config'),
     path('audit-log/', views.audit_log, name='audit-log'),
     path('bookings/', views.bookings_list, name='bookings'),
+    path('bookings/walk-in/create/', views.walk_in_booking_create, name='walk-in-booking-create'),
     path('bookings/<uuid:booking_id>/cancel/', views.booking_cancel, name='booking-cancel'),
     path('bookings/<uuid:booking_id>/complete/', views.booking_complete, name='booking-complete'),
     # Properties
@@ -52,5 +53,10 @@ urlpatterns = [
     path('activities/', views.activities_list, name='activities'),
     path('activities/create/', views.activity_create, name='activity-create'),
     path('activities/<uuid:activity_id>/update/', views.activity_update, name='activity-update'),
+    # Hero & Site Banners
+    path('banners/', views.banners_list, name='banners-list'),
+    path('banners/create/', views.banner_create, name='banner-create'),
+    path('banners/<uuid:banner_id>/toggle/', views.banner_toggle, name='banner-toggle'),
+    path('banners/<uuid:banner_id>/delete/', views.banner_delete, name='banner-delete'),
 ]
 

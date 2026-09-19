@@ -3,6 +3,7 @@ OTP generation and database helper utilities.
 All OTP operations use PostgreSQL — no Redis needed.
 """
 
+import hmac
 import logging
 import secrets
 from datetime import timedelta
@@ -21,33 +22,41 @@ def normalize_email(email: str) -> str:
 
 
 # =============================================================================
-# OTP GENERATION
+# OTP GENERATION & THROTTLING
 # =============================================================================
 
 def generate_otp() -> str:
-    """
-    Generate a cryptographically secure 6-digit OTP using secrets module.
-    """
-    length = getattr(settings, "OTP_LENGTH", 6)
-    lower = 10 ** (length - 1)
-    upper = (10 ** length) - 1
-    return str(secrets.randbelow(upper - lower + 1) + lower)
+    """Generate a cryptographically secure 6-digit OTP."""
+    return f"{secrets.randbelow(900000) + 100000}"
+
+
+def is_otp_throttled(email: str, purpose: str = "login") -> bool:
+    """Check if an OTP request was made too recently for this email & purpose."""
+    from .models import OTP
+    email = normalize_email(email)
+    throttle_seconds = getattr(settings, "OTP_THROTTLE_SECONDS", 60)
+    cutoff = timezone.now() - timedelta(seconds=throttle_seconds)
+    return OTP.objects.filter(
+        email=email,
+        purpose=purpose,
+        created_at__gte=cutoff,
+    ).exists()
 
 
 # =============================================================================
 # OTP DATABASE OPERATIONS
 # =============================================================================
 
-def create_and_store_otp(email: str) -> str:
+def create_and_store_otp(email: str, purpose: str = "login") -> str:
     """
-    Generate a new OTP, store it in PostgreSQL, and return the code.
-    Deletes any existing OTPs for this email first.
+    Generate a new OTP, store it in the database, and return the code.
+    Deletes any existing OTPs for this (email, purpose) first.
     """
     from .models import OTP
     email = normalize_email(email)
 
-    # Remove any old OTPs for this email
-    OTP.objects.filter(email=email).delete()
+    # Remove any existing OTP for this email and purpose
+    OTP.objects.filter(email=email, purpose=purpose).delete()
 
     # Create new OTP with expiry
     otp_code = generate_otp()
@@ -57,15 +66,17 @@ def create_and_store_otp(email: str) -> str:
     OTP.objects.create(
         email=email,
         code=otp_code,
+        purpose=purpose,
         expires_at=expires_at,
     )
 
     return otp_code
 
 
-def verify_otp(email: str, submitted_code: str) -> dict:
+def verify_otp(email: str, submitted_code: str, purpose: str = "login") -> dict:
     """
-    Verify the submitted OTP against the database.
+    Verify the submitted OTP against the database for a specific purpose.
+    Uses constant-time comparison to prevent timing attacks.
 
     Returns a dict with:
         - success (bool)
@@ -76,7 +87,7 @@ def verify_otp(email: str, submitted_code: str) -> dict:
     email = normalize_email(email)
 
     try:
-        otp = OTP.objects.get(email=email)
+        otp = OTP.objects.get(email=email, purpose=purpose)
     except OTP.DoesNotExist:
         return {
             "success": False,
@@ -101,8 +112,8 @@ def verify_otp(email: str, submitted_code: str) -> dict:
             "code": "OTP_BLOCKED",
         }
 
-    # Check the code
-    if submitted_code != otp.code:
+    # Check the code with constant-time comparison
+    if not hmac.compare_digest(str(submitted_code).strip(), str(otp.code).strip()):
         otp.attempts += 1
         otp.save(update_fields=["attempts"])
         max_attempts = getattr(settings, "OTP_MAX_ATTEMPTS", 3)

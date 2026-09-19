@@ -75,6 +75,7 @@ def dashboard_live_data(request):
 
 @require_employee
 def bookings_list(request):
+    from payments.models import Payment
     fin = _fin_level(request)
     rooms = _assigned_rooms(request)
     bookings_qs = Booking.objects.filter(
@@ -84,12 +85,81 @@ def bookings_list(request):
     
     paginator = Paginator(bookings_qs, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
+    available_rooms = rooms.filter(is_active=True).select_related('property').order_by('property__name', 'name')
     
     return render(request, 'employeeadmin/bookings.html', {
         'bookings': page_obj, 
         'page_obj': page_obj,
-        'fin': fin
+        'fin': fin,
+        'assigned_rooms': available_rooms,
+        'payment_methods': Payment.METHOD_CHOICES,
     })
+
+
+@require_employee
+@require_POST
+def walk_in_booking_create(request):
+    from rooms.services import create_walk_in_booking
+    from payments.models import Payment
+    from datetime import datetime
+    from decimal import Decimal, InvalidOperation
+
+    rooms = _assigned_rooms(request)
+    room_id = request.POST.get('room_id')
+    room = get_object_or_404(Room, pk=room_id, id__in=rooms.values_list('id', flat=True))
+
+    try:
+        check_in = datetime.strptime(request.POST.get('check_in', ''), '%Y-%m-%d').date()
+        check_out = datetime.strptime(request.POST.get('check_out', ''), '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'error': 'Invalid check-in or check-out date format.'}, status=400)
+
+    guest_name = request.POST.get('guest_name', '').strip()
+    guest_phone = request.POST.get('guest_phone', '').strip()
+    if not guest_name or not guest_phone:
+        return JsonResponse({'error': 'Guest name and phone number are required.'}, status=400)
+
+    try:
+        guests = int(request.POST.get('guests', 1))
+    except ValueError:
+        guests = 1
+
+    payment_method = request.POST.get('payment_method', Payment.METHOD_CASH)
+    price_override = None
+    override_val = request.POST.get('price_override', '').strip()
+    if override_val:
+        try:
+            price_override = Decimal(override_val)
+        except InvalidOperation:
+            return JsonResponse({'error': 'Invalid price override.'}, status=400)
+
+    try:
+        booking = create_walk_in_booking(
+            room=room,
+            check_in=check_in,
+            check_out=check_out,
+            guests=guests,
+            guest_name=guest_name,
+            guest_phone=guest_phone,
+            guest_email=request.POST.get('guest_email', '').strip(),
+            guest_id_type=request.POST.get('guest_id_type', '').strip(),
+            guest_id_number=request.POST.get('guest_id_number', '').strip(),
+            payment_method=payment_method,
+            price_override=price_override,
+            created_by_staff=request.user,
+            operational_notes=request.POST.get('operational_notes', '').strip(),
+        )
+        return JsonResponse({
+            'message': f'Walk-in booking created successfully. Ref: {booking.booking_reference}',
+            'booking_reference': booking.booking_reference,
+            'booking_id': str(booking.id),
+        })
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        logger.exception("Error creating walk-in booking: %s", e)
+        return JsonResponse({'error': 'Internal server error while creating booking.'}, status=500)
+
 
 
 @require_employee
