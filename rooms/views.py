@@ -122,7 +122,7 @@ def _build_search_queryset(data):
     else:
         rooms = rooms.order_by("price_per_night")
         
-    return rooms
+    return rooms, unavailable_ids
 
 def _get_location_label(city, property_id):
     location_label = city or "All locations"
@@ -175,10 +175,23 @@ class SearchRoomsView(APIView):
         property_id = data.get("property_id")
         guests = max(1, data.get("guests", 1))
         
-        rooms = _build_search_queryset(data)
+        rooms, unavailable_ids = _build_search_queryset(data)
+        from .services import compute_bulk_ux_signals
+        rooms_list_objs = list(rooms)
+        ux_signals_map = compute_bulk_ux_signals(
+            rooms_list_objs,
+            check_in=check_in,
+            check_out=check_out,
+            unavailable_ids=unavailable_ids,
+        )
 
-        context = {"request": request, "check_in": check_in, "check_out": check_out}
-        room_list  = RoomSerializer(rooms, many=True, context=context).data
+        context = {
+            "request": request,
+            "check_in": check_in,
+            "check_out": check_out,
+            "ux_signals_map": ux_signals_map,
+        }
+        room_list  = RoomSerializer(rooms_list_objs, many=True, context=context).data
         num_nights = (check_out - check_in).days
 
         location_label = _get_location_label(city, property_id)
@@ -215,7 +228,7 @@ class RoomDetailView(APIView):
     """
     GET /rooms/<room_id>/
 
-    Returns full details for a single room.
+    Returns full details for a single room, including dynamic UX signals.
     """
 
     permission_classes = [AllowAny]
@@ -233,8 +246,21 @@ class RoomDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        check_in_str = request.query_params.get("check_in")
+        check_out_str = request.query_params.get("check_out")
+        check_in = None
+        check_out = None
+        if check_in_str and check_out_str:
+            from datetime import datetime
+            try:
+                check_in = datetime.strptime(check_in_str, "%Y-%m-%d").date()
+                check_out = datetime.strptime(check_out_str, "%Y-%m-%d").date()
+            except Exception:
+                pass
+
+        context = {"request": request, "check_in": check_in, "check_out": check_out}
         return Response(
-            {"room": RoomSerializer(room, context={"request": request}).data},
+            {"room": RoomSerializer(room, context=context).data},
             status=status.HTTP_200_OK,
         )
 

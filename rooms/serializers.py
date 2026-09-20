@@ -51,6 +51,7 @@ class RoomSerializer(serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
     property_rating = serializers.SerializerMethodField()
     property_name = serializers.SerializerMethodField()
+    ux_signals = serializers.SerializerMethodField()
 
     class Meta:
         model = Room
@@ -69,7 +70,17 @@ class RoomSerializer(serializers.ModelSerializer):
             "dynamic_total_price",
             "property_rating",
             "property_name",
+            "ux_signals",
         ]
+
+    def get_ux_signals(self, obj):
+        ux_map = self.context.get("ux_signals_map")
+        if ux_map is not None:
+            return ux_map.get(obj.id, {})
+        from .services import get_room_ux_signals
+        check_in = self.context.get("check_in")
+        check_out = self.context.get("check_out")
+        return get_room_ux_signals(obj, check_in=check_in, check_out=check_out)
 
     def get_property_rating(self, obj):
         return float(obj.rating) if obj.rating is not None else None

@@ -372,3 +372,138 @@ class PaymentConfirmationServiceTest(TestCase):
         booking.refresh_from_db()
         self.assertEqual(booking.status, 'failed')
 
+
+class RoomUXSignalsTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = _guest('uxguest@test.com')
+        self.prop = Property.objects.create(
+            name='Oceanic Resort',
+            city='Pondicherry',
+            address='Beach Road',
+            is_active=True,
+        )
+        # Create 3 rooms of same type 'suite' in Oceanic Resort
+        self.room1 = Room.objects.create(
+            property=self.prop, name='Suite 101', city='Pondicherry',
+            room_type='suite', price_per_night=Decimal('5000'), capacity=2,
+            operational_status='available', rating=Decimal('4.8'),
+        )
+        self.room2 = Room.objects.create(
+            property=self.prop, name='Suite 102', city='Pondicherry',
+            room_type='suite', price_per_night=Decimal('5000'), capacity=2,
+            operational_status='available', rating=Decimal('4.8'),
+        )
+        self.room3 = Room.objects.create(
+            property=self.prop, name='Suite 103', city='Pondicherry',
+            room_type='suite', price_per_night=Decimal('5000'), capacity=2,
+            operational_status='available', rating=Decimal('4.8'),
+        )
+
+    def test_scarcity_calculation_levels(self):
+        from rooms.services import compute_bulk_ux_signals, get_room_ux_signals
+        today = timezone.now().date()
+        ci = today + timedelta(days=10)
+        co = today + timedelta(days=12)
+
+        # 1. With 3 rooms total and 0 booked -> 3 remaining -> no scarcity badge
+        signals = compute_bulk_ux_signals([self.room1, self.room2, self.room3], ci, co)
+        sig1 = signals.get(self.room1.id)
+        self.assertIsNotNone(sig1)
+        self.assertEqual(sig1['remaining_rooms'], 3)
+        self.assertIsNone(sig1['scarcity_badge'])
+        self.assertEqual(sig1['scarcity_level'], 'normal')
+        self.assertTrue(sig1['is_top_rated'])
+        self.assertIn('Guest Favourite', sig1['top_rated_badge'])
+
+        # 2. Book 1 room -> 2 remaining -> warning scarcity badge
+        Booking.objects.create(
+            room=self.room1, user=self.user, check_in=ci, check_out=co,
+            guests=1, total_price=Decimal('10000'), status='confirmed',
+        )
+        signals = compute_bulk_ux_signals([self.room2, self.room3], ci, co)
+        sig2 = signals.get(self.room2.id)
+        self.assertEqual(sig2['remaining_rooms'], 2)
+        self.assertEqual(sig2['scarcity_level'], 'warning')
+        self.assertEqual(sig2['scarcity_badge'], 'Hurry, only 2 rooms left!')
+
+        # 3. Book 2nd room -> 1 remaining -> critical scarcity badge
+        Booking.objects.create(
+            room=self.room2, user=self.user, check_in=ci, check_out=co,
+            guests=1, total_price=Decimal('10000'), status='confirmed',
+        )
+        signals = compute_bulk_ux_signals([self.room3], ci, co)
+        sig3 = signals.get(self.room3.id)
+        self.assertEqual(sig3['remaining_rooms'], 1)
+        self.assertEqual(sig3['scarcity_level'], 'critical')
+        self.assertEqual(sig3['scarcity_badge'], '⚡ Only 1 room left for your dates!')
+
+        # Test single room get_room_ux_signals returns the same
+        single_sig = get_room_ux_signals(self.room3, ci, co)
+        self.assertEqual(single_sig['remaining_rooms'], 1)
+        self.assertEqual(single_sig['scarcity_level'], 'critical')
+
+    def test_high_demand_recent_bookings(self):
+        from rooms.services import compute_bulk_ux_signals
+        today = timezone.now().date()
+        ci = today + timedelta(days=20)
+        co = today + timedelta(days=22)
+
+        # Create 2 confirmed bookings created recently for room1
+        Booking.objects.create(
+            room=self.room1, user=self.user, check_in=today + timedelta(days=30),
+            check_out=today + timedelta(days=32), guests=1, total_price=Decimal('10000'),
+            status='confirmed',
+        )
+        Booking.objects.create(
+            room=self.room2, user=self.user, check_in=today + timedelta(days=35),
+            check_out=today + timedelta(days=37), guests=1, total_price=Decimal('10000'),
+            status='confirmed',
+        )
+
+        signals = compute_bulk_ux_signals([self.room1], ci, co)
+        sig = signals.get(self.room1.id)
+        self.assertTrue(sig['is_high_demand'])
+        self.assertEqual(sig['recent_bookings_count'], 2)
+        self.assertIn('Booked 2 times this week', sig['high_demand_badge'])
+
+    def test_search_view_returns_ux_signals(self):
+        today = timezone.now().date()
+        ci = (today + timedelta(days=5)).isoformat()
+        co = (today + timedelta(days=7)).isoformat()
+
+        res = self.client.get(
+            reverse('rooms:search'),
+            {'city': 'Pondicherry', 'check_in': ci, 'check_out': co, 'guests': 1},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn('rooms', data)
+        self.assertGreater(len(data['rooms']), 0)
+        first_room = data['rooms'][0]
+        self.assertIn('ux_signals', first_room)
+        signals = first_room['ux_signals']
+        self.assertIn('remaining_rooms', signals)
+        self.assertIn('scarcity_level', signals)
+        self.assertTrue(signals['is_top_rated'])
+
+    def test_room_detail_view_returns_ux_signals(self):
+        today = timezone.now().date()
+        ci = (today + timedelta(days=10)).isoformat()
+        co = (today + timedelta(days=12)).isoformat()
+
+        # Call with check_in / check_out query params
+        res = self.client.get(
+            reverse('rooms:detail', args=[self.room1.id]),
+            {'check_in': ci, 'check_out': co},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn('room', data)
+        self.assertIn('ux_signals', data['room'])
+        signals = data['room']['ux_signals']
+        self.assertIn('remaining_rooms', signals)
+        self.assertEqual(signals['remaining_rooms'], 3)
+        self.assertTrue(signals['is_top_rated'])
+
+

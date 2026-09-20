@@ -149,3 +149,118 @@ def create_walk_in_booking(
         logger.warning(f"Failed to enqueue walk-in booking side tasks: {e}")
 
     return booking
+
+
+def compute_bulk_ux_signals(rooms, check_in=None, check_out=None, unavailable_ids=None):
+    """
+    Computes real-time scarcity, demand, and social-proof UX signals in bulk.
+    Executes in O(1) database queries regardless of the number of rooms.
+    Returns: dict mapping room.id -> dict of signal properties.
+    """
+    from datetime import timedelta
+    from django.db.models import Count
+
+    if not rooms:
+        return {}
+
+    room_list = list(rooms)
+    property_ids = {r.property_id for r in room_list if r.property_id}
+
+    # 1. Scarcity math: available rooms per (property_id, room_type)
+    avail_map = {}
+
+    if check_in and check_out and property_ids:
+        if unavailable_ids is None:
+            unavailable_ids = Room.objects.get_unavailable_room_ids(check_in, check_out)
+
+        available_qs = (
+            Room.objects.filter(
+                property_id__in=property_ids,
+                is_active=True,
+                operational_status=Room.STATUS_AVAILABLE,
+            )
+            .exclude(id__in=unavailable_ids)
+            .values("property_id", "room_type")
+            .annotate(available=Count("id"))
+        )
+        avail_map = {(row["property_id"], row["room_type"]): row["available"] for row in available_qs}
+
+    # 2. Demand math: bookings confirmed in last 7 days per (property_id, room_type)
+    recent_map = {}
+    if property_ids:
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        recent_qs = (
+            Booking.objects.filter(
+                room__property_id__in=property_ids,
+                created_at__gte=seven_days_ago,
+                status__in=["confirmed", "completed", "pending"],
+            )
+            .values("room__property_id", "room__room_type")
+            .annotate(recent_count=Count("id"))
+        )
+        recent_map = {
+            (row["room__property_id"], row["room__room_type"]): row["recent_count"]
+            for row in recent_qs
+        }
+
+    # 3. Assemble signals per room
+    signals_by_id = {}
+    for r in room_list:
+        prop_id = r.property_id
+        rtype = r.room_type
+
+        # Scarcity
+        remaining = None
+        scarcity_badge = None
+        scarcity_level = "normal"
+
+        if check_in and check_out and prop_id:
+            remaining = avail_map.get((prop_id, rtype), 0)
+
+            if remaining == 1:
+                scarcity_badge = "⚡ Only 1 room left for your dates!"
+                scarcity_level = "critical"
+            elif remaining == 2:
+                scarcity_badge = "Hurry, only 2 rooms left!"
+                scarcity_level = "warning"
+
+        # Demand
+        recent_count = recent_map.get((prop_id, rtype), 0) if prop_id else 0
+        is_high_demand = recent_count >= 2
+        high_demand_badge = (
+            f"🔥 High Demand · Booked {recent_count} times this week"
+            if is_high_demand
+            else None
+        )
+
+        # Rating / Top Rated
+        raw_rating = r.rating
+        if raw_rating is None and hasattr(r, "property") and r.property and getattr(r.property, "rating", None):
+            raw_rating = getattr(r.property, "rating", None)
+        rating = float(raw_rating) if raw_rating is not None else None
+        is_top_rated = rating is not None and rating >= 4.7
+        top_rated_badge = f"★ Guest Favourite ({rating:.1f})" if is_top_rated else None
+
+        signals_by_id[r.id] = {
+            "remaining_count": remaining,
+            "remaining_rooms": remaining,
+            "scarcity_badge": scarcity_badge,
+            "scarcity_level": scarcity_level,
+            "is_high_demand": is_high_demand,
+            "recent_bookings_count": recent_count,
+            "high_demand_badge": high_demand_badge,
+            "is_top_rated": is_top_rated,
+            "rating": rating,
+            "top_rated_badge": top_rated_badge,
+            "instant_hold": True,
+            "instant_hold_badge": "10-Minute Hold Guarantee",
+        }
+
+    return signals_by_id
+
+
+def get_room_ux_signals(room, check_in=None, check_out=None):
+    """Convenience helper to compute UX signals for a single room."""
+    res = compute_bulk_ux_signals([room], check_in=check_in, check_out=check_out)
+    return res.get(room.id, {})
+

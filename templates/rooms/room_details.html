@@ -170,6 +170,9 @@
 
       <!-- Right sidebar -->
       <div class="tt-property-sidebar">
+        <!-- Scarcity & Trust signals -->
+        <div id="uxSignalBanner" class="hidden" style="margin-bottom:16px;border:1px solid var(--line);padding:14px 16px;background:#fff;"></div>
+
         <div class="tt-summary">
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
             <div>
@@ -274,7 +277,14 @@
   const loadRoom = async () => {
     if (roomId == null || roomId === '') { showError(); return; }
     try {
-      const res = await fetch(`${ROOM_API_BASE}${roomId}/`);
+      let url = `${ROOM_API_BASE}${roomId}/`;
+      const q = new URLSearchParams();
+      if (checkIn) q.set('check_in', checkIn);
+      if (checkOut) q.set('check_out', checkOut);
+      const qs = q.toString();
+      if (qs) url += `?${qs}`;
+
+      const res = await fetch(url);
       if (res.ok === false) { showError(); return; }
       const data = await res.json();
       roomData = data.room;
@@ -371,6 +381,64 @@
     document.getElementById('sidebarNights').textContent = `${numNights} night${numNights > 1 ? 's' : ''} total`;
     document.getElementById('sidebarTotal').textContent = inr(total);
     const sp = document.getElementById('stickyPrice'); if (sp) sp.textContent = inr(room.price_per_night);
+
+    // UX Signals & Scarcity Banner
+    const uxBanner = document.getElementById('uxSignalBanner');
+    if (uxBanner) {
+      const signals = room.ux_signals || {};
+      let bannerHtml = '';
+
+      if (signals.scarcity_badge) {
+        const isCrit = signals.scarcity_level === 'critical';
+        const color = isCrit ? '#b91c1c' : '#b45309';
+        const bg = isCrit ? '#fef2f2' : '#fffbeb';
+        const border = isCrit ? '#fecaca' : '#fde68a';
+        bannerHtml += `
+          <div style="background:${bg};border:1px solid ${border};padding:10px 12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:16px;line-height:1.2;">${isCrit ? '⚡' : '⏳'}</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:${color};letter-spacing:-.01em;">${signals.scarcity_badge}</div>
+              <div style="font-size:12px;color:#4b5563;margin-top:2px;">Rooms for these dates sell out fast. Lock your rate now.</div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (signals.is_high_demand && signals.high_demand_badge) {
+        bannerHtml += `
+          <div style="background:#fff7ed;border:1px solid #fed7aa;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:15px;line-height:1;">🔥</span>
+            <div style="font-size:12px;font-weight:600;color:#c2410c;">
+              ${signals.high_demand_badge}
+            </div>
+          </div>
+        `;
+      }
+
+      if (signals.is_top_rated && signals.top_rated_badge) {
+        bannerHtml += `
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:14px;color:#0f172a;font-weight:700;">★</span>
+            <div style="font-size:12px;font-weight:600;color:#0f172a;">
+              ${signals.top_rated_badge} · Highly rated by guests
+            </div>
+          </div>
+        `;
+      }
+
+      // 10-minute hold guarantee
+      bannerHtml += `
+        <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#475569;line-height:1.4;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span><strong>10-Minute Hold Guarantee:</strong> No double-booking. Your room is locked instantly when you proceed.</span>
+        </div>
+      `;
+
+      uxBanner.innerHTML = bannerHtml;
+      uxBanner.classList.remove('hidden');
+    }
   }
 
   const bookRoom = async () => {
@@ -468,8 +536,8 @@
         url.searchParams.set('check_out', checkOut);
         globalThis.history.replaceState({}, '', url);
         
-        // Re-render UI and toggle back
-        renderRoom();
+        // Re-fetch room data for new dates to update UX signals & pricing
+        await loadRoom();
         toggleDateEdit();
         
         // Ensure book buttons are enabled

@@ -6,6 +6,41 @@ context without re-deriving it.
 
 ---
 
+## 2026-09-19 — V3 Room UX Signals & Scarcity Badges Engine
+
+### 1. Real-Time Scarcity & Demand Math (`rooms/services.py`)
+- `compute_bulk_ux_signals(rooms, check_in, check_out, unavailable_ids)`: Computes real-time inventory scarcity per `(property_id, room_type)` using a single SQL aggregation query:
+  `Room.objects.filter(property_id__in=..., is_active=True, operational_status='available').exclude(id__in=unavailable_ids).values('property_id', 'room_type').annotate(available=Count('id'))`.
+- Accepts precalculated `unavailable_ids` from search query builder to eliminate redundant booking & OTA block database queries ($O(1)$ query overhead, bounded performance test passing at $\le 7$ queries).
+- Dynamic Scarcity Levels:
+  - Critical: `remaining == 1` -> `"⚡ Only 1 room left for your dates!"` (`scarcity_level="critical"`).
+  - Warning: `remaining == 2` -> `"Hurry, only 2 rooms left!"` (`scarcity_level="warning"`).
+  - Normal: `remaining >= 3` -> No scarcity pressure (`scarcity_level="normal"`).
+- Social Proof & Demand:
+  - `is_high_demand`: Checks bookings confirmed in last 7 days ($\ge 2$ bookings) -> `"🔥 High Demand · Booked X times this week"`.
+  - `is_top_rated`: Evaluates room/property rating ($\ge 4.7$) -> `"★ Guest Favourite (X.X)"`.
+- `get_room_ux_signals(room, check_in, check_out)`: Single-room wrapper returning dynamic signals for room detail views.
+
+### 2. API Serializers & Thin Views (`rooms/serializers.py` & `rooms/views.py`)
+- `RoomSerializer`: Added `ux_signals = serializers.SerializerMethodField()`. Retrieves precomputed signals from `context['ux_signals_map']` for $O(1)$ serialization with zero per-room DB query overhead, falling back to `get_room_ux_signals()` for single room detail calls.
+- `SearchRoomsView._handle_search()`: Precomputes bulk UX signals using search dates and prefiltered `unavailable_ids`, passing map into `RoomSerializer` context.
+- `RoomDetailView.get()`: Parses `check_in` and `check_out` query params from URL and injects into serializer context.
+
+### 3. Room Search & Room Details Luxury UI (`templates/rooms/`)
+- `templates/rooms/search.html`: Added `uxSignalsHTML(room)` rendering elegant floating luxury chips on room cards (`⚡ Only 1 room left!`, `🔥 High Demand`, `★ Guest Favourite`) and subtle inline scarcity text, avoiding aggressive popups while keeping guests informed.
+- `templates/rooms/room_details.html`: Added `#uxSignalBanner` above price summary displaying real-time scarcity notices, high demand indicators, guest favourite badges, and the 10-Minute Hold Guarantee trust notice (`✓ No double-booking. Your room is locked instantly when you proceed.`). Refetches UX signals on date update.
+
+### 4. Automated Test Suite (`rooms/tests.py`)
+- `RoomUXSignalsTest`: Unit and integration tests covering:
+  - Scarcity calculation levels (3 rooms -> normal, 2 rooms -> warning, 1 room -> critical).
+  - High demand badge generation based on 7-day recent bookings.
+  - Guest favourite badge generation for top-rated rooms ($\ge 4.7$).
+  - `SearchRoomsView` API payload containing `ux_signals`.
+  - `RoomDetailView` API payload containing `ux_signals`.
+  - Verified bounded query counts in `rooms.tests_performance` with $O(1)$ query complexity. All 113 tests passing.
+
+---
+
 ## 2026-09-19 — Loyalty Points Program & Coupon Redemption Engine (Milestone 37 / LOY-01, LOY-02, LOY-08)
 
 ### 1. Coupon Redemption Rules & Voucher Models (`loyalty/models.py`)
