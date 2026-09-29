@@ -6,6 +6,20 @@ context without re-deriving it.
 
 ---
 
+## 2026-09-29 — Security audit fixes + Hostinger VPS deployment
+
+Full record: `docs/SECURITY-AUDIT-2026-09-29.md`; runbook: `docs/VPS-DEPLOYMENT.md`.
+
+- **Secrets:** `.env.example` no longer holds a real Gmail app password (still in git history — rotate it).
+- **`build.sh`:** superadmin bootstrap only when `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD` are set; removed the `Admin@1234` fallback.
+- **`accounts/adapter.py`:** Google login can no longer re-activate a locked/revoked staff account; unverified guests still activate. Tests in `GoogleAdapterReactivationTests`.
+- **`settings/prod.py`:** `EMAIL_BACKEND` env override (default still console for Render), MySQL utf8mb4 + strict mode, `TRUST_PROXY_HEADERS` switch.
+- **`core/middleware.py`:** `ProxyRemoteAddrMiddleware` so throttling and audit IPs work behind nginx.
+- **`rooms/apps.py`:** django-q schedules registered in `post_migrate` instead of `ready()` (no DB writes per process start, no duplicate-schedule race).
+- **`deploy/` + `requirements-mysql.txt`:** systemd units, nginx config, env template, deploy and backup scripts.
+
+---
+
 ## 2026-09-19 — V3 Room UX Signals & Scarcity Badges Engine
 
 ### 1. Real-Time Scarcity & Demand Math (`rooms/services.py`)
