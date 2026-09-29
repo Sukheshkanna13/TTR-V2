@@ -351,3 +351,57 @@ class FolioPageTests(TestCase):
     def test_change_password_link_present(self):
         res = self.client.get(reverse('accounts:folio'))
         self.assertContains(res, reverse('accounts:change-password'))
+
+
+class GoogleAdapterReactivationTests(TestCase):
+    """A Google-verified email must not bypass a super admin's lock/revoke."""
+
+    def setUp(self):
+        from unittest.mock import MagicMock
+        from django.test import RequestFactory
+        from accounts.adapter import CustomSocialAccountAdapter
+
+        self.adapter = CustomSocialAccountAdapter()
+        self.request = RequestFactory().get("/")
+        self.MagicMock = MagicMock
+
+    def _sociallogin(self, email):
+        sociallogin = self.MagicMock()
+        sociallogin.is_existing = False
+        sociallogin.account.extra_data = {"email": email, "email_verified": True}
+        return sociallogin
+
+    def test_locked_staff_cannot_be_reactivated_via_google(self):
+        from allauth.core.exceptions import ImmediateHttpResponse
+
+        staff = make_user("locked.staff@example.com", role="employee")
+        staff.is_active = False
+        staff.save(update_fields=["is_active"])
+        sociallogin = self._sociallogin("locked.staff@example.com")
+
+        with self.assertRaises(ImmediateHttpResponse):
+            self.adapter.pre_social_login(self.request, sociallogin)
+
+        staff.refresh_from_db()
+        self.assertFalse(staff.is_active)
+        sociallogin.connect.assert_not_called()
+
+    def test_unverified_guest_is_activated_by_google_verified_email(self):
+        guest = make_user("unverified.guest@example.com", role="guest")
+        guest.is_active = False
+        guest.save(update_fields=["is_active"])
+        sociallogin = self._sociallogin("unverified.guest@example.com")
+
+        self.adapter.pre_social_login(self.request, sociallogin)
+
+        guest.refresh_from_db()
+        self.assertTrue(guest.is_active)
+        sociallogin.connect.assert_called_once()
+
+    def test_active_user_is_linked_without_changes(self):
+        make_user("active.guest@example.com", role="guest")
+        sociallogin = self._sociallogin("active.guest@example.com")
+
+        self.adapter.pre_social_login(self.request, sociallogin)
+
+        sociallogin.connect.assert_called_once()
