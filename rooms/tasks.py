@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 
 from .models import Booking
@@ -10,17 +11,39 @@ logger = logging.getLogger(__name__)
 def release_expired_holds():
     """
     Scheduled task to bulk update expired holds.
-    Updates all PENDING bookings where hold_expires_at is in the past to EXPIRED.
+    Updates all PENDING bookings where hold_expires_at is in the past to EXPIRED
+    and returns any coupon reserved on them to "active".
+
+    A bulk queryset .update() bypasses Booking.expire_if_needed(), so the coupon
+    release must happen here explicitly. Row locks stop a concurrent payment
+    confirmation (which also locks the booking) from interleaving.
     """
+    from loyalty.models import Coupon
+
     now = timezone.now()
-    expired_count = Booking.objects.filter(
-        status="pending",
-        hold_expires_at__lt=now
-    ).update(status="expired")
-    
+    with transaction.atomic():
+        expired_ids = list(
+            Booking.objects.select_for_update()
+            .filter(status="pending", hold_expires_at__lt=now)
+            .values_list("pk", flat=True)
+        )
+        if expired_ids:
+            Coupon.objects.filter(
+                status=Coupon.STATUS_APPLIED, bookings__pk__in=expired_ids
+            ).update(status=Coupon.STATUS_ACTIVE)
+            expired_count = Booking.objects.filter(pk__in=expired_ids).update(status="expired")
+        else:
+            expired_count = 0
+
+        # Self-heal: a coupon can only be "applied" while a live hold references it.
+        # Repairs coupons stranded by earlier sweeps that skipped the release.
+        Coupon.objects.filter(status=Coupon.STATUS_APPLIED).exclude(
+            bookings__status="pending"
+        ).update(status=Coupon.STATUS_ACTIVE)
+
     if expired_count > 0:
         logger.info(f"Released {expired_count} expired holds.")
-    
+
     return expired_count
 
 def auto_complete_bookings():

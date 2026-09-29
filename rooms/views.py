@@ -635,6 +635,9 @@ class CancelBookingView(APIView):
                 else:
                     refund_message = " Cancellation successful, but automatic refund failed. Please contact support."
 
+        if booking.status == "pending":
+            booking.release_coupon()
+
         booking.status = "cancelled"
         booking.hold_expires_at = None
         booking.save(update_fields=["status", "hold_expires_at"])

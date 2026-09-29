@@ -177,6 +177,10 @@ def apply_coupon_to_booking(booking_id, coupon_code: str, user=None) -> Tuple[bo
         except Booking.DoesNotExist:
             return False, "Booking not found.", Decimal('0.00'), Decimal('0.00')
 
+        # A guest may only discount their own booking (remove_coupon does the same check)
+        if user and booking.user_id != user.id:
+            return False, "Booking not found.", Decimal('0.00'), Decimal('0.00')
+
         if booking.status != "pending":
             return False, f"Cannot apply coupon to booking with status: {booking.status}.", Decimal('0.00'), booking.payable_amount
 
