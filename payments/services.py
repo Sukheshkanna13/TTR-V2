@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from django.db import transaction
 from rooms.models import Booking
 from payments.models import Payment
-from payments.utils import send_booking_confirmation_email, send_invoice_email
+from payments.utils import inr_to_paise, send_booking_confirmation_email, send_invoice_email
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def confirm_booking_and_payment(
             return {"success": False, "error": "Booking is cancelled.", "code": "CANCELLED"}
 
         # 3. Amount verification (PAY-01)
-        expected_paise = int(booking.payable_amount * 100)
+        expected_paise = inr_to_paise(booking.payable_amount)
         if captured_amount_paise is not None and captured_amount_paise != expected_paise:
             logger.error(
                 "PAYMENT RECONCILIATION FAILED for booking %s: expected %s paise, received %s paise",
