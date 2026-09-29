@@ -406,6 +406,12 @@ class HoldRoomView(APIView):
             now = timezone.now()
             hold_expires_at = now + timedelta(minutes=hold_duration)
 
+            # Serialise holds per room. Locking only the overlapping bookings is
+            # not enough: with no rows to lock, two concurrent transactions both
+            # see "free" and both insert (Postgres READ COMMITTED), and on MySQL
+            # the range gap-locks deadlock. Same approach as the walk-in service.
+            Room.objects.select_for_update().get(pk=room.pk)
+
             # RECLAIM: if this guest already holds this exact room+dates
             # (e.g. they hit Back and returned), refresh and reuse that hold
             # instead of rejecting them with a 409 against their own hold.

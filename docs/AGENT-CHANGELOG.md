@@ -17,6 +17,10 @@ Full record: `docs/SECURITY-AUDIT-2026-09-29.md`; runbook: `docs/VPS-DEPLOYMENT.
 - **`core/middleware.py`:** `ProxyRemoteAddrMiddleware` so throttling and audit IPs work behind nginx.
 - **`rooms/apps.py`:** django-q schedules registered in `post_migrate` instead of `ready()` (no DB writes per process start, no duplicate-schedule race).
 - **`deploy/` + `requirements-mysql.txt`:** systemd units, nginx config, env template, deploy and backup scripts.
+- **`payments/utils.py`:** `inr_to_paise` replaces `int(float(x)*100)` (was under-charging 6.6% of amounts by 1 paisa and tripping webhook reconciliation).
+- **Coupons:** `Booking.release_coupon()`; expiry sweep, guest cancel and superadmin cancel now release a reserved coupon; sweep self-heals stranded ones; `apply_coupon_to_booking` checks booking ownership.
+- **Booking bounds:** `MAX_STAY_NIGHTS` / `MAX_ADVANCE_BOOKING_DAYS` in `validate_booking_dates` (public search was CPU-abusable via far-future dates).
+- **`HoldRoomView`:** locks the Room row before checking overlaps.
 
 ---
 

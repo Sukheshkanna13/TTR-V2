@@ -4,6 +4,7 @@ Serializers for rooms and bookings.
 
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -15,12 +16,27 @@ User = get_user_model()
 
 
 def validate_booking_dates(check_in, check_out):
-    """Common date validation logic for check-in and check-out dates."""
+    """
+    Common date validation logic for check-in and check-out dates.
+
+    Also bounds the range: calculate_price walks every night in memory, so an
+    unbounded check_out on the anonymous search endpoint costs ~1.4s CPU per
+    room (year 9999) and overflows the price column.
+    """
     errors = {}
+    max_nights = getattr(settings, "MAX_STAY_NIGHTS", 90)
+    max_advance = getattr(settings, "MAX_ADVANCE_BOOKING_DAYS", 730)
+
     if check_in and check_in < date.today():
         errors["check_in"] = "Check-in date cannot be in the past."
+    elif check_in and (check_in - date.today()).days > max_advance:
+        errors["check_in"] = f"Check-in date cannot be more than {max_advance} days ahead."
+
     if check_in and check_out and check_out <= check_in:
         errors["check_out"] = "Check-out date must be after check-in date."
+    elif check_in and check_out and (check_out - check_in).days > max_nights:
+        errors["check_out"] = f"Stays longer than {max_nights} nights are not bookable online. Please contact us."
+
     if errors:
         raise serializers.ValidationError(errors)
 
