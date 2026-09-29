@@ -3,6 +3,16 @@ from django.conf import settings
 from django.db import models
 from core.constants import REQ_TO_BOOK
 
+# Channex OTA mapping + outbox models live in core/ota/models.py for modularity
+# but are registered under the `core` app (app_label="core"). Importing them here
+# makes Django's migration system discover them. Do not remove this import.
+from core.ota.models import (  # noqa: E402,F401
+    ChannexProperty,
+    ChannexRoomType,
+    ChannexRatePlan,
+    ARIChange,
+)
+
 
 class Attraction(models.Model):
     CATEGORY_CHOICES = [
