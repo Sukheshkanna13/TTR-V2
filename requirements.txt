@@ -21,7 +21,8 @@ django-unfold>=0.90,<1.0
 Pillow>=12.0,<13.0
 
 # Packaging (Required for razorpay/pkg_resources interactions in newer Python versions)
-setuptools<70.0
+# <81 keeps pkg_resources, which razorpay 1.4 imports; >=78.1.1 fixes the path-traversal advisories
+setuptools>=78.1.1,<81
 
 # Added for production / deployment / background tasks
 django-q2>=1.7,<2.0

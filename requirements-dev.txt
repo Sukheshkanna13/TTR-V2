@@ -10,3 +10,4 @@ code-review-graph>=2.3.3
 # the editor runs; pinning it here makes headless/CI checks reproducible.
 django-stubs>=6.0.5
 pyrefly>=1.0.0
+pip-audit>=2.7

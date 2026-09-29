@@ -2,8 +2,11 @@
 
 Daily-mode audit (8/10 confidence gate) of `bugfixes/render-deploy`, code-traced with no
 live requests. Machine-readable copy: `.gstack/security-reports/2026-09-29-audit.json`
-(gitignored). Not run: global-skill scan, `pip-audit` (not installed) — the dependency
-CVE check is still open.
+(gitignored). Not run: global-skill scan (needs permission to read outside the repo).
+Dependency scan (`pip-audit -r requirements.txt`) done: the setuptools pin was raised from
+`<70` to `>=78.1.1,<81`, clearing 4 of 6 advisories. The last, PYSEC-2026-3447, needs
+setuptools 83, which drops `pkg_resources` and would break razorpay 1.4's client import. It
+affects package building, not the running web app; revisit when razorpay drops `pkg_resources`.
 
 | # | Sev | Finding | Status |
 |---|-----|---------|--------|
