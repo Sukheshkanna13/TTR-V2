@@ -1,24 +1,11 @@
 """
-Email-based authentication backend and CSRF-exempt session auth.
+Email-based authentication backend.
 """
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
-from rest_framework.authentication import SessionAuthentication
 
 User = get_user_model()
-
-
-class CsrfExemptSessionAuthentication(SessionAuthentication):
-    """
-    SessionAuthentication subclass that skips CSRF checks.
-    DRF's default SessionAuthentication enforces CSRF on all
-    authenticated requests. This is correct for browser forms,
-    but breaks API testing from terminal/Postman/frontend apps.
-    """
-
-    def enforce_csrf(self, request):
-        return  # Skip CSRF check
 
 
 class EmailBackend(ModelBackend):

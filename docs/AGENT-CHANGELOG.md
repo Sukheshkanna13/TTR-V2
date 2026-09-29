@@ -21,6 +21,8 @@ Full record: `docs/SECURITY-AUDIT-2026-09-29.md`; runbook: `docs/VPS-DEPLOYMENT.
 - **Coupons:** `Booking.release_coupon()`; expiry sweep, guest cancel and superadmin cancel now release a reserved coupon; sweep self-heals stranded ones; `apply_coupon_to_booking` checks booking ownership.
 - **Booking bounds:** `MAX_STAY_NIGHTS` / `MAX_ADVANCE_BOOKING_DAYS` in `validate_booking_dates` (public search was CPU-abusable via far-future dates).
 - **`HoldRoomView`:** locks the Room row before checking overlaps.
+- **CSRF:** DRF default auth is now `SessionAuthentication` (CSRF enforced for logged-in requests); removed `accounts.backends.CsrfExemptSessionAuthentication`. `ReleaseHoldView` keeps its own exempt class (tab-close beacon).
+- **Deps:** setuptools pin `>=78.1.1,<81`; `pip-audit` in requirements-dev.
 
 ---
 

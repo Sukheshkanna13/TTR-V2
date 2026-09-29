@@ -14,7 +14,7 @@ affects package building, not the running web app; revisit when razorpay drops `
 | 2 | CRIT | `build.sh` created superadmin with default password `Admin@1234` | Fixed: env-only, skipped when unset |
 | 3 | HIGH | Google login re-activated locked/revoked staff (`accounts/adapter.py`) | Fixed + tests |
 | 4 | HIGH | Console email backend hard-coded in `prod.py` (OTPs in logs, no email on VPS) | Fixed: `EMAIL_BACKEND` env; Render default unchanged. VPS env template sets SMTP |
-| 5 | MED | `CsrfExemptSessionAuthentication` is the DRF default, so session-authenticated API endpoints skip CSRF | **Open** — needs the frontend to send the CSRF token on every fetch; `SameSite=Lax` limits practical risk |
+| 5 | MED | `CsrfExemptSessionAuthentication` was the DRF default, so session-authenticated API endpoints skipped CSRF | Fixed: standard `SessionAuthentication`; templates already sent `X-CSRFToken`. Anonymous endpoints and webhooks are unaffected; hold-release stays exempt on purpose. Tests in `accounts/tests_csrf.py`. Verify the guest flows in a browser before go-live |
 | 6 | MED | MySQL root password `vengeance` is the `base.py` default and in history | **Open** — dev relies on it (no `DATABASE_URL` in `.env`). Rotate if ever reused; prod already requires `DATABASE_URL` |
 | 7 | MED | Deploy blockers: no `mysqlclient`, Postgres-only assumptions, `/media/` not served | Fixed: `requirements-mysql.txt`, MySQL options in `prod.py`, nginx `/media/` |
 
@@ -41,6 +41,7 @@ Open, needs a business or product decision (not changed):
 - **Paid but no booking**: `ROOM_CONFLICT`, payment for a cancelled booking, and `AMOUNT_MISMATCH` only log "RECONCILIATION NEEDED". No automatic refund or alert; finance must watch the logs.
 - **Superadmin cancel of a confirmed booking** does not initiate a refund or resync OTA inventory (guest cancel does refund).
 - **Guest cancel** always refunds in full regardless of policy or check-in date, and is not row-locked (a double click can show a false "refund failed").
+- `static/js/auth.js` is unreferenced legacy code with a hardcoded `http://127.0.0.1:8000`; safe to delete.
 - **Hold creates an unused Razorpay order** for `total_price`; checkout creates its own for `payable_amount`. Wasted API call per hold and orphan orders.
 - Login lockout is keyed by email only, so anyone can lock a known guest out for 15 minutes (accepted DoS).
 - `asgi.py` defaults to dev settings, `wsgi.py` to prod.
