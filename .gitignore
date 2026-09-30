@@ -39,3 +39,6 @@ celerybeat-schedule
 celerybeat.pid
 .gstack/
 src-reference/
+
+# Ignore local gap analysis reports
+TTR-V2 * Channex PMS Certification*.html

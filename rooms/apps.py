@@ -27,6 +27,17 @@ class RoomsConfig(AppConfig):
                 }
             )
             
+            # Channex ARI outbox: coalesce pending changes and push them,
+            # rate-limited and with retry/backoff (core/ota/tasks.py).
+            Schedule.objects.update_or_create(
+                func="core.ota.tasks.process_ari_outbox",
+                defaults={
+                    "schedule_type": Schedule.MINUTES,
+                    "minutes": 1,
+                    "repeats": -1
+                }
+            )
+
             # Register auto_complete_bookings daily
             Schedule.objects.get_or_create(
                 func="rooms.tasks.auto_complete_bookings",

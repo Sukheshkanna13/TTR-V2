@@ -21,6 +21,38 @@ from core.ota.base import ChannelManager
 logger = logging.getLogger(__name__)
 
 
+class ChannexConfigError(Exception):
+    """Channex is not configured (e.g. missing API key).
+
+    Distinct from ``ChannexAPIError`` so the outbox worker can pause without
+    burning retries on every pending change while ops fix the config.
+    """
+
+
+class ChannexAPIError(Exception):
+    """Raised by every batched ARI call on failure (contract §3.2).
+
+    ``retryable`` is True for 429, 5xx and network errors (status_code 0).
+    ``retry_after`` carries the server's Retry-After seconds when given.
+    """
+
+    def __init__(self, status_code: int, message: str, retry_after: Optional[int] = None):
+        super().__init__(f"Channex API error {status_code}: {message}")
+        self.status_code = status_code
+        self.message = message
+        self.retry_after = retry_after
+        self.retryable = status_code == 0 or status_code == 429 or 500 <= status_code < 600
+
+
+def _parse_retry_after(value: Optional[str]) -> Optional[int]:
+    if not value:
+        return None
+    try:
+        return max(0, int(float(value)))
+    except (TypeError, ValueError):
+        return None
+
+
 class ChannexManager(ChannelManager):
     """
     Concrete Channel Manager connector for Channex.io REST API and Webhooks.
@@ -140,6 +172,65 @@ class ChannexManager(ChannelManager):
         except requests.RequestException as e:
             logger.error(f"Failed to push rate to Channex: {e}")
             return {"success": False, "error": str(e)}
+
+    # ------------------------------------------------------------------
+    # Batched ARI calls used by the outbox worker (core.ota.tasks).
+    # One call carries many values (several room types / dates) so a whole
+    # property's pending changes go out as a single request.
+    # ------------------------------------------------------------------
+
+    def push_availability_values(self, values: list) -> str:
+        """POST ``/availability`` with a list of value dicts.
+
+        Each value: ``{"property_id", "room_type_id", "date_from", "date_to"
+        (inclusive), "availability"}``. Returns the Channex task id.
+        Raises ``ChannexAPIError`` / ``ChannexConfigError``; never fakes success.
+        """
+        return self._post_ari("availability", values)
+
+    def push_restriction_values(self, values: list) -> str:
+        """POST ``/restrictions`` (rates + restrictions per rate plan).
+
+        Each value: ``{"property_id", "rate_plan_id", "date_from", "date_to",
+        ...rate/restriction fields}``. Returns the Channex task id.
+        """
+        return self._post_ari("restrictions", values)
+
+    def _post_ari(self, endpoint: str, values: list) -> str:
+        if not self.api_key:
+            raise ChannexConfigError("CHANNEX_API_KEY is not configured; refusing to push ARI.")
+        if not values:
+            raise ValueError("Refusing to POST an empty ARI batch.")
+
+        url = f"{self.api_url}/{endpoint}"
+        try:
+            resp = requests.post(url, headers=self._get_headers(), json={"values": values}, timeout=10)
+        except requests.RequestException as exc:
+            raise ChannexAPIError(0, f"network error calling {url}: {exc}") from exc
+
+        if resp.status_code >= 400:
+            raise ChannexAPIError(
+                resp.status_code,
+                (resp.text or "")[:1000],
+                retry_after=_parse_retry_after(resp.headers.get("Retry-After")),
+            )
+
+        try:
+            body = resp.json() if resp.content else {}
+        except ValueError:
+            body = {}
+        data = body.get("data") if isinstance(body, dict) else None
+        task_id = ""
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            task_id = str(data[0].get("id", ""))
+        elif isinstance(data, dict):
+            task_id = str(data.get("id", ""))
+
+        warnings = (body.get("meta") or {}).get("warnings") if isinstance(body, dict) else None
+        if warnings:
+            logger.warning("Channex %s accepted with warnings (task %s): %s", endpoint, task_id, warnings)
+        logger.info("Pushed %d %s value(s) to Channex (task %s)", len(values), endpoint, task_id)
+        return task_id
 
     def handle_webhook(self, event_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """

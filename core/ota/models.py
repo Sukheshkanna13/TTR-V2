@@ -43,13 +43,15 @@ class ChannexProperty(models.Model):
         related_name="channex_mapping",
     )
     channex_property_id = models.UUIDField(
-        help_text="Property UUID as it exists in Channex.",
+        unique=True,
+        help_text="Property UUID as it exists in Channex. Must be globally "
+        "unique — inbound bookings resolve TTR property from this UUID.",
     )
     currency = models.CharField(
         max_length=3,
-        default="USD",
+        default="INR",
         help_text="ISO 4217 currency code Channex expects for this property "
-        "(the staging test property is USD; production is likely INR).",
+        "(the staging test property is USD; production is INR).",
     )
     is_active = models.BooleanField(
         default=True,
@@ -84,7 +86,9 @@ class ChannexRoomType(models.Model):
     )
     room_type = models.CharField(max_length=10, choices=ROOM_TYPE_CHOICES)
     channex_room_type_id = models.UUIDField(
-        help_text="Room type UUID as it exists in Channex.",
+        unique=True,
+        help_text="Room type UUID as it exists in Channex. Must be globally "
+        "unique — inbound bookings resolve TTR room type from this UUID.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -125,11 +129,13 @@ class ChannexRatePlan(models.Model):
         help_text="Human label for this rate plan (e.g. 'BAR', 'Bed & Breakfast').",
     )
     channex_rate_plan_id = models.UUIDField(
+        unique=True,
         help_text="Rate plan UUID as it exists in Channex.",
     )
     is_default = models.BooleanField(
-        default=True,
-        help_text="The plan used when a change does not name a specific rate plan.",
+        default=False,
+        help_text="The plan used when a change does not name a specific rate plan. "
+        "Only one plan per room type may be marked default.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -138,6 +144,13 @@ class ChannexRatePlan(models.Model):
         app_label = "core"
         verbose_name = "Channex rate-plan mapping"
         verbose_name_plural = "Channex rate-plan mappings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["room_type_mapping"],
+                condition=models.Q(is_default=True),
+                name="uniq_default_rateplan_per_roomtype",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.name} ↔ {self.channex_rate_plan_id}"
