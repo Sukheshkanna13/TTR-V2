@@ -193,6 +193,10 @@ def room_status_update(request, room_id):
         return JsonResponse({'error': 'Invalid status.'}, status=400)
     room.operational_status = new_status
     room.save(update_fields=['operational_status'])
+    # C7.2: status change affects availability for all future dates
+    from core.ota.dispatch import record_ari_change
+    from datetime import date, timedelta
+    record_ari_change(room.room_type, room.property_id, date.today(), date.today() + timedelta(days=500), change_types=("availability",))
     return JsonResponse({'message': f'Status updated to {new_status}.', 'status': new_status})
 
 
@@ -236,6 +240,9 @@ def ota_block_create(request):
         return JsonResponse({'error': 'Invalid date range.'}, status=400)
 
     block = OTABlock.objects.create(room=room, start_date=start, end_date=end, reason=reason)
+    # C7.2: blocking a room reduces availability for those dates → notify Channex
+    from core.ota.dispatch import record_ari_change
+    record_ari_change(room.room_type, room.property_id, start, end, change_types=("availability",))
     return JsonResponse({'message': 'Block created.', 'id': str(block.id)})
 
 
@@ -245,7 +252,13 @@ def ota_block_delete(request, block_id):
     block = get_object_or_404(OTABlock, pk=block_id)
     if not _assigned_rooms(request).filter(pk=block.room_id).exists():
         return JsonResponse({'error': 'Not authorised.'}, status=403)
+    # C7.2: capture dates + room info before delete (inaccessible after)
+    _room = block.room  # single extra query; room FK is not select_related here
+    _start, _end = block.start_date, block.end_date
     block.delete()
+    # Removing a block frees availability for those dates → notify Channex
+    from core.ota.dispatch import record_ari_change
+    record_ari_change(_room.room_type, _room.property_id, _start, _end, change_types=("availability",))
     return JsonResponse({'message': 'Block removed.'})
 
 
@@ -273,6 +286,9 @@ def seasonal_rate_create(request):
         return JsonResponse({'error': 'Invalid price.'}, status=400)
 
     rate = RoomRate.objects.create(room=room, start_date=start, end_date=end, price=price)
+    # C7.2: new rate/restriction row → push rates+restrictions for that date range
+    from core.ota.dispatch import record_ari_change
+    record_ari_change(room.room_type, room.property_id, start, end, change_types=("rates", "restrictions"))
     return JsonResponse({'message': 'Rate created.', 'id': str(rate.id)})
 
 
@@ -343,6 +359,7 @@ def room_create(request):
 
 
 def _handle_room_update_details(room, data):
+    fields_changed = []
     for field in ('name', 'price_per_night', 'capacity', 'amenities', 'description'):
         val = data.get(field)
         if val is not None:
@@ -351,11 +368,17 @@ def _handle_room_update_details(room, data):
             elif field == 'capacity':
                 val = int(val)
             setattr(room, field, val)
+            fields_changed.append(field)
     # Rating: explicit null clears, value sets
     if 'rating' in data:
         r = data['rating']
         room.rating = Decimal(str(r)) if r is not None and str(r).strip() else Decimal("4.5")
     room.save()
+    # C7.2: price change → push updated rates for all future dates
+    if 'price_per_night' in fields_changed:
+        from core.ota.dispatch import record_ari_change
+        from datetime import date, timedelta
+        record_ari_change(room.room_type, room.property_id, date.today(), date.today() + timedelta(days=500), change_types=("rates",))
     return JsonResponse({'message': 'Room updated.'})
 
 
@@ -366,6 +389,10 @@ def _handle_room_set_status(room, data):
         return JsonResponse({'error': 'Invalid status.'}, status=400)
     room.operational_status = new_status
     room.save(update_fields=['operational_status'])
+    # C7.2: status change affects availability for all future dates
+    from core.ota.dispatch import record_ari_change
+    from datetime import date, timedelta
+    record_ari_change(room.room_type, room.property_id, date.today(), date.today() + timedelta(days=500), change_types=("availability",))
     return JsonResponse({'message': f'Status set to {new_status}.'})
 
 

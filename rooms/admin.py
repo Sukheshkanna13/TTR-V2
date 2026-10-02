@@ -87,6 +87,17 @@ class RoomAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("property").prefetch_related("images")
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # C7.4: price_per_night or operational_status changed via list_editable
+        changed = set(form.changed_data) if form.changed_data else set()
+        from core.ota.dispatch import record_ari_change
+        from datetime import date, timedelta
+        if 'price_per_night' in changed:
+            record_ari_change(obj.room_type, obj.property_id, date.today(), date.today() + timedelta(days=500), change_types=("rates",))
+        if 'operational_status' in changed:
+            record_ari_change(obj.room_type, obj.property_id, date.today(), date.today() + timedelta(days=500), change_types=("availability",))
+
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
@@ -144,6 +155,20 @@ class OTABlockAdmin(admin.ModelAdmin):
     search_fields = ("room__name", "reason")
     list_per_page = 25
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # C7.4: creating or editing a block reduces availability
+        from core.ota.dispatch import record_ari_change
+        record_ari_change(obj.room.room_type, obj.room.property_id, obj.start_date, obj.end_date, change_types=("availability",))
+
+    def delete_model(self, request, obj):
+        # Capture before delete; obj is gone after super() call
+        _room_type, _property_id, _start, _end = obj.room.room_type, obj.room.property_id, obj.start_date, obj.end_date
+        super().delete_model(request, obj)
+        # C7.4: removing a block frees availability
+        from core.ota.dispatch import record_ari_change
+        record_ari_change(_room_type, _property_id, _start, _end, change_types=("availability",))
+
 
 @admin.register(RoomRate)
 class RoomRateAdmin(admin.ModelAdmin):
@@ -151,3 +176,16 @@ class RoomRateAdmin(admin.ModelAdmin):
     list_filter = ("room__property", "room__city")
     search_fields = ("room__name",)
     list_per_page = 25
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # C7.4: new or edited rate/restriction row → push rates+restrictions
+        from core.ota.dispatch import record_ari_change
+        record_ari_change(obj.room.room_type, obj.room.property_id, obj.start_date, obj.end_date, change_types=("rates", "restrictions"))
+
+    def delete_model(self, request, obj):
+        _room_type, _property_id, _start, _end = obj.room.room_type, obj.room.property_id, obj.start_date, obj.end_date
+        super().delete_model(request, obj)
+        # C7.4: deleting a rate reverts to base price for that range
+        from core.ota.dispatch import record_ari_change
+        record_ari_change(_room_type, _property_id, _start, _end, change_types=("rates", "restrictions"))

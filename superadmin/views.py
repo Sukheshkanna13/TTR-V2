@@ -587,6 +587,10 @@ def _room_set_status(request, room, data):
     room.operational_status = new_status
     room.save(update_fields=['operational_status'])
     _log(request, 'ROOM_STATUS_UPDATED', detail=f"room={room.name}, status={new_status}")
+    # C7.3: status change affects availability for all future dates
+    from core.ota.dispatch import record_ari_change
+    from datetime import date, timedelta
+    record_ari_change(room.room_type, room.property_id, date.today(), date.today() + timedelta(days=500), change_types=("availability",))
     return JsonResponse({'message': f'Status set to {new_status}.'})
 
 def _room_toggle_active(request, room, data):
@@ -627,6 +631,11 @@ def _room_update_details(request, room, data):
     if fields_changed:
         room.save()
         _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, fields={fields_changed}")
+        # C7.3: price change → push updated rates for all future dates
+        if 'price_per_night' in fields_changed:
+            from core.ota.dispatch import record_ari_change
+            from datetime import date, timedelta
+            record_ari_change(room.room_type, room.property_id, date.today(), date.today() + timedelta(days=500), change_types=("rates",))
     return JsonResponse({'message': 'Room updated.'})
 
 @require_super_admin

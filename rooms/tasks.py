@@ -11,16 +11,41 @@ def release_expired_holds():
     """
     Scheduled task to bulk update expired holds.
     Updates all PENDING bookings where hold_expires_at is in the past to EXPIRED.
+
+    C7.1: snapshot room_type / property_id / dates BEFORE the bulk UPDATE,
+    because .update() returns only a count — no Python objects are hydrated,
+    so room info is unreachable after the call.  After updating, record an
+    availability change for each freed date range so the outbox worker pushes
+    the corrected inventory to Channex.
     """
+    from core.ota.dispatch import record_ari_change
+
     now = timezone.now()
+
+    # Snapshot the fields we need before bulk update.
+    # Any hold expiring in the tiny gap between this query and the .update()
+    # below is caught by the next 1-minute worker run — acceptable.
+    expiring = list(
+        Booking.objects.filter(status="pending", hold_expires_at__lt=now)
+        .values("room__room_type", "room__property_id", "check_in", "check_out")
+    )
+
     expired_count = Booking.objects.filter(
         status="pending",
-        hold_expires_at__lt=now
+        hold_expires_at__lt=now,
     ).update(status="expired")
-    
+
     if expired_count > 0:
-        logger.info(f"Released {expired_count} expired holds.")
-    
+        logger.info("Released %d expired holds.", expired_count)
+        for row in expiring:
+            record_ari_change(
+                room_type=row["room__room_type"],
+                property_id=row["room__property_id"],
+                date_from=row["check_in"],
+                date_to=row["check_out"],
+                change_types=("availability",),
+            )
+
     return expired_count
 
 def auto_complete_bookings():
