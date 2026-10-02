@@ -32,3 +32,8 @@ django-allauth>=65.0,<66.0
 cryptography>=43.0
 PyJWT>=2.8.0
 gunicorn>=21.2.0
+
+# MySQL driver — pure-Python, works on Windows/Linux/Mac without build tools.
+# mysqlclient (C extension) also works if already installed; base.py patches
+# PyMySQL in only when mysqlclient is absent.
+PyMySQL>=1.1,<2.0

@@ -8,6 +8,15 @@ from pathlib import Path
 # pyrefly: ignore [missing-import]
 from decouple import Csv, config
 # pyrefly: ignore [missing-import]
+
+# PyMySQL is a pure-Python MySQL driver that works on all platforms
+# (including Windows + Python 3.14 where mysqlclient has no wheel).
+# It must be patched in before Django loads the mysql backend.
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass  # mysqlclient is installed directly — no patch needed
 import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # Now that settings is a package (hotel_booking/settings/base.py),
