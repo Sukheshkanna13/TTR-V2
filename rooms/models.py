@@ -652,6 +652,48 @@ class RoomRate(models.Model):
         decimal_places=2,
         help_text="Overridden price per night in INR.",
     )
+    # ── OTA restrictions ────────────────────────────────────────────────────
+    # All fields are nullable so existing RoomRate rows are unaffected.
+    # Field names match the Channex /restrictions payload 1-to-1, and are
+    # standard across Booking.com, Expedia, Agoda and most OTAs, making the
+    # mapping layer trivial for any future platform switch.
+    #
+    # min_stay_arrival  – minimum nights required when the guest ARRIVES in
+    #                     this date range (most common; Booking.com MLOS).
+    # min_stay_through  – minimum nights required when ANY night of the stay
+    #                     falls in this range (Channex-specific; less common).
+    # max_stay          – maximum nights allowed.
+    # stop_sell         – block all OTA sales for this date range.
+    # closed_to_arrival – guests may not CHECK IN on dates in this range.
+    # closed_to_departure – guests may not CHECK OUT on dates in this range.
+    min_stay_arrival = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Minimum nights for guests arriving in this date range "
+                  "(maps to min_stay_arrival in Channex / MLOS on Booking.com).",
+    )
+    min_stay_through = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Minimum nights when any stay-night falls in this range "
+                  "(maps to min_stay_through in Channex; leave blank if unsure).",
+    )
+    max_stay = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Maximum nights allowed for guests whose stay covers this range.",
+    )
+    stop_sell = models.BooleanField(
+        default=False,
+        help_text="Block all OTA sales for this date range.",
+    )
+    closed_to_arrival = models.BooleanField(
+        default=False,
+        help_text="Guests may not check in on dates in this range.",
+    )
+    closed_to_departure = models.BooleanField(
+        default=False,
+        help_text="Guests may not check out on dates in this range.",
+    )
+    # ────────────────────────────────────────────────────────────────────────
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

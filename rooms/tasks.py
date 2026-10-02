@@ -86,20 +86,38 @@ def award_loyalty_for_completed_stays():
 
 def sync_ota_inventory_for_dates(room_type: str, check_in_str: str, check_out_str: str, property_id=None):
     """
-    Background worker task to compute remaining available inventory for room_type
-    across the date range and push updates to Channex.
+    Record an availability change in the ARI outbox for the given room_type
+    and date range.  The outbox worker (core.ota.tasks.process_ari_outbox)
+    coalesces pending rows, builds the per-date payload, and pushes to Channex
+    with rate-limiting and retry/backoff.
+
+    Signature kept identical to the old direct-push version so all existing
+    callers (payments/services.py, rooms/services.py, core/ota/processor.py)
+    continue to work without any changes.
+
+    C6 change: replaced the direct ChannexManager.push_inventory() call (which
+    used the wrong /ari endpoint and swallowed errors) with record_ari_change().
     """
     from django.utils.dateparse import parse_date
-    from core.ota.channex import ChannexManager
+    from core.ota.dispatch import record_ari_change
 
     ci = parse_date(check_in_str) if isinstance(check_in_str, str) else check_in_str
     co = parse_date(check_out_str) if isinstance(check_out_str, str) else check_out_str
 
     if not ci or not co:
-        logger.warning(f"Invalid dates for OTA inventory sync: {check_in_str} to {check_out_str}")
+        logger.warning(
+            "sync_ota_inventory_for_dates: invalid dates %r to %r — skipped",
+            check_in_str, check_out_str,
+        )
         return False
 
-    manager = ChannexManager()
-    avail = manager.calculate_available_count(room_type, ci, co, property_id=property_id)
-    res = manager.push_inventory(room_type, ci, co, avail, property_id=property_id)
-    return res.get("success", False)
+    # record_ari_change is a no-op when the property has no active Channex
+    # mapping, so property_id=None is safe here.
+    record_ari_change(
+        room_type=room_type,
+        property_id=property_id,
+        date_from=ci,
+        date_to=co,          # check_out is already the exclusive end date
+        change_types=("availability",),
+    )
+    return True
