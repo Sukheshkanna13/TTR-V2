@@ -114,15 +114,10 @@ WSGI_APPLICATION = "hotel_booking.wsgi.application"
 # =============================================================================
 
 # Default to MySQL for local dev; Render/Hostinger prod sets DATABASE_URL automatically.
+# Falls back to SQLite when DATABASE_URL is unset or blank (e.g. local dev without MySQL).
+_db_url = config("DATABASE_URL", default="") or "sqlite:///db.sqlite3"
 DATABASES = {
-    "default": dj_database_url.config(
-        env="DATABASE_URL",
-        default=config(
-            "DATABASE_URL",
-            default="mysql://root:vengeance@127.0.0.1:3306/ttr_v2",
-        ),
-        conn_max_age=600,
-    )
+    "default": dj_database_url.parse(_db_url, conn_max_age=600)
 }
 
 # =============================================================================

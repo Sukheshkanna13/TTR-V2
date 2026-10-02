@@ -232,6 +232,55 @@ class ChannexManager(ChannelManager):
         logger.info("Pushed %d %s value(s) to Channex (task %s)", len(values), endpoint, task_id)
         return task_id
 
+    # ------------------------------------------------------------------
+    # Inbound booking revision API (C9 / C10)
+    # ------------------------------------------------------------------
+
+    def fetch_booking_revision(self, revision_id: str) -> Dict[str, Any]:
+        """GET /booking_revisions/:id — fetch full booking revision details."""
+        if not self.api_key:
+            raise ChannexConfigError("CHANNEX_API_KEY not configured")
+        url = f"{self.api_url}/booking_revisions/{revision_id}"
+        try:
+            resp = requests.get(url, headers=self._get_headers(), timeout=10)
+        except requests.RequestException as exc:
+            raise ChannexAPIError(0, f"network error: {exc}") from exc
+        if resp.status_code >= 400:
+            raise ChannexAPIError(resp.status_code, (resp.text or "")[:500])
+        body = resp.json() if resp.content else {}
+        return body.get("data", body)
+
+    def ack_booking_revision(self, revision_id: str) -> bool:
+        """POST /booking_revisions/:id/ack (empty body) — acknowledge revision."""
+        if not self.api_key:
+            logger.warning("ack_booking_revision: CHANNEX_API_KEY not set; skipping ACK.")
+            return False
+        url = f"{self.api_url}/booking_revisions/{revision_id}/ack"
+        try:
+            resp = requests.post(url, headers=self._get_headers(), timeout=10)
+            if resp.status_code >= 400:
+                logger.warning("ACK failed for revision %s: %s %s", revision_id, resp.status_code, resp.text[:200])
+                return False
+            return True
+        except requests.RequestException as exc:
+            logger.warning("ACK network error for revision %s: %s", revision_id, exc)
+            return False
+
+    def fetch_booking_feed(self) -> list:
+        """GET /booking_revisions/feed — returns only unacknowledged revisions."""
+        if not self.api_key:
+            raise ChannexConfigError("CHANNEX_API_KEY not configured")
+        url = f"{self.api_url}/booking_revisions/feed"
+        try:
+            resp = requests.get(url, headers=self._get_headers(), timeout=15)
+        except requests.RequestException as exc:
+            raise ChannexAPIError(0, f"network error: {exc}") from exc
+        if resp.status_code >= 400:
+            raise ChannexAPIError(resp.status_code, (resp.text or "")[:500])
+        body = resp.json() if resp.content else {}
+        data = body.get("data", [])
+        return data if isinstance(data, list) else []
+
     def handle_webhook(self, event_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Delegate to processor function.

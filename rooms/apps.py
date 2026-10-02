@@ -67,6 +67,16 @@ class RoomsConfig(AppConfig):
                     "repeats": -1,
                 }
             )
+            # C10 — Channex booking feed poll (backup ingest path).
+            # Primary is the webhook; this catches anything the webhook missed.
+            Schedule.objects.update_or_create(
+                func="core.ota.tasks.poll_booking_feed",
+                defaults={
+                    "schedule_type": Schedule.MINUTES,
+                    "minutes": 15,
+                    "repeats": -1,
+                }
+            )
         except Exception:
             # Catch exceptions during migrations or initial setup
             pass

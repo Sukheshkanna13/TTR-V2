@@ -567,3 +567,75 @@ def nightly_full_sync() -> dict:
         results[str(mapping.property_id)] = full_sync_property(mapping.property_id)
     logger.info("nightly_full_sync: done. properties=%d", len(results))
     return results
+
+
+# ---------------------------------------------------------------------------
+# C10 — Feed-poll backup (certification Tests 3–5 fallback path)
+# ---------------------------------------------------------------------------
+
+# Maps Channex revision status to the event string process_channex_webhook expects
+_REVISION_STATUS_MAP = {
+    "new": "booking.new",
+    "modified": "booking.modified",
+    "cancelled": "booking.cancelled",
+}
+
+
+def poll_booking_feed() -> dict:
+    """C10 — Poll GET /booking_revisions/feed every 15 min as a backup ingest path.
+
+    The primary path is the webhook (C9); this catches anything the webhook
+    missed (network blip, downtime, Channex retry not yet sent).  Each
+    processed revision is ACK'd so the feed shrinks on the next run.
+    """
+    from core.ota.processor import process_channex_webhook
+    from payments.models import ProcessedWebhookEvent
+
+    manager = ChannexManager()
+    summary = {"fetched": 0, "processed": 0, "already_done": 0, "acked": 0, "errors": 0}
+
+    try:
+        revisions = manager.fetch_booking_feed()
+    except ChannexConfigError as exc:
+        logger.warning("poll_booking_feed skipped: %s", exc)
+        return summary
+    except ChannexAPIError as exc:
+        logger.error("poll_booking_feed: feed fetch failed: %s", exc)
+        return summary
+
+    summary["fetched"] = len(revisions)
+
+    for revision in revisions:
+        revision_id = str(revision.get("id") or "").strip()
+        if not revision_id:
+            continue
+
+        event_id = f"rev_{revision_id}"
+
+        if ProcessedWebhookEvent.objects.filter(source="channex", event_id=event_id).exists():
+            # Already handled by the webhook path — just ACK and move on
+            manager.ack_booking_revision(revision_id)
+            summary["already_done"] += 1
+            summary["acked"] += 1
+            continue
+
+        revision_status = str(revision.get("status") or "new").lower()
+        event_type = _REVISION_STATUS_MAP.get(revision_status, "booking.new")
+        booking_data = revision.get("booking") or {}
+
+        try:
+            result = process_channex_webhook(event_type, {"event": event_type, "booking": booking_data})
+            summary["processed"] += 1
+
+            if result.get("success"):
+                ProcessedWebhookEvent.objects.get_or_create(source="channex", event_id=event_id)
+                manager.ack_booking_revision(revision_id)
+                summary["acked"] += 1
+            else:
+                logger.warning("poll_booking_feed: revision %s processed with failure: %s", revision_id, result)
+        except Exception as exc:
+            logger.exception("poll_booking_feed: error on revision %s", revision_id)
+            summary["errors"] += 1
+
+    logger.info("poll_booking_feed: %s", summary)
+    return summary
