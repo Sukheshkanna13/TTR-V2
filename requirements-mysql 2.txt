@@ -1,0 +1,5 @@
+# VPS install: everything in requirements.txt plus the MySQL driver.
+# Needs system packages first: sudo apt install -y pkg-config libmysqlclient-dev build-essential python3-dev
+# Kept separate so the Render build (PostgreSQL, no MySQL headers) is unaffected.
+-r requirements.txt
+mysqlclient>=2.2,<3.0
