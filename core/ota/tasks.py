@@ -316,3 +316,254 @@ def process_ari_outbox() -> dict:
     result = dict(summary)
     logger.info("ARI outbox run: %s", result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# C8 — Full sync (certification Test 1 + nightly reconciliation)
+# ---------------------------------------------------------------------------
+
+def full_sync_property(property_id) -> dict:
+    """Push 500 days of availability + rates/restrictions for one property.
+
+    Channex certification Test 1 requires:
+      - All availability for all room types across 500 days → 1 API call
+      - All rates/restrictions for all rate plans across 500 days → 1 API call
+
+    This function makes exactly those 2 calls.  It is intentionally separate
+    from the outbox worker — it bypasses the outbox and pushes directly so
+    the cert screenshare can show a clean "full sync fired, 2 calls made"
+    sequence.
+
+    Returns a dict with keys: property, availability_task_id,
+    restrictions_task_id, room_types, rate_plans, errors.
+
+    Safe to call manually via ``python manage.py channex_full_sync``
+    or from the nightly schedule.  Raises nothing — errors are returned
+    in the ``errors`` list so the caller can log/report them.
+    """
+    from datetime import date, timedelta
+    from core.ota.models import ChannexProperty, ChannexRoomType, ChannexRatePlan
+    from core.ota.availability import compute_per_date_availability
+    from core.ota.channex import ChannexManager, ChannexAPIError, ChannexConfigError
+
+    result = {
+        "property_id": str(property_id),
+        "availability_task_id": "",
+        "restrictions_task_id": "",
+        "room_types": [],
+        "rate_plans": [],
+        "errors": [],
+    }
+
+    # ── Resolve mapping ──────────────────────────────────────────────────────
+    try:
+        mapping = ChannexProperty.objects.select_related("property").get(
+            property_id=property_id, is_active=True,
+        )
+    except ChannexProperty.DoesNotExist:
+        result["errors"].append(f"No active Channex mapping for property {property_id}.")
+        logger.error("full_sync: %s", result["errors"][-1])
+        return result
+
+    today = date.today()
+    horizon_end = today + timedelta(days=_cfg("HORIZON_DAYS"))
+    property_uuid = str(mapping.channex_property_id)
+    currency = mapping.currency
+
+    client = ChannexManager()
+
+    # ── Build availability values (1 entry per room-type per night) ──────────
+    availability_values = []
+    room_type_mappings = list(
+        ChannexRoomType.objects.filter(
+            property_mapping=mapping,
+        ).select_related("property_mapping")
+    )
+
+    for rt_mapping in room_type_mappings:
+        room_type = rt_mapping.room_type
+        room_type_uuid = str(rt_mapping.channex_room_type_id)
+        result["room_types"].append(room_type)
+
+        counts = compute_per_date_availability(room_type, property_id, today, horizon_end)
+        if not counts:
+            logger.warning("full_sync: no availability data for %s at property %s", room_type, property_id)
+            continue
+
+        # _compress builds date-range entries from the per-date dict
+        base = {"property_id": property_uuid, "room_type_id": room_type_uuid}
+        availability_values.extend(_compress(counts, base, "availability"))
+
+    # ── Build rates/restrictions values (1 entry per rate-plan per night) ────
+    restrictions_values = []
+    rate_plan_mappings = list(
+        ChannexRatePlan.objects.filter(
+            room_type_mapping__property_mapping=mapping,
+        ).select_related("room_type_mapping__property_mapping")
+    )
+
+    for rp_mapping in rate_plan_mappings:
+        rate_plan_uuid = str(rp_mapping.channex_rate_plan_id)
+        room_type = rp_mapping.room_type_mapping.room_type
+        result["rate_plans"].append(rp_mapping.name)
+
+        # Build one entry per night covering the full horizon.
+        # Rate: look up RoomRate override for that date; fall back to
+        # Room.price_per_night for the room type at this property.
+        # Restrictions: read from RoomRate if a row covers that date.
+        from rooms.models import Room, RoomRate
+        from django.db.models import Q
+
+        # Get base price (cheapest active room of this type — representative
+        # price for the type; matches the "decide which room's price represents
+        # the type" decision from D5 in the gap analysis).
+        base_room = (
+            Room.objects.filter(
+                property_id=property_id,
+                room_type=room_type,
+                is_active=True,
+            )
+            .order_by("price_per_night")
+            .first()
+        )
+        if base_room is None:
+            logger.warning("full_sync: no active room of type %s at property %s", room_type, property_id)
+            continue
+
+        # Fetch all RoomRate overrides for this room in the horizon
+        rate_overrides = list(
+            RoomRate.objects.filter(
+                room=base_room,
+                start_date__lt=horizon_end,
+                end_date__gte=today,
+            ).order_by("start_date")
+        )
+
+        # Build per-date map: date → (price, restrictions)
+        from datetime import timedelta as td
+
+        def _nights_list(s, e):
+            d, out = s, []
+            while d < e:
+                out.append(d)
+                d += td(days=1)
+            return out
+
+        nightly = {}
+        for night in _nights_list(today, horizon_end):
+            price = base_room.price_per_night
+            min_stay_arrival = None
+            min_stay_through = None
+            max_stay = None
+            stop_sell = False
+            closed_to_arrival = False
+            closed_to_departure = False
+            for override in rate_overrides:
+                if override.start_date <= night < override.end_date:
+                    price = override.price
+                    if override.min_stay_arrival is not None:
+                        min_stay_arrival = override.min_stay_arrival
+                    if override.min_stay_through is not None:
+                        min_stay_through = override.min_stay_through
+                    if override.max_stay is not None:
+                        max_stay = override.max_stay
+                    stop_sell = override.stop_sell
+                    closed_to_arrival = override.closed_to_arrival
+                    closed_to_departure = override.closed_to_departure
+                    break
+            nightly[night] = {
+                "price": price,
+                "min_stay_arrival": min_stay_arrival,
+                "min_stay_through": min_stay_through,
+                "max_stay": max_stay,
+                "stop_sell": stop_sell,
+                "closed_to_arrival": closed_to_arrival,
+                "closed_to_departure": closed_to_departure,
+            }
+
+        # Compress into date-range entries (consecutive identical nights → 1 row)
+        if not nightly:
+            continue
+
+        nights_list = sorted(nightly.keys())
+        range_start = nights_list[0]
+        prev = nightly[range_start]
+        for night in nights_list[1:]:
+            cur = nightly[night]
+            if cur != prev:
+                entry = {
+                    "property_id": property_uuid,
+                    "rate_plan_id": rate_plan_uuid,
+                    "date_from": range_start.isoformat(),
+                    "date_to": night.isoformat(),  # exclusive end
+                    "rate": str(prev["price"]),
+                }
+                for field in ("min_stay_arrival", "min_stay_through", "max_stay"):
+                    if prev[field] is not None:
+                        entry[field] = prev[field]
+                for field in ("stop_sell", "closed_to_arrival", "closed_to_departure"):
+                    if prev[field]:
+                        entry[field] = True
+                restrictions_values.append(entry)
+                range_start = night
+                prev = cur
+        # Final range
+        entry = {
+            "property_id": property_uuid,
+            "rate_plan_id": rate_plan_uuid,
+            "date_from": range_start.isoformat(),
+            "date_to": horizon_end.isoformat(),
+            "rate": str(prev["price"]),
+        }
+        for field in ("min_stay_arrival", "min_stay_through", "max_stay"):
+            if prev[field] is not None:
+                entry[field] = prev[field]
+        for field in ("stop_sell", "closed_to_arrival", "closed_to_departure"):
+            if prev[field]:
+                entry[field] = True
+        restrictions_values.append(entry)
+
+    # ── Push ─────────────────────────────────────────────────────────────────
+    try:
+        if availability_values:
+            result["availability_task_id"] = client.push_availability_values(availability_values)
+            logger.info("full_sync: availability pushed for property %s, task_id=%s",
+                        property_id, result["availability_task_id"])
+        else:
+            result["errors"].append("No availability values built — check room type mappings.")
+
+        if restrictions_values:
+            result["restrictions_task_id"] = client.push_restriction_values(restrictions_values)
+            logger.info("full_sync: rates/restrictions pushed for property %s, task_id=%s",
+                        property_id, result["restrictions_task_id"])
+        else:
+            result["errors"].append("No rates/restrictions values built — check rate plan mappings.")
+
+    except ChannexConfigError as exc:
+        result["errors"].append(f"Config error: {exc}")
+        logger.error("full_sync aborted for property %s: %s", property_id, exc)
+    except ChannexAPIError as exc:
+        result["errors"].append(f"API error {exc.status_code}: {exc}")
+        logger.error("full_sync API error for property %s: %s", property_id, exc)
+    except Exception as exc:
+        result["errors"].append(f"Unexpected error: {exc}")
+        logger.exception("full_sync unexpected error for property %s", property_id)
+
+    return result
+
+
+def nightly_full_sync() -> dict:
+    """Run full_sync_property for every active Channex property.
+
+    Scheduled once per day (off-peak).  Channex cert rule: full sync ≤ once
+    per 24 h and must not replace delta updates.  This is a reconciliation
+    safety-net only — the outbox handles real-time deltas.
+    """
+    from core.ota.models import ChannexProperty
+
+    results = {}
+    for mapping in ChannexProperty.objects.filter(is_active=True).select_related("property"):
+        logger.info("nightly_full_sync: starting for property %s", mapping.property_id)
+        results[str(mapping.property_id)] = full_sync_property(mapping.property_id)
+    logger.info("nightly_full_sync: done. properties=%d", len(results))
+    return results

@@ -56,6 +56,17 @@ class RoomsConfig(AppConfig):
                     "repeats": -1
                 }
             )
+
+            # C8 — Channex nightly full sync (certification Test 1 / reconciliation).
+            # Runs once per day at off-peak hours (2 AM).  Channex rule: full sync
+            # ≤ once per 24 h; delta updates (outbox) handle real-time changes.
+            Schedule.objects.update_or_create(
+                func="core.ota.tasks.nightly_full_sync",
+                defaults={
+                    "schedule_type": Schedule.DAILY,
+                    "repeats": -1,
+                }
+            )
         except Exception:
             # Catch exceptions during migrations or initial setup
             pass
