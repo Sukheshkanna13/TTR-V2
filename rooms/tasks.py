@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 
 from .models import Booking
@@ -10,33 +11,47 @@ logger = logging.getLogger(__name__)
 def release_expired_holds():
     """
     Scheduled task to bulk update expired holds.
-    Updates all PENDING bookings where hold_expires_at is in the past to EXPIRED.
+    Updates all PENDING bookings where hold_expires_at is in the past to EXPIRED
+    and returns any coupon reserved on them to "active".
+
+    A bulk queryset .update() bypasses Booking.expire_if_needed(), so the coupon
+    release must happen here explicitly. Row locks stop a concurrent payment
+    confirmation (which also locks the booking) from interleaving.
 
     C7.1: snapshot room_type / property_id / dates BEFORE the bulk UPDATE,
     because .update() returns only a count — no Python objects are hydrated,
-    so room info is unreachable after the call.  After updating, record an
+    so room info is unreachable after the call. After updating, record an
     availability change for each freed date range so the outbox worker pushes
     the corrected inventory to Channex.
     """
     from core.ota.dispatch import record_ari_change
+    from loyalty.models import Coupon
 
     now = timezone.now()
+    expiring = []
+    with transaction.atomic():
+        expiring = list(
+            Booking.objects.select_for_update()
+            .filter(status="pending", hold_expires_at__lt=now)
+            .values("pk", "room__room_type", "room__property_id", "check_in", "check_out")
+        )
+        if expiring:
+            expired_ids = [row["pk"] for row in expiring]
+            Coupon.objects.filter(
+                status=Coupon.STATUS_APPLIED, bookings__pk__in=expired_ids
+            ).update(status=Coupon.STATUS_ACTIVE)
+            expired_count = Booking.objects.filter(pk__in=expired_ids).update(status="expired")
+        else:
+            expired_count = 0
 
-    # Snapshot the fields we need before bulk update.
-    # Any hold expiring in the tiny gap between this query and the .update()
-    # below is caught by the next 1-minute worker run — acceptable.
-    expiring = list(
-        Booking.objects.filter(status="pending", hold_expires_at__lt=now)
-        .values("room__room_type", "room__property_id", "check_in", "check_out")
-    )
-
-    expired_count = Booking.objects.filter(
-        status="pending",
-        hold_expires_at__lt=now,
-    ).update(status="expired")
+        # Self-heal: a coupon can only be "applied" while a live hold references it.
+        # Repairs coupons stranded by earlier sweeps that skipped the release.
+        Coupon.objects.filter(status=Coupon.STATUS_APPLIED).exclude(
+            bookings__status="pending"
+        ).update(status=Coupon.STATUS_ACTIVE)
 
     if expired_count > 0:
-        logger.info("Released %d expired holds.", expired_count)
+        logger.info(f"Released {expired_count} expired holds.")
         for row in expiring:
             record_ari_change(
                 room_type=row["room__room_type"],

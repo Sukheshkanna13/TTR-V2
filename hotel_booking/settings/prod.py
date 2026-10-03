@@ -1,6 +1,10 @@
 """
 Production settings for hotel_booking project.
-Deployed on Render (free tier — PostgreSQL, no Redis).
+
+Runs on either target, selected purely through environment variables:
+  - Render free tier (default): PostgreSQL, console email, no proxy trust.
+  - Ubuntu VPS behind nginx: MySQL/PostgreSQL via DATABASE_URL, SMTP via
+    EMAIL_BACKEND, TRUST_PROXY_HEADERS=True. See docs/VPS-DEPLOYMENT.md.
 """
 from .base import *  # NOSONAR
 import dj_database_url
@@ -45,7 +49,8 @@ SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
-# Database — Render auto-injects DATABASE_URL for the linked PostgreSQL
+# Database — DATABASE_URL is required (guarded above). Render injects a
+# PostgreSQL URL; on a VPS use e.g. mysql://user:pass@127.0.0.1:3306/ttr_v2
 DATABASES = {
     "default": dj_database_url.config(
         env="DATABASE_URL",
@@ -53,6 +58,23 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
+if DATABASES["default"]["ENGINE"].endswith("mysql"):
+    # Full unicode (guest names, emoji in reviews) and strict SQL mode so bad
+    # data raises instead of being silently truncated.
+    DATABASES["default"].setdefault("OPTIONS", {}).update(
+        {
+            "charset": "utf8mb4",
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        }
+    )
+
+# Reverse proxy (nginx on a VPS). nginx must overwrite X-Forwarded-For with the
+# real client address; without this every guest shares one throttle bucket and
+# audit-log rows record 127.0.0.1. Leave False when gunicorn is directly exposed.
+TRUST_PROXY_HEADERS = config("TRUST_PROXY_HEADERS", default=False, cast=bool)
+if TRUST_PROXY_HEADERS:
+    MIDDLEWARE.insert(0, "core.middleware.ProxyRemoteAddrMiddleware")
+    REST_FRAMEWORK = {**REST_FRAMEWORK, "NUM_PROXIES": 0}  # ident = REMOTE_ADDR
 
 # Logging — console only (Render filesystem is ephemeral, no file logging)
 LOGGING = {
@@ -94,11 +116,15 @@ LOGGING = {
 }
 
 # =============================================================================
-# EMAIL — Console Backend (Render Free Tier blocks outbound SMTP ports)
+# EMAIL
 # =============================================================================
-# We must use the console backend on Render's free tier to avoid timeouts.
-# The OTP will be printed to your Render Logs tab instead of sending a real email.
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Default is the console backend because Render's free tier blocks outbound SMTP.
+# OTPs are then PRINTED TO THE LOGS and no guest receives an email, so on a VPS
+# set EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend in the env file.
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend",
+)
 
 # Inherits Gmail SMTP from base.py. Override with SendGrid when you have a key:
 # EMAIL_HOST = "smtp.sendgrid.net"

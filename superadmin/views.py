@@ -816,6 +816,8 @@ def booking_cancel(request, booking_id):
     if booking.status not in ('confirmed', 'pending'):
         return JsonResponse({'error': 'Only confirmed or pending bookings can be cancelled.'}, status=400)
     reason = request.POST.get('reason', '').strip() or 'Cancelled by super admin'
+    if booking.status == 'pending':
+        booking.release_coupon()
     booking.status = 'cancelled'
     booking.save(update_fields=['status'])
     _log(request, 'BOOKING_CANCELLED', target_user=booking.user,

@@ -165,3 +165,13 @@ Guest login and admin login are completely separate systems with separate access
 ## Loyalty Program (V2)
 
 Points are earned on: first booking, per night stayed, repeat bookings (higher rate), monthly repeat (multiplier), reviews, referrals. Three tiers (Base → Mid → Top) with configurable names, thresholds, and discounts set by Super Admin. Guests redeem points for discount coupons. All rules are runtime-configurable — nothing is hardcoded.
+
+---
+
+## Deployment
+
+- **VPS (Hostinger Ubuntu):** follow `docs/VPS-DEPLOYMENT.md`; configs live in `deploy/`; install with `requirements-mysql.txt`.
+- **Render:** `render.yaml` + `build.sh` (superadmin needs `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`).
+- `hotel_booking.settings.prod` serves both; behaviour is env-driven (`EMAIL_BACKEND`, `TRUST_PROXY_HEADERS`, `DATABASE_URL`).
+- Recurring django-q jobs register on `migrate` (`rooms/apps.py`), not at process start.
+- Audit history: `docs/SECURITY-AUDIT-2026-09-29.md`.

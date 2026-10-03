@@ -1,0 +1,167 @@
+{% extends "superadmin/base.html" %}
+{% block title %}Hero Banners{% endblock %}
+{% block content %}
+<h1 class="sa-page-title">Hero Banners & Content Management</h1>
+
+<!-- Create Banner -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Add New Hero Banner</h2>
+  <form method="POST" action="{% url 'superadmin:banner-create' %}" enctype="multipart/form-data" class="sa-form-grid">
+    {% csrf_token %}
+    <div class="sa-field">
+      <label class="sa-label" for="target_page">Target Page</label>
+      <select class="sa-input" id="target_page" name="target_page" required>
+        {% for val, label in page_choices %}
+          <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="sa-field">
+      <label class="sa-label" for="title">Headline / Floating Title</label>
+      <input class="sa-input" type="text" id="title" name="title" required placeholder="e.g. Escape to Serenity">
+    </div>
+    <div class="sa-field">
+      <label class="sa-label" for="subtitle">Subtitle / Tagline</label>
+      <input class="sa-input" type="text" id="subtitle" name="subtitle" placeholder="e.g. Boutique Heritage & Coastal Stays">
+    </div>
+    <div class="sa-field">
+      <label class="sa-label" for="cta_label">CTA Button Text</label>
+      <input class="sa-input" type="text" id="cta_label" name="cta_label" value="Explore Stays" placeholder="Explore Stays">
+    </div>
+    <div class="sa-field">
+      <label class="sa-label" for="cta_url">CTA Destination URL</label>
+      <input class="sa-input" type="text" id="cta_url" name="cta_url" value="/rooms/search/" placeholder="/rooms/search/">
+    </div>
+    <div class="sa-field">
+      <label class="sa-label" for="sort_order">Display Priority (Lower = higher)</label>
+      <input class="sa-input" type="number" id="sort_order" name="sort_order" value="0" min="0">
+    </div>
+    <div class="sa-field">
+      <label class="sa-label" for="image">Desktop Hero Image (High Res)</label>
+      <input class="sa-input" type="file" id="image" name="image" accept="image/*" required style="padding:4px;">
+    </div>
+    <div class="sa-field">
+      <label class="sa-label" for="mobile_image">Mobile Image (Optional Vertical Crop)</label>
+      <input class="sa-input" type="file" id="mobile_image" name="mobile_image" accept="image/*" style="padding:4px;">
+    </div>
+    <button class="sa-btn sa-btn-primary sa-form-submit" type="submit" style="margin-top:12px;">Upload & Activate Banner</button>
+  </form>
+</div>
+
+<!-- Banners List -->
+<div class="sa-card">
+  <h2 class="sa-section-title">Configured Hero Banners</h2>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Preview</th>
+          <th>Page</th>
+          <th>Headline & Tagline</th>
+          <th>CTA Button</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in banners %}
+        <tr id="banner-row-{{ b.id }}">
+          <td style="width: 120px;">
+            {% if b.image %}
+              <img src="{{ b.image.url }}" alt="{{ b.title }}" style="width:100px; height:60px; object-fit:cover; border-radius:6px; border:1px solid #E7E5E4;">
+            {% else %}
+              <span style="color:#78716C; font-size:12px;">No image</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="sa-badge" style="background:#F5F5F4; color:#1C1917; font-weight:600;">
+              {{ b.get_target_page_display }}
+            </span>
+          </td>
+          <td>
+            <div style="font-weight:600; color:#1C1917;">{{ b.title }}</div>
+            {% if b.subtitle %}
+              <div style="font-size:12px; color:#78716C; margin-top:2px;">{{ b.subtitle }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <span style="font-size:13px; color:#0F766E;">{{ b.cta_label }}</span>
+            <div style="font-size:11px; color:#78716C;">{{ b.cta_url }}</div>
+          </td>
+          <td>{{ b.sort_order }}</td>
+          <td>
+            <span id="status-badge-{{ b.id }}" class="sa-badge {% if b.is_active %}sa-badge-active{% else %}sa-badge-inactive{% endif %}">
+              {% if b.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+          </td>
+          <td style="white-space:nowrap;">
+            <button type="button" class="sa-btn sa-btn-sm sa-btn-secondary" onclick="toggleBanner('{{ b.id }}')">
+              Toggle Status
+            </button>
+            <button type="button" class="sa-btn sa-btn-sm sa-btn-danger" style="margin-left:4px;" onclick="deleteBanner('{{ b.id }}')">
+              Delete
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align:center; color:#78716C; padding:24px;">
+            No custom banners created yet. The website is currently displaying default fallback hero assets.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  async function toggleBanner(bannerId) {
+    try {
+      const res = await fetch(`/super-admin/banners/${bannerId}/toggle/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const badge = document.getElementById(`status-badge-${bannerId}`);
+        if (data.is_active) {
+          badge.className = 'sa-badge sa-badge-active';
+          badge.textContent = 'Active';
+        } else {
+          badge.className = 'sa-badge sa-badge-inactive';
+          badge.textContent = 'Inactive';
+        }
+      } else {
+        alert(data.error || 'Failed to toggle banner.');
+      }
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  async function deleteBanner(bannerId) {
+    if (!confirm('Are you sure you want to delete this hero banner?')) return;
+    try {
+      const res = await fetch(`/super-admin/banners/${bannerId}/delete/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const row = document.getElementById(`banner-row-${bannerId}`);
+        if (row) row.remove();
+      } else {
+        alert(data.error || 'Failed to delete banner.');
+      }
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+</script>
+{% endblock %}

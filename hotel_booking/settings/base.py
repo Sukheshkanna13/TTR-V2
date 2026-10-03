@@ -227,8 +227,12 @@ DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER", default="noreply@hotelbooking.com
 # =============================================================================
 
 REST_FRAMEWORK = {
+    # Standard SessionAuthentication enforces CSRF on authenticated requests.
+    # The templates already send X-CSRFToken. Anonymous endpoints (login, register,
+    # OTP) and the Razorpay/Channex webhooks are unauthenticated, so DRF does not
+    # apply the check to them. The hold-release endpoint opts out on purpose.
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "accounts.backends.CsrfExemptSessionAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
@@ -276,6 +280,10 @@ LOGIN_LOCK_DURATION_MINUTES = 15
 
 # Booking hold duration
 HOLD_DURATION_MINUTES = config("HOLD_DURATION_MINUTES", default=10, cast=int)
+
+# Online booking bounds (also cap the per-night price loop on the public search)
+MAX_STAY_NIGHTS = config("MAX_STAY_NIGHTS", default=90, cast=int)
+MAX_ADVANCE_BOOKING_DAYS = config("MAX_ADVANCE_BOOKING_DAYS", default=730, cast=int)
 
 
 # =============================================================================

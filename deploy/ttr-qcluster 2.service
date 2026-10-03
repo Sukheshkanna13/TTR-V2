@@ -1,0 +1,20 @@
+[Unit]
+Description=TTR-V2 django-q worker (hold expiry, email, loyalty sweep)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+User=ttr
+Group=ttr
+WorkingDirectory=/srv/ttr/app
+EnvironmentFile=/etc/ttr/ttr.env
+ExecStart=/srv/ttr/venv/bin/python manage.py qcluster
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/srv/ttr
+
+[Install]
+WantedBy=multi-user.target

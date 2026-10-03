@@ -511,6 +511,16 @@ class Booking(models.Model):
             return False
         return timezone.now() >= self.hold_expires_at
 
+    def release_coupon(self):
+        """
+        Return a coupon reserved on this hold ("applied") to "active" so the
+        guest can use it again. A redeemed coupon (paid booking) is untouched.
+        Call whenever a pending booking ends without payment.
+        """
+        if self.coupon and self.coupon.status == "applied":
+            self.coupon.status = "active"
+            self.coupon.save(update_fields=["status"])
+
     def expire_if_needed(self):
         """
         Auto-expire this booking if the hold has timed out.
@@ -518,9 +528,7 @@ class Booking(models.Model):
         """
         if self.is_hold_expired:
             self.status = "expired"
-            if self.coupon and self.coupon.status == "applied":
-                self.coupon.status = "active"
-                self.coupon.save(update_fields=["status"])
+            self.release_coupon()
             self.save(update_fields=["status"])
             return True
         return False
@@ -534,9 +542,7 @@ class Booking(models.Model):
             return False
         self.status = "failed" if reason == "payment_failed" else "expired"
         self.hold_expires_at = None
-        if self.coupon and self.coupon.status == "applied":
-            self.coupon.status = "active"
-            self.coupon.save(update_fields=["status"])
+        self.release_coupon()
         self.save(update_fields=["status", "hold_expires_at"])
         return True
 

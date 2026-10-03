@@ -5,6 +5,7 @@ Razorpay client utilities and email helpers for payments.
 import hashlib
 import hmac
 import logging
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.conf import settings
 from django.core.mail import EmailMessage, send_mail
@@ -13,6 +14,18 @@ from django.template.loader import render_to_string
 import razorpay
 
 logger = logging.getLogger(__name__)
+
+def inr_to_paise(amount_inr):
+    """
+    Convert an INR amount to integer paise using exact Decimal arithmetic.
+
+    Never use int(float(x) * 100): float(1.13) * 100 is 112.99999999999999 and
+    truncates to 112, which under-charges the guest and later fails the
+    webhook amount reconciliation (payments.services), releasing a paid hold.
+    """
+    paise = Decimal(str(amount_inr)) * 100
+    return int(paise.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
 
 # =========================================================================
 # Razorpay Client
@@ -42,7 +55,7 @@ def create_razorpay_order(amount_inr, booking_id):
     client = get_razorpay_client()
 
     # Razorpay expects amount in paise (1 INR = 100 paise)
-    amount_paise = int(float(amount_inr) * 100)
+    amount_paise = inr_to_paise(amount_inr)
 
     order_data = {
         "amount": amount_paise,
@@ -68,7 +81,7 @@ def refund_razorpay_payment(payment_id, amount_inr=None):
     
     data = {}
     if amount_inr:
-        data["amount"] = int(float(amount_inr) * 100)
+        data["amount"] = inr_to_paise(amount_inr)
         
     try:
         refund = client.payment.refund(payment_id, data)
