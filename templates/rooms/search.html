@@ -20,7 +20,6 @@
   }
   /* Bigger, editorial room cards (reference search.jsx) */
   #results .tt-card {
-    height: 220px;
     min-height: 220px;
     display: flex;
     flex-direction: row;
@@ -35,6 +34,39 @@
   #results .tt-card:hover {
     box-shadow: 0 6px 20px rgba(10, 22, 40, 0.08);
   }
+  /* Card content: fixed inner padding, grows with content, footer pinned to bottom */
+  #results .tt-card-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    box-sizing: border-box;
+  }
+  #results .tt-card-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  #results .tt-card-main .tt-eyebrow { font-size: 11px; }
+  #results .tt-card-title {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  #results .tt-card-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  #results .tt-card-chips .tt-chip { font-size: 12px; padding: 5px 10px; white-space: nowrap; }
+  #results .tt-chip-more { font-size: 12px; color: var(--accent); font-weight: 500; padding: 5px 4px; }
+  #results .tt-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  #results .tt-card-footer .tt-btn { flex-shrink: 0; }
+  #results .tt-card-price { font-size: 18px; }
+  #results .tt-card-unit { font-size: 11px; margin-top: 2px; }
   #results .tt-card-image-wrap {
     flex: 0 0 290px;
     position: relative;
@@ -66,6 +98,8 @@
       height: auto !important;
       min-height: 0;
     }
+    #results .tt-card-content { padding: 16px; }
+    #results .tt-card-footer { flex-wrap: wrap; }
     #results .tt-card-image-wrap {
       flex: 0 0 200px !important;
       height: 200px !important;
@@ -352,11 +386,7 @@
     if (!s) return '';
     let badges = [];
 
-    if (s.scarcity_badge) {
-      const isCrit = s.scarcity_level === 'critical';
-      const bg = isCrit ? '#dc2626' : '#d97706';
-      badges.push(`<span style="background:${bg};color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,0.22);">${s.scarcity_badge}</span>`);
-    } else if (s.high_demand_badge) {
+    if (s.high_demand_badge) {
       badges.push(`<span style="background:#ea580c;color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,0.22);">${s.high_demand_badge}</span>`);
     }
 
@@ -454,22 +484,13 @@
         const detailUrl   = roomDetailUrl(room.id);
         const typeLabel   = room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1);
         const amenityChips = room.amenities_list.slice(0, 4)
-          .map(a => `<span class="tt-chip tt-chip-tonal" style="font-size:12px;padding:5px 10px;">${a}</span>`)
+          .map(a => `<span class="tt-chip tt-chip-tonal">${a}</span>`)
           .join('');
         const extraChips = room.amenities_list.length > 4
-          ? `<span style="font-size:12px;color:var(--accent);font-weight:500;padding:5px 4px;">+${room.amenities_list.length - 4} more</span>`
+          ? `<span class="tt-chip-more">+${room.amenities_list.length - 4} more</span>`
           : '';
 
         const s = room.ux_signals || {};
-        let inlineScarcity = '';
-        if (s.scarcity_badge) {
-          const color = s.scarcity_level === 'critical' ? '#dc2626' : '#d97706';
-          inlineScarcity = `<div style="font-size:12px;color:${color};font-weight:600;display:flex;align-items:center;gap:4px;margin-top:5px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            ${s.scarcity_badge}
-          </div>`;
-        }
-
         const card = document.createElement('div');
         card.className = 'tt-card';
         card.onclick = (e) => {
@@ -482,18 +503,17 @@
             ${roomImageHTML(room)}
             <div class="tt-card-tags"><span class="tt-tag">${typeLabel}</span></div>
           </div>
-          <div style="flex:1;padding:20px 24px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;">
-            <div>
-              <div class="tt-eyebrow" style="font-size:11px;">${room.city} &middot; Max ${room.capacity} guests</div>
-              <h3 class="tt-h3" style="margin-top:4px;margin-bottom:4px;font-size:20px;line-height:1.2;">${room.name}</h3>
-              <div style="margin-bottom:6px;">${starHTML(room.property_rating)}</div>
-              ${inlineScarcity}
-              <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">${amenityChips}${extraChips}</div>
+          <div class="tt-card-content">
+            <div class="tt-card-main">
+              <div class="tt-eyebrow">${room.city} &middot; Max ${room.capacity} guests</div>
+              <h3 class="tt-h3 tt-card-title">${room.name}</h3>
+              <div>${starHTML(room.property_rating)}</div>
+              <div class="tt-card-chips">${amenityChips}${extraChips}</div>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);gap:16px;">
+            <div class="tt-card-footer">
               <div>
-                <div class="tt-card-price" style="font-size:18px;">₹${Number(room.price_per_night).toLocaleString('en-IN')}</div>
-                <div class="tt-muted" style="font-size:11px;margin-top:2px;">per night</div>
+                <div class="tt-card-price">₹${Number(room.price_per_night).toLocaleString('en-IN')}</div>
+                <div class="tt-muted tt-card-unit">per night</div>
               </div>
               <a href="${detailUrl}" class="tt-btn tt-btn-primary tt-btn-sm">Book now &rarr;</a>
             </div>

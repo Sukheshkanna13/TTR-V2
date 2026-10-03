@@ -157,6 +157,12 @@
 
     <!-- Dropdown / mobile menu -->
     <div class="tt-mobile-menu" id="mobileMenu" style="display:none;">
+      <div style="padding-bottom:12px;margin-bottom:8px;border-bottom:1px solid var(--line);">
+        <a href="{% url 'core:home' %}" class="tt-logo-split" style="text-decoration:none;">
+          <img src="{% static 'images/logo-left.png' %}" alt="Temple and Towns Resorts logo" class="tt-logo-left-img" style="height:36px;" loading="lazy">
+          <img src="{% static 'images/logo-half.png' %}" alt="Temple and Towns Resorts" class="tt-logo-half-img" style="height:36px;" loading="lazy">
+        </a>
+      </div>
       <a href="{% url 'rooms:search-page' %}" class="tt-mobile-link">Stays</a>
       <a href="{% url 'core:things-to-do' %}" class="tt-mobile-link">Things to do</a>
       <a href="{% url 'core:retreat' %}" class="tt-mobile-link">Nature Retreat</a>

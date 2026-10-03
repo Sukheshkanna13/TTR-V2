@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -428,8 +429,13 @@ input[type=number] {
 <div class="ea-layout">
   <aside class="ea-sidebar">
     <div class="ea-sidebar-header">
-      <span class="ea-brand">Temples & Towns</span>
-      <span class="ea-role">Staff Portal</span>
+      <a href="/admin-portal/dashboard/" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;">
+        <img src="{% static 'images/logo-left.png' %}" alt="Temples & Towns" style="height:32px;width:auto;mix-blend-mode:multiply;" loading="lazy">
+        <div>
+          <span class="ea-brand" style="display:block;line-height:1.2;">Temples & Towns</span>
+          <span class="ea-role" style="display:block;">Staff Portal</span>
+        </div>
+      </a>
     </div>
     <div class="ea-sidebar-body">
       <div class="ea-nav-group">Operations</div>

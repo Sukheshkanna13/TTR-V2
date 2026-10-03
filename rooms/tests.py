@@ -400,48 +400,31 @@ class RoomUXSignalsTest(TestCase):
             operational_status='available', rating=Decimal('4.8'),
         )
 
-    def test_scarcity_calculation_levels(self):
+    def test_remaining_rooms_count_has_no_scarcity_badge(self):
         from rooms.services import compute_bulk_ux_signals, get_room_ux_signals
         today = timezone.now().date()
         ci = today + timedelta(days=10)
         co = today + timedelta(days=12)
 
-        # 1. With 3 rooms total and 0 booked -> 3 remaining -> no scarcity badge
         signals = compute_bulk_ux_signals([self.room1, self.room2, self.room3], ci, co)
         sig1 = signals.get(self.room1.id)
-        self.assertIsNotNone(sig1)
         self.assertEqual(sig1['remaining_rooms'], 3)
-        self.assertIsNone(sig1['scarcity_badge'])
-        self.assertEqual(sig1['scarcity_level'], 'normal')
         self.assertTrue(sig1['is_top_rated'])
         self.assertIn('Guest Favourite', sig1['top_rated_badge'])
 
-        # 2. Book 1 room -> 2 remaining -> warning scarcity badge
-        Booking.objects.create(
-            room=self.room1, user=self.user, check_in=ci, check_out=co,
-            guests=1, total_price=Decimal('10000'), status='confirmed',
-        )
-        signals = compute_bulk_ux_signals([self.room2, self.room3], ci, co)
-        sig2 = signals.get(self.room2.id)
-        self.assertEqual(sig2['remaining_rooms'], 2)
-        self.assertEqual(sig2['scarcity_level'], 'warning')
-        self.assertEqual(sig2['scarcity_badge'], 'Hurry, only 2 rooms left!')
-
-        # 3. Book 2nd room -> 1 remaining -> critical scarcity badge
-        Booking.objects.create(
-            room=self.room2, user=self.user, check_in=ci, check_out=co,
-            guests=1, total_price=Decimal('10000'), status='confirmed',
-        )
-        signals = compute_bulk_ux_signals([self.room3], ci, co)
-        sig3 = signals.get(self.room3.id)
+        for room in (self.room1, self.room2):
+            Booking.objects.create(
+                room=room, user=self.user, check_in=ci, check_out=co,
+                guests=1, total_price=Decimal('10000'), status='confirmed',
+            )
+        sig3 = compute_bulk_ux_signals([self.room3], ci, co)[self.room3.id]
         self.assertEqual(sig3['remaining_rooms'], 1)
-        self.assertEqual(sig3['scarcity_level'], 'critical')
-        self.assertEqual(sig3['scarcity_badge'], '⚡ Only 1 room left for your dates!')
+        # Urgency messaging was removed from the design language.
+        self.assertNotIn('scarcity_badge', sig3)
+        self.assertNotIn('scarcity_level', sig3)
 
-        # Test single room get_room_ux_signals returns the same
         single_sig = get_room_ux_signals(self.room3, ci, co)
         self.assertEqual(single_sig['remaining_rooms'], 1)
-        self.assertEqual(single_sig['scarcity_level'], 'critical')
 
     def test_high_demand_recent_bookings(self):
         from rooms.services import compute_bulk_ux_signals
@@ -484,7 +467,7 @@ class RoomUXSignalsTest(TestCase):
         self.assertIn('ux_signals', first_room)
         signals = first_room['ux_signals']
         self.assertIn('remaining_rooms', signals)
-        self.assertIn('scarcity_level', signals)
+        self.assertNotIn('scarcity_level', signals)
         self.assertTrue(signals['is_top_rated'])
 
     def test_room_detail_view_returns_ux_signals(self):

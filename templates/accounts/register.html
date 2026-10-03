@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Create account — Temple and Towns Resorts{% endblock %}
 
 {% block content %}
@@ -6,9 +7,10 @@
   <div style="width:100%;max-width:440px;">
 
     <div style="text-align:center;margin-bottom:32px;">
-      <div style="font-size:22px;font-weight:700;letter-spacing:-.03em;color:var(--ink);margin-bottom:8px;">
-        Temple and Towns Resorts
-      </div>
+      <a href="{% url 'core:home' %}" class="tt-logo-split" style="text-decoration:none;margin-bottom:16px;display:inline-flex;">
+        <img src="{% static 'images/logo-left.png' %}" alt="Temple and Towns Resorts" class="tt-logo-left-img" style="height:46px;" loading="lazy">
+        <img src="{% static 'images/logo-half.png' %}" alt="Temple and Towns Resorts" class="tt-logo-half-img" style="height:46px;" loading="lazy">
+      </a>
       <h1 id="pageHeading" style="font-size:26px;font-weight:700;letter-spacing:-.025em;color:var(--ink);margin:0 0 8px;">Create your account</h1>
       <p id="pageSubheading" style="font-size:14px;color:var(--text-muted);margin:0;">Join to unlock curated stays and member rates.</p>
     </div>

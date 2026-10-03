@@ -153,7 +153,7 @@ def create_walk_in_booking(
 
 def compute_bulk_ux_signals(rooms, check_in=None, check_out=None, unavailable_ids=None):
     """
-    Computes real-time scarcity, demand, and social-proof UX signals in bulk.
+    Computes real-time demand and social-proof UX signals in bulk.
     Executes in O(1) database queries regardless of the number of rooms.
     Returns: dict mapping room.id -> dict of signal properties.
     """
@@ -166,7 +166,7 @@ def compute_bulk_ux_signals(rooms, check_in=None, check_out=None, unavailable_id
     room_list = list(rooms)
     property_ids = {r.property_id for r in room_list if r.property_id}
 
-    # 1. Scarcity math: available rooms per (property_id, room_type)
+    # 1. Availability math: available rooms per (property_id, room_type)
     avail_map = {}
 
     if check_in and check_out and property_ids:
@@ -209,20 +209,9 @@ def compute_bulk_ux_signals(rooms, check_in=None, check_out=None, unavailable_id
         prop_id = r.property_id
         rtype = r.room_type
 
-        # Scarcity
         remaining = None
-        scarcity_badge = None
-        scarcity_level = "normal"
-
         if check_in and check_out and prop_id:
             remaining = avail_map.get((prop_id, rtype), 0)
-
-            if remaining == 1:
-                scarcity_badge = "⚡ Only 1 room left for your dates!"
-                scarcity_level = "critical"
-            elif remaining == 2:
-                scarcity_badge = "Hurry, only 2 rooms left!"
-                scarcity_level = "warning"
 
         # Demand
         recent_count = recent_map.get((prop_id, rtype), 0) if prop_id else 0
@@ -244,8 +233,6 @@ def compute_bulk_ux_signals(rooms, check_in=None, check_out=None, unavailable_id
         signals_by_id[r.id] = {
             "remaining_count": remaining,
             "remaining_rooms": remaining,
-            "scarcity_badge": scarcity_badge,
-            "scarcity_level": scarcity_level,
             "is_high_demand": is_high_demand,
             "recent_bookings_count": recent_count,
             "high_demand_badge": high_demand_badge,

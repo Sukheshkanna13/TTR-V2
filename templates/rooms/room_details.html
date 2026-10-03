@@ -388,22 +388,6 @@
       const signals = room.ux_signals || {};
       let bannerHtml = '';
 
-      if (signals.scarcity_badge) {
-        const isCrit = signals.scarcity_level === 'critical';
-        const color = isCrit ? '#b91c1c' : '#b45309';
-        const bg = isCrit ? '#fef2f2' : '#fffbeb';
-        const border = isCrit ? '#fecaca' : '#fde68a';
-        bannerHtml += `
-          <div style="background:${bg};border:1px solid ${border};padding:10px 12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px;">
-            <span style="font-size:16px;line-height:1.2;">${isCrit ? '⚡' : '⏳'}</span>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:${color};letter-spacing:-.01em;">${signals.scarcity_badge}</div>
-              <div style="font-size:12px;color:#4b5563;margin-top:2px;">Rooms for these dates sell out fast. Lock your rate now.</div>
-            </div>
-          </div>
-        `;
-      }
-
       if (signals.is_high_demand && signals.high_demand_badge) {
         bannerHtml += `
           <div style="background:#fff7ed;border:1px solid #fed7aa;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
