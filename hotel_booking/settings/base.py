@@ -113,12 +113,28 @@ WSGI_APPLICATION = "hotel_booking.wsgi.application"
 # DATABASE
 # =============================================================================
 
-# Default to MySQL for local dev; Render/Hostinger prod sets DATABASE_URL automatically.
-# Falls back to SQLite when DATABASE_URL is unset or blank (e.g. local dev without MySQL).
-_db_url = config("DATABASE_URL", default="") or "sqlite:///db.sqlite3"
-DATABASES = {
-    "default": dj_database_url.parse(_db_url, conn_max_age=600)
-}
+# Default to MySQL (ttv1) for local dev; if DATABASE_URL is set (e.g. Render/prod), parse that.
+_db_url = config("DATABASE_URL", default="")
+if _db_url:
+    DATABASES = {
+        "default": dj_database_url.parse(_db_url, conn_max_age=600)
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": config("DB_NAME", default="ttv1"),
+            "USER": config("DB_USER", default="root"),
+            "PASSWORD": config("DB_PASSWORD", default="root"),
+            "HOST": config("DB_HOST", default="localhost"),
+            "PORT": config("DB_PORT", default="3306"),
+            "OPTIONS": {
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
+
+
 
 # =============================================================================
 # CUSTOM USER MODEL
