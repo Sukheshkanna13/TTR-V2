@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 
 from django.core.paginator import Paginator
@@ -10,6 +11,8 @@ from django.views.decorators.http import require_POST
 from rooms.models import Booking, Room, RoomImage, OTABlock, RoomRate, Property
 from .decorators import require_employee
 from core.constants import UNKNOWN_ACTION_ERR
+
+logger = logging.getLogger(__name__)
 NOT_ASSIGNED_MSG = 'Not assigned.'
 
 

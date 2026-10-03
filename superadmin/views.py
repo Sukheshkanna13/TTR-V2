@@ -1,4 +1,5 @@
 import json
+import logging
 import secrets
 from decimal import Decimal
 from django.contrib.auth.hashers import make_password
@@ -15,6 +16,8 @@ from .models import AuditLog, PropertyTaxConfig
 
 from accounts.models import User
 from core.constants import UNKNOWN_ACTION_ERR, REQ_TO_BOOK
+
+logger = logging.getLogger(__name__)
 
 
 def _log(request, action, target_user=None, detail=''):
@@ -722,8 +725,11 @@ def bookings_list(request):
             Q(booking_reference__icontains=q)
         )
 
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     properties = Property.objects.filter(is_active=True).order_by('name')
-    
+
     from payments.models import Payment
     all_rooms = Room.objects.filter(is_active=True).select_related('property').order_by('property__name', 'name')
 
