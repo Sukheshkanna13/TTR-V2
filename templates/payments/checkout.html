@@ -478,6 +478,7 @@
         amount:      orderData.order.amount,
         currency:    orderData.order.currency,
         name:        'Temple and Towns Resorts',
+        image:       globalThis.location.origin + "{% static 'images/logo-left.png' %}",
         description: `Booking: ${orderData.booking.room_name}`,
         order_id:    orderData.order.order_id,
         handler: async (response) => {

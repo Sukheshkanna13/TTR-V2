@@ -11,6 +11,8 @@ from django.conf import settings
 from django.core.mail import EmailMessage, send_mail
 from django.template.loader import render_to_string
 
+from core.utils import email_logo_url
+
 import razorpay
 
 logger = logging.getLogger(__name__)
@@ -170,6 +172,7 @@ def send_booking_confirmation_email(booking_or_id):
                 "booking": booking,
                 "room": booking.room,
                 "user": booking.user,
+                "logo_url": email_logo_url(),
             },
         )
 
@@ -220,6 +223,7 @@ def send_invoice_email(booking_or_id):
                 "room": booking.room,
                 "guest": booking.user,
                 "num_nights": num_nights,
+                "logo_url": email_logo_url(),
             },
         )
         email = EmailMessage(

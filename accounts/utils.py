@@ -14,6 +14,8 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
 
+from core.utils import email_logo_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -202,7 +204,7 @@ def send_otp_email(email: str, otp_code: str) -> bool:
     try:
         html_message = render_to_string(
             "emails/otp_email.html",
-            {"otp": otp_code, "year": timezone.now().year},
+            {"otp": otp_code, "year": timezone.now().year, "logo_url": email_logo_url()},
         )
         plain_message = strip_tags(html_message)
     except Exception:

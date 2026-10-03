@@ -278,6 +278,10 @@ OTP_MAX_ATTEMPTS = 3
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_LOCK_DURATION_MINUTES = 15
 
+# Public site origin (https://example.com, no trailing slash). Used to build
+# absolute URLs in emails, e.g. the logo. Empty = emails omit the logo image.
+SITE_URL = config("SITE_URL", default="").rstrip("/")
+
 # Booking hold duration
 HOLD_DURATION_MINUTES = config("HOLD_DURATION_MINUTES", default=10, cast=int)
 
