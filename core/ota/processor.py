@@ -207,7 +207,7 @@ def _handle_booking_created(data: Dict[str, Any]) -> Dict[str, Any]:
     logger.info(f"Created OTA booking {booking.booking_reference} for {guest_user.email} (OTA ID: {ota_id})")
 
     # Outbound inventory update
-    _enqueue_inventory_sync(room.room_type, check_in, check_out)
+    _enqueue_inventory_sync(room.room_type, check_in, check_out, property_id=room.property_id)
 
     return {
         "success": True,
@@ -287,8 +287,8 @@ def _handle_booking_modified(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Outbound inventory update for old and new ranges
     if dates_changed:
-        _enqueue_inventory_sync(booking.room.room_type, old_ci, old_co)
-        _enqueue_inventory_sync(booking.room.room_type, new_ci, new_co)
+        _enqueue_inventory_sync(booking.room.room_type, old_ci, old_co, property_id=booking.room.property_id)
+        _enqueue_inventory_sync(booking.room.room_type, new_ci, new_co, property_id=booking.room.property_id)
 
     return {
         "success": True,
@@ -320,12 +320,12 @@ def _handle_booking_cancelled(data: Dict[str, Any]) -> Dict[str, Any]:
     logger.info(f"Cancelled OTA booking {booking.booking_reference} (OTA ID: {ota_id})")
 
     # Restore inventory on OTA channels
-    _enqueue_inventory_sync(booking.room.room_type, booking.check_in, booking.check_out)
+    _enqueue_inventory_sync(booking.room.room_type, booking.check_in, booking.check_out, property_id=booking.room.property_id)
 
     return {"success": True, "action": "cancelled", "booking_id": str(booking.id)}
 
 
-def _enqueue_inventory_sync(room_type: str, check_in: date, check_out: date):
+def _enqueue_inventory_sync(room_type: str, check_in: date, check_out: date, property_id=None):
     """
     Queue background task for outbound inventory update.
     """
@@ -336,11 +336,12 @@ def _enqueue_inventory_sync(room_type: str, check_in: date, check_out: date):
             room_type,
             check_in.isoformat(),
             check_out.isoformat(),
+            property_id,
         )
     except Exception as e:
         logger.warning(f"Could not enqueue async inventory sync (running synchronously if possible): {e}")
         try:
             from rooms.tasks import sync_ota_inventory_for_dates
-            sync_ota_inventory_for_dates(room_type, check_in.isoformat(), check_out.isoformat())
+            sync_ota_inventory_for_dates(room_type, check_in.isoformat(), check_out.isoformat(), property_id)
         except Exception as sync_err:
             logger.error(f"Synchronous inventory sync failed: {sync_err}")
