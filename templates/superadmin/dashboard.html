@@ -221,15 +221,33 @@ function refreshHoldsTable(holds) {
     const tr = document.createElement('tr');
     tr.id = 'hold-' + h.id;
     tr.dataset.expires = h.expires_at || '';
-    tr.innerHTML = `
-      <td><code>${h.reference}</code></td>
-      <td>${h.guest}</td>
-      <td>${h.room}</td>
-      <td>${h.property}</td>
-      <td>${h.check_in}</td>
-      <td class="hold-timer" style="font-variant-numeric:tabular-nums;font-weight:600;"></td>
-      <td><button class="sa-btn sa-btn-sm sa-btn-danger"
-                  onclick="cancelBooking('${h.id}','hold')">Cancel hold</button></td>`;
+    const addCell = (value, wrapCode) => {
+      const td = document.createElement('td');
+      if (wrapCode) {
+        const code = document.createElement('code');
+        code.textContent = value == null ? '' : value;
+        td.appendChild(code);
+      } else {
+        td.textContent = value == null ? '' : value;
+      }
+      tr.appendChild(td);
+    };
+    addCell(h.reference, true);
+    addCell(h.guest);
+    addCell(h.room);
+    addCell(h.property);
+    addCell(h.check_in);
+    const timerTd = document.createElement('td');
+    timerTd.className = 'hold-timer';
+    timerTd.style.cssText = 'font-variant-numeric:tabular-nums;font-weight:600;';
+    tr.appendChild(timerTd);
+    const actionTd = document.createElement('td');
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'sa-btn sa-btn-sm sa-btn-danger';
+    cancelBtn.textContent = 'Cancel hold';
+    cancelBtn.addEventListener('click', () => cancelBooking(h.id, 'hold'));
+    actionTd.appendChild(cancelBtn);
+    tr.appendChild(actionTd);
     tbody.appendChild(tr);
   });
 }

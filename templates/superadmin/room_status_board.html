@@ -64,7 +64,7 @@ async function updateRoomStatus(roomId, newStatus, selectEl) {
     const color = STATUS_COLORS[newStatus] || '#78716C'; /* var(--c-text-muted) literal: concatenated with hex alpha suffixes below */
     const label = selectEl.options[selectEl.selectedIndex].text;
     const badge = card.querySelector('.status-badge');
-    if (badge) badge.innerHTML = `<span class="sa-badge" style="background:${color}20;color:${color};border:1px solid ${color}40;">${label}</span>`;
+    if (badge) badge.innerHTML = `<span class="sa-badge" style="background:${escapeHtml(color)}20;color:${escapeHtml(color)};border:1px solid ${escapeHtml(color)}40;">${escapeHtml(label)}</span>`;
   }
 }
 

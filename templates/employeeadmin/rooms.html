@@ -28,10 +28,12 @@
         <option value="deluxe">Deluxe</option>
       </select>
     </div>
+    {% if fin != 'C' %}
     <div>
       <label class="ea-label" for="createPrice">Price / Night (₹)</label>
       <input class="ea-input" type="number" name="price_per_night" id="createPrice" step="1" min="1" required style="width:120px;">
     </div>
+    {% endif %}
     <div>
       <label class="ea-label" for="createCapacity">Capacity</label>
       <input class="ea-input" type="number" name="capacity" id="createCapacity" value="2" min="1" style="width:80px;">
@@ -73,7 +75,7 @@
         <th>Room</th>
         <th>Property</th>
         <th>Type</th>
-        <th>Price / Night</th>
+        {% if fin != 'C' %}<th>Price / Night</th>{% endif %}
         <th>Capacity</th>
         <th>Rating</th>
         <th>Amenities</th>
@@ -88,7 +90,7 @@
       <td style="font-weight:600;">{{ r.name }}</td>
       <td>{{ r.property.name }}</td>
       <td>{{ r.get_room_type_display }}</td>
-      <td>₹{{ r.price_per_night|floatformat:0 }}</td>
+      {% if fin != 'C' %}<td>₹{{ r.price_per_night|floatformat:0 }}</td>{% endif %}
       <td>{{ r.capacity }}</td>
       <td>{{ r.rating|default:"—" }}</td>
       <td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;color:#99f6e4;">{{ r.amenities|default:"—" }}</td>
@@ -105,7 +107,7 @@
         </span>
       </td>
       <td style="white-space:nowrap;">
-        <button class="ea-btn ea-btn-sm ea-btn-primary" data-id="{{ r.id }}" data-name="{{ r.name }}" data-type="{{ r.room_type }}" data-price="{{ r.price_per_night }}" data-capacity="{{ r.capacity }}" data-amenities="{{ r.amenities }}" data-description="{{ r.description }}" data-propid="{{ r.property_id }}" data-rating="{{ r.rating|default_if_none:'' }}" onclick="openEditModal(this)">Edit</button>
+        <button class="ea-btn ea-btn-sm ea-btn-primary" data-id="{{ r.id }}" data-name="{{ r.name }}" data-type="{{ r.room_type }}" {% if fin != 'C' %}data-price="{{ r.price_per_night }}" {% endif %}data-capacity="{{ r.capacity }}" data-amenities="{{ r.amenities }}" data-description="{{ r.description }}" data-propid="{{ r.property_id }}" data-rating="{{ r.rating|default_if_none:'' }}" onclick="openEditModal(this)">Edit</button>
         <button class="ea-btn ea-btn-sm" onclick="toggleActive('{{ r.id }}', this)">
           {% if r.is_active %}Deactivate{% else %}Activate{% endif %}
         </button>
@@ -116,7 +118,7 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="10" style="color:#5eead4;padding:24px 12px;opacity:.7;">No rooms found.</td></tr>
+    <tr><td colspan="{% if fin == 'C' %}9{% else %}10{% endif %}" style="color:#5eead4;padding:24px 12px;opacity:.7;">No rooms found.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -144,10 +146,12 @@
         </div>
       </div>
       <div style="display:flex;gap:12px;">
+        {% if fin != 'C' %}
         <div>
           <label class="ea-label" for="edit-price">Price / Night (₹)</label>
           <input class="ea-input" type="number" id="edit-price" step="1" required style="width:120px;">
         </div>
+        {% endif %}
         <div>
           <label class="ea-label" for="edit-capacity">Capacity</label>
           <input class="ea-input" type="number" id="edit-capacity" min="1" required style="width:80px;">
@@ -246,7 +250,8 @@ function openEditModal(btn) {
   document.getElementById('edit-room-id').value = ds.id;
   document.getElementById('edit-name').value = ds.name;
   document.getElementById('edit-type').value = ds.type;
-  document.getElementById('edit-price').value = ds.price;
+  const priceInput = document.getElementById('edit-price');
+  if (priceInput) priceInput.value = ds.price || '';
   document.getElementById('edit-capacity').value = ds.capacity;
   document.getElementById('edit-amenities').value = ds.amenities;
   document.getElementById('edit-description').value = ds.description;
@@ -265,13 +270,15 @@ document.getElementById('editForm').addEventListener('submit', async e => {
     action: 'update_details',
     name: document.getElementById('edit-name').value,
     room_type: document.getElementById('edit-type').value,
-    price_per_night: document.getElementById('edit-price').value,
     capacity: document.getElementById('edit-capacity').value,
     amenities: document.getElementById('edit-amenities').value,
     description: document.getElementById('edit-description').value,
     property_id: document.getElementById('edit-property').value,
     rating: document.getElementById('edit-rating').value || null,
   };
+  // Fin level C staff do not see or edit prices; the input is absent.
+  const priceEl = document.getElementById('edit-price');
+  if (priceEl) payload.price_per_night = priceEl.value;
   const data = await roomAction(roomId, payload);
   if (data.message) { closeEditModal(); location.reload(); }
   else alert(data.error);

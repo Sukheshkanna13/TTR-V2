@@ -328,14 +328,18 @@ function setupAmenitiesDropdown(containerId, hiddenInputId, initialValue = '') {
   function renderOptions() {
     optionsContainer.innerHTML = '';
     currentOptions.forEach(opt => {
-      const isChecked = selectedItems.has(opt) ? 'checked' : '';
       const itemDiv = document.createElement('label');
       itemDiv.style.cssText = 'display:flex; align-items:center; gap:8px; color:var(--c-text); font-size:13px; cursor:pointer; user-select:none;';
-      itemDiv.innerHTML = `
-        <input type="checkbox" value="${opt}" ${isChecked} style="cursor:pointer;">
-        <span>${opt}</span>
-      `;
-      itemDiv.querySelector('input').addEventListener('change', updateHiddenValue);
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = opt;
+      cb.checked = selectedItems.has(opt);
+      cb.style.cursor = 'pointer';
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = opt;
+      itemDiv.appendChild(cb);
+      itemDiv.appendChild(labelSpan);
+      cb.addEventListener('change', updateHiddenValue);
       optionsContainer.appendChild(itemDiv);
     });
     updateHiddenValue();
