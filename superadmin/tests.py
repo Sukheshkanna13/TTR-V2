@@ -52,8 +52,9 @@ class DashboardLiveDataTest(TestCase):
         for hold in data['pending_holds']:
             self.assertIn('expires_at', hold, msg="Hold entry missing 'expires_at' field")
 
-    def test_today_revenue_only_includes_todays_checkins(self):
+    def test_today_revenue_sums_payments_captured_today(self):
         from rooms.models import Property, Room, Booking
+        from payments.models import Payment
         from decimal import Decimal
 
         prop = Property.objects.create(
@@ -67,22 +68,28 @@ class DashboardLiveDataTest(TestCase):
         tomorrow = today + timezone.timedelta(days=1)
         day_after = today + timezone.timedelta(days=2)
 
-        # Booking checking in today
-        Booking.objects.create(
+        b1 = Booking.objects.create(
             user=self.user, room=room,
             check_in=today, check_out=tomorrow,
             status='confirmed', total_price=Decimal('1500'), guests=1,
         )
-        # Booking checking in tomorrow (must NOT be in today_revenue)
-        Booking.objects.create(
+        b2 = Booking.objects.create(
             user=self.user, room=room,
             check_in=tomorrow, check_out=day_after,
             status='confirmed', total_price=Decimal('2000'), guests=1,
         )
+        # Captured today → counted, whatever the stay dates
+        Payment.objects.create(booking=b1, amount=Decimal('1500'), status='captured')
+        Payment.objects.create(booking=b2, amount=Decimal('2000'), status='captured')
+        # Not captured → not revenue
+        Payment.objects.create(booking=b2, amount=Decimal('999'), status='created')
+        # Captured yesterday → not today's revenue
+        old = Payment.objects.create(booking=b1, amount=Decimal('700'), status='captured')
+        Payment.objects.filter(pk=old.pk).update(created_at=timezone.now() - timezone.timedelta(days=1))
 
         res = self.client.get(reverse('superadmin:dashboard-live'))
         data = res.json()
-        self.assertAlmostEqual(data['today_revenue'], 1500.0, places=0)
+        self.assertAlmostEqual(data['today_revenue'], 3500.0, places=0)
 
     def test_active_bookings_excludes_checkouts_today(self):
         from rooms.models import Property, Room, Booking

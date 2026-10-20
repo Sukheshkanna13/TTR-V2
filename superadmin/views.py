@@ -1,10 +1,15 @@
-import json
+import datetime as dt
 import logging
 import secrets
+from collections import defaultdict
+from datetime import date, timedelta
 from decimal import Decimal
+
+from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.core.paginator import Paginator
-from django.db.models import Sum, Count, Q, F, ExpressionWrapper, DurationField
+from django.db import transaction
+from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -15,22 +20,75 @@ from .decorators import require_super_admin
 from .models import AuditLog, PropertyTaxConfig
 
 from accounts.models import User
+from accounts.role_routing import EMPLOYEE_ADMIN_ROLES
+from core.admin_utils import (
+    BadInput, audit, clean_date, clean_uuid, parse_json, to_date, to_decimal, to_int,
+)
 from core.constants import UNKNOWN_ACTION_ERR, REQ_TO_BOOK
 
 logger = logging.getLogger(__name__)
 
+# Bookings that represent real, paid stays. Operational counters (active stays,
+# arrivals, departures) deliberately stay confirmed-only.
+REVENUE_STATUSES = ('confirmed', 'completed')
+
+# Model field limits (PositiveSmallIntegerField / DecimalField(max_digits=10, 2)).
+MAX_SMALL_INT = 32767
+MAX_MONEY = Decimal('99999999.99')
+MAX_BIG_MONEY = Decimal('9999999999.99')   # DecimalField(max_digits=12, decimal_places=2)
+ARI_HORIZON_DAYS = 500
+
 
 def _log(request, action, target_user=None, detail=''):
-    AuditLog.objects.create(
-        actor=request.user,
-        action=action,
-        target_user=target_user,
-        detail=detail,
-        ip_address=request.META.get('REMOTE_ADDR'),
+    audit(request, action, target_user=target_user, detail=detail)
+
+
+def _push_ari(room_type, property_id, change_types):
+    """Queue an OTA push for every night from today over the booking horizon."""
+    from core.ota.dispatch import record_ari_change
+    today = date.today()
+    record_ari_change(
+        room_type, property_id, today, today + timedelta(days=ARI_HORIZON_DAYS),
+        change_types=change_types,
     )
 
 
+def _text(value, field, max_len=None, required=False):
+    """Coerce a client-supplied text field; reject non-strings instead of 500-ing on save."""
+    if not isinstance(value, str):
+        raise BadInput(f'{field} must be text.')
+    value = value.strip()
+    if required and not value:
+        raise BadInput(f'{field} is required.')
+    if max_len and len(value) > max_len:
+        raise BadInput(f'{field} must be at most {max_len} characters.')
+    return value
+
+
+def _uuid_list(values, field):
+    if not isinstance(values, (list, tuple)):
+        raise BadInput(f'{field} must be a list.')
+    cleaned = []
+    for v in values:
+        cv = clean_uuid(v)
+        if cv is None:
+            raise BadInput(f'Invalid id in {field}.')
+        cleaned.append(cv)
+    return cleaned
+
+
 # ── Dashboard ──────────────────────────────────────────────────────────────────
+
+def _collected_today():
+    """Money actually collected today: captured payments created today (local time)."""
+    from payments.models import Payment
+    tz_today = timezone.localdate()
+    start = timezone.make_aware(dt.datetime.combine(tz_today, dt.time.min))
+    end = start + timedelta(days=1)
+    return Payment.objects.filter(
+        status='captured', created_at__gte=start, created_at__lt=end,
+    ).aggregate(t=Sum('amount'))['t'] or 0
+
 
 @require_super_admin
 def dashboard(request):
@@ -54,13 +112,13 @@ def dashboard(request):
         status='pending',
     ).select_related('user', 'room__property').order_by('created_at')[:20])
 
-    today_revenue = todays_arrivals_qs.aggregate(t=Sum('total_price'))['t'] or 0
+    today_revenue = _collected_today()
 
     month_revenue = Booking.objects.filter(
-        status='confirmed', check_in__gte=month_start,
+        status__in=REVENUE_STATUSES, check_in__gte=month_start,
     ).aggregate(t=Sum('total_price'))['t'] or 0
 
-    total_rooms = Room.objects.count()
+    total_rooms = Room.objects.filter(is_active=True).count()
     total_guests = User.objects.filter(userprofile__role='guest').count()
 
     recent_bookings = Booking.objects.select_related(
@@ -99,9 +157,7 @@ def dashboard_live_data(request):
         status='confirmed', check_out=today,
     ).count()
 
-    today_revenue = Booking.objects.filter(
-        status='confirmed', check_in=today,
-    ).aggregate(t=Sum('total_price'))['t'] or 0
+    today_revenue = _collected_today()
 
     pending_qs = Booking.objects.filter(
         status='pending',
@@ -140,14 +196,14 @@ def dashboard_live_data(request):
 @require_super_admin
 def employees_list(request):
     employees_qs = User.objects.filter(
-        userprofile__role='employee'
+        userprofile__role__in=EMPLOYEE_ADMIN_ROLES
     ).select_related(
         'userprofile', 'userprofile__created_by'
     ).prefetch_related('userprofile__assigned_properties').order_by('-date_joined')
-    
+
     paginator = Paginator(employees_qs, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
-    
+
     properties = Property.objects.filter(is_active=True)
     return render(request, 'superadmin/employees.html', {
         'employees': page_obj,
@@ -164,7 +220,10 @@ def employee_create(request):
     fin_level = request.POST.get('fin_level', 'C')
     if fin_level not in ('A', 'B', 'C'):
         fin_level = 'C'
-    property_ids = request.POST.getlist('properties')
+    try:
+        property_ids = _uuid_list(request.POST.getlist('properties'), 'properties')
+    except BadInput as e:
+        return e.response()
 
     errors = []
     if not email or '@' not in email:
@@ -254,7 +313,7 @@ def _emp_update_fin(request, employee, data):
     return JsonResponse({'message': 'Financial level updated.'})
 
 def _emp_update_properties(request, employee, data):
-    prop_ids = data.get('property_ids', [])
+    prop_ids = _uuid_list(data.get('property_ids', []), 'property_ids')
     if hasattr(employee, 'userprofile'):
         employee.userprofile.assigned_properties.set(
             Property.objects.filter(id__in=prop_ids)
@@ -266,14 +325,17 @@ def _emp_update_properties(request, employee, data):
 @require_POST
 def employee_update(request, user_id):
     employee = get_object_or_404(User, pk=user_id)
-    data = json.loads(request.body)
+    try:
+        data = parse_json(request)
+    except BadInput as e:
+        return e.response()
     action = data.get('action')
 
     if employee == request.user and action in ('lock', 'revoke'):
         return JsonResponse({'error': 'You cannot disable your own account.'}, status=400)
 
     profile = getattr(employee, 'userprofile', None)
-    if profile and profile.role != 'employee':
+    if profile is None or profile.role not in EMPLOYEE_ADMIN_ROLES:
         return JsonResponse({'error': 'Cannot manage non-employee users.'}, status=403)
 
     handlers = {
@@ -285,10 +347,13 @@ def employee_update(request, user_id):
         'update_fin': _emp_update_fin,
         'update_properties': _emp_update_properties,
     }
-    
+
     handler = handlers.get(action)
     if handler:
-        return handler(request, employee, data)
+        try:
+            return handler(request, employee, data)
+        except BadInput as e:
+            return e.response()
 
     return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
@@ -303,9 +368,9 @@ def employee_delete(request, user_id):
         return JsonResponse({'error': 'You cannot delete your own account.'}, status=400)
 
     profile = getattr(employee, 'userprofile', None)
-    if profile and profile.role != 'employee':
+    if profile is None or profile.role not in EMPLOYEE_ADMIN_ROLES:
         return JsonResponse({'error': 'Cannot delete non-employee users.'}, status=403)
-    if profile and not profile.can_hard_delete:
+    if not profile.can_hard_delete:
         return JsonResponse(
             {'error': 'Account has activity — revoke instead of deleting.'},
             status=400,
@@ -322,25 +387,20 @@ def employee_delete(request, user_id):
 
 @require_super_admin
 def analytics(request):
-    import datetime as dt
     today = timezone.now().date()
 
-    date_from_str = request.GET.get('from', '')
-    date_to_str = request.GET.get('to', '')
-    try:
-        date_from = dt.date.fromisoformat(date_from_str) if date_from_str else today.replace(day=1)
-    except ValueError:
-        date_from = today.replace(day=1)
-    try:
-        date_to = dt.date.fromisoformat(date_to_str) if date_to_str else today
-    except ValueError:
-        date_to = today
+    date_from = clean_date(request.GET.get('from')) or today.replace(day=1)
+    date_to = clean_date(request.GET.get('to')) or today
+    range_swapped = date_from > date_to
+    if range_swapped:
+        date_from, date_to = date_to, date_from
 
-    confirmed_qs = Booking.objects.filter(
-        status='confirmed', check_in__gte=date_from, check_in__lte=date_to,
+    # Revenue, counts and the cancellation rate are attributed to the check-in date.
+    counted_qs = Booking.objects.filter(
+        status__in=REVENUE_STATUSES, check_in__gte=date_from, check_in__lte=date_to,
     )
 
-    agg = confirmed_qs.aggregate(
+    agg = counted_qs.aggregate(
         total_revenue=Sum('total_price'),
         total_bookings=Count('id'),
     )
@@ -353,39 +413,49 @@ def analytics(request):
     all_closed = total_bookings + cancelled_count
     cancellation_rate = round(cancelled_count / all_closed * 100, 1) if all_closed else 0
 
-    revenue_by_property = (
-        confirmed_qs
+    revenue_rows = list(
+        counted_qs
         .values('room__property__name', 'room__property__id')
         .annotate(revenue=Sum('total_price'), count=Count('id'))
         .order_by('-revenue')
     )
 
-    # Occupancy: confirmed booking-nights / (days_in_range * active_rooms_per_property)
-    days_in_range = max((date_to - date_from).days, 1)
+    # Occupancy: nights actually inside [date_from, date_to] / (days * active rooms).
+    days_in_range = (date_to - date_from).days + 1
+    range_end = date_to + timedelta(days=1)  # exclusive
     property_rooms = {
         p['property']: p['room_count']
         for p in Room.objects.filter(is_active=True).values('property').annotate(room_count=Count('id'))
     }
-    booked_nights_aggs = confirmed_qs.values('room__property_id').annotate(
-        t_nights=Sum(ExpressionWrapper(F('check_out') - F('check_in'), output_field=DurationField()))
-    )
-    booked_nights_by_property = {
-        item['room__property_id']: (item['t_nights'].days if item['t_nights'] else 0)
-        for item in booked_nights_aggs
-    }
+    booked_nights = defaultdict(int)
+    overlapping = Booking.objects.filter(
+        status__in=REVENUE_STATUSES, check_in__lte=date_to, check_out__gt=date_from,
+    ).values_list('room__property_id', 'check_in', 'check_out')
+    for prop_id, check_in, check_out in overlapping:
+        nights = (min(check_out, range_end) - max(check_in, date_from)).days
+        if nights > 0:
+            booked_nights[prop_id] += nights
 
-    occupancy_by_property = []
-    for row in revenue_by_property:
-        prop_id = row['room__property__id']
-        room_count = property_rooms.get(prop_id, 1)
-        capacity_nights = days_in_range * room_count
-        booked_nights = booked_nights_by_property.get(prop_id, 0)
-        occupancy_by_property.append({
-            'name': row['room__property__name'],
+    rows = {}
+    for row in revenue_rows:
+        rows[row['room__property__id']] = {
+            'name': row['room__property__name'] or 'Unassigned',
             'revenue': row['revenue'],
             'count': row['count'],
-            'occupancy': round(booked_nights / capacity_nights * 100, 1) if capacity_nights else 0,
-        })
+        }
+    missing = [pid for pid in booked_nights if pid not in rows]
+    if missing:
+        names = dict(Property.objects.filter(pk__in=[m for m in missing if m]).values_list('pk', 'name'))
+        for pid in missing:
+            rows[pid] = {'name': names.get(pid, 'Unassigned'), 'revenue': 0, 'count': 0}
+
+    occupancy_by_property = []
+    for prop_id, row in rows.items():
+        capacity_nights = days_in_range * property_rooms.get(prop_id, 0)
+        occupancy = 0
+        if capacity_nights:
+            occupancy = min(round(booked_nights.get(prop_id, 0) / capacity_nights * 100, 1), 100.0)
+        occupancy_by_property.append({**row, 'occupancy': occupancy})
 
     return render(request, 'superadmin/analytics.html', {
         'total_revenue': total_revenue,
@@ -394,91 +464,170 @@ def analytics(request):
         'occupancy_by_property': occupancy_by_property,
         'date_from': date_from,
         'date_to': date_to,
+        'range_swapped': range_swapped,
         'today': today,
     })
 
 
 # ── Tax Config ─────────────────────────────────────────────────────────────────
 
+def _parse_tax_form(post):
+    threshold = to_decimal(post.get('threshold', '7500'), 'threshold', min_value=0, max_value=MAX_MONEY)
+    low = to_decimal(post.get('low_rate_pct', '12'), 'low rate', min_value=0, max_value=28)
+    high = to_decimal(post.get('high_rate_pct', '18'), 'high rate', min_value=0, max_value=28)
+    if low > high:
+        raise BadInput('Low rate cannot be higher than the high rate.')
+    return threshold, low, high
+
+
 @require_super_admin
 def tax_config(request):
     properties = Property.objects.filter(is_active=True).prefetch_related('tax_config')
     if request.method == 'POST':
-        prop_id = request.POST.get('property_id')
+        prop_id = clean_uuid(request.POST.get('property_id'))
+        if prop_id is None:
+            messages.error(request, 'Choose a valid property.')
+            return redirect('superadmin:tax-config')
         prop = get_object_or_404(Property, pk=prop_id)
+        try:
+            threshold, low, high = _parse_tax_form(request.POST)
+        except BadInput as e:
+            messages.error(request, f'Tax config not saved: {e.message}')
+            return redirect('superadmin:tax-config')
         cfg, _ = PropertyTaxConfig.objects.get_or_create(property=prop)
-        cfg.threshold = Decimal(request.POST.get('threshold', '7500'))
-        cfg.low_rate_pct = Decimal(request.POST.get('low_rate_pct', '12'))
-        cfg.high_rate_pct = Decimal(request.POST.get('high_rate_pct', '18'))
+        old = (cfg.threshold, cfg.low_rate_pct, cfg.high_rate_pct)
+        cfg.threshold, cfg.low_rate_pct, cfg.high_rate_pct = threshold, low, high
         cfg.updated_by = request.user
         cfg.save()
-        _log(request, 'TAX_CONFIG_UPDATED', detail=f"property={prop.name}")
+        _log(request, 'TAX_CONFIG_UPDATED', detail=(
+            f"property={prop.name}, threshold {old[0]}→{threshold}, "
+            f"low {old[1]}→{low}, high {old[2]}→{high}"))
+        messages.success(request, 'Tax config saved.')
         return redirect('superadmin:tax-config')
     return render(request, 'superadmin/tax_config.html', {'properties': properties})
 
 
 # ── Loyalty Config ─────────────────────────────────────────────────────────────
+# Handlers raise BadInput on malformed input; loyalty_config turns that into a
+# flash message + redirect (the page is a plain form POST, not a fetch).
+
+def _post_property(request, field='property_id'):
+    prop_id = clean_uuid(request.POST.get(field))
+    if prop_id is None:
+        raise BadInput('Choose a valid property.')
+    return get_object_or_404(Property, pk=prop_id)
+
 
 def _handle_save_config(request):
     from loyalty.models import LoyaltyConfig
-    prop_id = request.POST.get('property_id')
-    prop = get_object_or_404(Property, pk=prop_id)
+    prop = _post_property(request)
+    first_pts = to_int(request.POST.get('first_booking_pts', 200), 'first booking points',
+                       min_value=0, max_value=1_000_000)
+    per_night = to_int(request.POST.get('pts_per_night', 100), 'points per night',
+                       min_value=0, max_value=1_000_000)
+    multiplier = to_decimal(request.POST.get('monthly_repeat_multiplier', '1.5'),
+                            'monthly repeat multiplier', min_value=0, max_value='99.99')
     cfg, _ = LoyaltyConfig.objects.get_or_create(property=prop)
-    cfg.first_booking_pts = int(request.POST.get('first_booking_pts', 200))
-    cfg.pts_per_night = int(request.POST.get('pts_per_night', 100))
-    cfg.monthly_repeat_multiplier = Decimal(request.POST.get('monthly_repeat_multiplier', '1.5'))
+    old = (cfg.first_booking_pts, cfg.pts_per_night, cfg.monthly_repeat_multiplier)
+    cfg.first_booking_pts = first_pts
+    cfg.pts_per_night = per_night
+    cfg.monthly_repeat_multiplier = multiplier
     cfg.save()
-    _log(request, 'LOYALTY_CONFIG_UPDATED', detail=f"property={prop.name}")
+    _log(request, 'LOYALTY_CONFIG_UPDATED', detail=(
+        f"property={prop.name}, first_booking_pts {old[0]}→{first_pts}, "
+        f"pts_per_night {old[1]}→{per_night}, multiplier {old[2]}→{multiplier}"))
 
 
 def _handle_save_tier(request):
     from loyalty.models import LoyaltyTier
     tier_id = request.POST.get('tier_id')
-    name = request.POST.get('name', '').strip()
-    min_pts = int(request.POST.get('min_pts', 0))
-    discount = Decimal(request.POST.get('discount_pct', '0'))
-    sort_order = int(request.POST.get('sort_order', 0))
+    name = _text(request.POST.get('name', ''), 'Tier name', max_len=50, required=True)
+    min_pts = to_int(request.POST.get('min_pts', 0), 'minimum points', min_value=0, max_value=100_000_000)
+    discount = to_decimal(request.POST.get('discount_pct', '0'), 'discount %', min_value=0, max_value=100)
+    sort_order = to_int(request.POST.get('sort_order', 0), 'sort order', min_value=0, max_value=MAX_SMALL_INT)
+    if tier_id:
+        tier_id = to_int(tier_id, 'tier id')
+    clash = LoyaltyTier.objects.filter(name=name)
+    if tier_id:
+        clash = clash.exclude(pk=tier_id)
+    if clash.exists():
+        raise BadInput(f'A tier named "{name}" already exists.')
     if tier_id:
         LoyaltyTier.objects.filter(pk=tier_id).update(
             name=name, min_pts=min_pts, discount_pct=discount, sort_order=sort_order)
     else:
         LoyaltyTier.objects.create(
             name=name, min_pts=min_pts, discount_pct=discount, sort_order=sort_order)
+    _log(request, 'LOYALTY_TIER_SAVED', detail=(
+        f"tier={name}, min_pts={min_pts}, discount_pct={discount}, sort_order={sort_order}"
+        + (f", tier_id={tier_id}" if tier_id else ", created")))
 
 
 def _handle_delete_tier(request):
     from loyalty.models import LoyaltyTier
-    LoyaltyTier.objects.filter(pk=request.POST.get('tier_id')).delete()
+    tier_id = to_int(request.POST.get('tier_id'), 'tier id')
+    tier = LoyaltyTier.objects.filter(pk=tier_id).first()
+    if tier is None:
+        return
+    detail = f"tier={tier.name}, min_pts={tier.min_pts}, discount_pct={tier.discount_pct}"
+    tier.delete()
+    _log(request, 'LOYALTY_TIER_DELETED', detail=detail)
 
 
 def _handle_save_campaign(request):
     from loyalty.models import CampaignRule
+    name = _text(request.POST.get('name', ''), 'Campaign name', max_len=100, required=True)
+    start = to_date(request.POST.get('start_date', ''), 'start date')
+    end = to_date(request.POST.get('end_date', ''), 'end date')
+    if end < start:
+        raise BadInput('Campaign end date cannot be before the start date.')
+    multiplier = to_decimal(request.POST.get('multiplier', '1'), 'multiplier',
+                            min_value=0, max_value='99.99')
     CampaignRule.objects.create(
-        name=request.POST.get('name'),
-        start_date=request.POST.get('start_date'),
-        end_date=request.POST.get('end_date'),
-        multiplier=Decimal(request.POST.get('multiplier', '1')),
-        is_active=True,
+        name=name, start_date=start, end_date=end, multiplier=multiplier, is_active=True,
     )
+    _log(request, 'LOYALTY_CAMPAIGN_SAVED',
+         detail=f"campaign={name}, {start}..{end}, multiplier={multiplier}")
 
 
 def _handle_delete_campaign(request):
     from loyalty.models import CampaignRule
-    CampaignRule.objects.filter(pk=request.POST.get('campaign_id')).delete()
+    campaign_id = to_int(request.POST.get('campaign_id'), 'campaign id')
+    campaign = CampaignRule.objects.filter(pk=campaign_id).first()
+    if campaign is None:
+        return
+    detail = f"campaign={campaign.name}, {campaign.start_date}..{campaign.end_date}"
+    campaign.delete()
+    _log(request, 'LOYALTY_CAMPAIGN_DELETED', detail=detail)
 
 
 def _handle_save_redemption_rule(request):
     from loyalty.models import CouponRedemptionRule
-    rule_id = request.POST.get('rule_id')
-    name = request.POST.get('name', '').strip()
-    points_cost = int(request.POST.get('points_cost', 100))
+    rule_id = clean_uuid(request.POST.get('rule_id')) if request.POST.get('rule_id') else None
+    if request.POST.get('rule_id') and rule_id is None:
+        raise BadInput('Invalid rule id.')
+    name = _text(request.POST.get('name', ''), 'Rule name', max_len=100)
+    points_cost = to_int(request.POST.get('points_cost', 100), 'points cost',
+                         min_value=1, max_value=100_000_000)
     discount_type = request.POST.get('discount_type', 'fixed')
-    discount_value = Decimal(request.POST.get('discount_value', '0.00'))
-    min_booking_amount = Decimal(request.POST.get('min_booking_amount', '0.00'))
+    if discount_type not in ('fixed', 'percentage'):
+        raise BadInput('Invalid discount type.')
+    discount_value = to_decimal(request.POST.get('discount_value', '0.00'), 'discount value',
+                                min_value=0, max_value=100 if discount_type == 'percentage' else MAX_MONEY)
+    min_booking_amount = to_decimal(request.POST.get('min_booking_amount', '0.00'),
+                                    'minimum booking amount', min_value=0, max_value=MAX_MONEY)
     max_discount_str = request.POST.get('max_discount_amount', '').strip()
-    max_discount_amount = Decimal(max_discount_str) if max_discount_str else None
-    validity_days = int(request.POST.get('validity_days', 30))
+    max_discount_amount = (
+        to_decimal(max_discount_str, 'max discount amount', min_value=0, max_value=MAX_MONEY)
+        if max_discount_str else None
+    )
+    validity_days = to_int(request.POST.get('validity_days', 30), 'validity days',
+                           min_value=1, max_value=3650)
     prop_id = request.POST.get('property_id') or None
+    if prop_id:
+        prop_id = clean_uuid(prop_id)
+        if prop_id is None:
+            raise BadInput('Invalid property.')
     prop = Property.objects.filter(pk=prop_id).first() if prop_id else None
 
     if rule_id:
@@ -509,14 +658,19 @@ def _handle_save_redemption_rule(request):
 
 def _handle_delete_redemption_rule(request):
     from loyalty.models import CouponRedemptionRule
-    rule_id = request.POST.get('rule_id')
+    rule_id = clean_uuid(request.POST.get('rule_id'))
+    if rule_id is None:
+        raise BadInput('Invalid rule id.')
     CouponRedemptionRule.objects.filter(pk=rule_id).delete()
     _log(request, 'REDEMPTION_RULE_DELETED', detail=f"rule_id={rule_id}")
 
 
 def _handle_toggle_redemption_rule(request):
     from loyalty.models import CouponRedemptionRule
-    rule = CouponRedemptionRule.objects.filter(pk=request.POST.get('rule_id')).first()
+    rule_id = clean_uuid(request.POST.get('rule_id'))
+    if rule_id is None:
+        raise BadInput('Invalid rule id.')
+    rule = CouponRedemptionRule.objects.filter(pk=rule_id).first()
     if rule:
         rule.is_active = not rule.is_active
         rule.save(update_fields=['is_active'])
@@ -547,7 +701,10 @@ def loyalty_config(request):
         }
         handler = handlers.get(action)
         if handler:
-            handler(request)
+            try:
+                handler(request)
+            except BadInput as e:
+                messages.error(request, f'Not saved: {e.message}')
         return redirect('superadmin:loyalty-config')
 
     return render(request, 'superadmin/loyalty_config.html', {
@@ -564,14 +721,14 @@ def loyalty_config(request):
 
 @require_super_admin
 def rooms_list(request):
-    property_filter = request.GET.get('property', '')
+    property_filter = clean_uuid(request.GET.get('property')) or ''
     rooms_qs = Room.objects.select_related('property').order_by('property__name', 'name')
     if property_filter:
         rooms_qs = rooms_qs.filter(property_id=property_filter)
-        
+
     paginator = Paginator(rooms_qs, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
-    
+
     properties = Property.objects.filter(is_active=True).order_by('name')
     return render(request, 'superadmin/rooms.html', {
         'rooms': page_obj,
@@ -580,6 +737,25 @@ def rooms_list(request):
         'property_filter': property_filter,
         'operational_choices': Room.OPERATIONAL_STATUS_CHOICES,
     })
+
+
+def _clean_room_field(field, val):
+    """Validate one editable Room field (shared by room_create and update_details)."""
+    if field == 'name':
+        return _text(val, 'Room name', max_len=100, required=True)
+    if field == 'room_type':
+        if not isinstance(val, str) or val not in dict(Room.ROOM_TYPE_CHOICES):
+            raise BadInput('Invalid room type.')
+        return val
+    if field == 'price_per_night':
+        return to_decimal(val, 'price', min_value='0.01', max_value=MAX_MONEY).quantize(Decimal('0.01'))
+    if field == 'capacity':
+        return to_int(val, 'capacity', min_value=1, max_value=20)
+    if field == 'rating':
+        if val in ('', None):
+            return Decimal('4.5')
+        return to_decimal(val, 'rating', min_value=0, max_value=5).quantize(Decimal('0.1'))
+    return _text(val, field)   # amenities, description
 
 
 def _room_set_status(request, room, data):
@@ -591,9 +767,7 @@ def _room_set_status(request, room, data):
     room.save(update_fields=['operational_status'])
     _log(request, 'ROOM_STATUS_UPDATED', detail=f"room={room.name}, status={new_status}")
     # C7.3: status change affects availability for all future dates
-    from core.ota.dispatch import record_ari_change
-    from datetime import date, timedelta
-    record_ari_change(room.room_type, room.property_id, date.today(), date.today() + timedelta(days=500), change_types=("availability",))
+    _push_ari(room.room_type, room.property_id, ("availability",))
     return JsonResponse({'message': f'Status set to {new_status}.'})
 
 def _room_toggle_active(request, room, data):
@@ -601,6 +775,8 @@ def _room_toggle_active(request, room, data):
     room.save(update_fields=['is_active'])
     state = 'activated' if room.is_active else 'deactivated'
     _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
+    # An inactive room is excluded from inventory, so OTA availability changes.
+    _push_ari(room.room_type, room.property_id, ("availability",))
     return JsonResponse({'message': f'Room {state}.', 'is_active': room.is_active})
 
 def _room_toggle_featured(request, room, data):
@@ -610,42 +786,50 @@ def _room_toggle_featured(request, room, data):
     _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, {state}")
     return JsonResponse({'message': f'Room {state}.', 'is_featured': room.is_featured})
 
-_ROOM_FIELD_CONVERTERS = {
-    'price_per_night': lambda v: Decimal(str(v)),
-    'capacity': lambda v: int(v),
-    'rating': lambda v: Decimal(str(round(float(v), 1))) if v else Decimal("4.5"),
-}
-
 def _room_update_details(request, room, data):
+    old_type, old_prop, old_price = room.room_type, room.property_id, room.price_per_night
     fields_changed = []
     for field in ('name', 'room_type', 'price_per_night', 'capacity', 'amenities', 'description', 'rating'):
         val = data.get(field)
         if val is None:
             continue
-        converter = _ROOM_FIELD_CONVERTERS.get(field)
-        if converter:
-            val = converter(val)
-        setattr(room, field, val)
+        setattr(room, field, _clean_room_field(field, val))
         fields_changed.append(field)
     prop_id = data.get('property_id')
     if prop_id:
-        room.property = get_object_or_404(Property, pk=prop_id)
+        clean_prop_id = clean_uuid(prop_id)
+        if clean_prop_id is None:
+            raise BadInput('Invalid property.')
+        room.property = get_object_or_404(Property, pk=clean_prop_id)
         fields_changed.append('property')
     if fields_changed:
         room.save()
-        _log(request, 'ROOM_UPDATED', detail=f"room={room.name}, fields={fields_changed}")
-        # C7.3: price change → push updated rates for all future dates
+        detail = f"room={room.name}, fields={fields_changed}"
         if 'price_per_night' in fields_changed:
-            from core.ota.dispatch import record_ari_change
-            from datetime import date, timedelta
-            record_ari_change(room.room_type, room.property_id, date.today(), date.today() + timedelta(days=500), change_types=("rates",))
+            detail += f", price {old_price}→{room.price_per_night}"
+        if room.room_type != old_type:
+            detail += f", room_type {old_type}→{room.room_type}"
+        if room.property_id != old_prop:
+            detail += f", property {old_prop}→{room.property_id}"
+        _log(request, 'ROOM_UPDATED', detail=detail)
+
+        if room.room_type != old_type or room.property_id != old_prop:
+            # Inventory moved between (room_type, property) buckets: refresh both.
+            for room_type, property_id in {(old_type, old_prop), (room.room_type, room.property_id)}:
+                _push_ari(room_type, property_id, ("availability", "rates"))
+        elif 'price_per_night' in fields_changed:
+            # C7.3: price change → push updated rates for all future dates
+            _push_ari(room.room_type, room.property_id, ("rates",))
     return JsonResponse({'message': 'Room updated.'})
 
 @require_super_admin
 @require_POST
 def room_update(request, room_id):
     room = get_object_or_404(Room, pk=room_id)
-    data = json.loads(request.body)
+    try:
+        data = parse_json(request)
+    except BadInput as e:
+        return e.response()
     action = data.get('action')
 
     handlers = {
@@ -654,10 +838,13 @@ def room_update(request, room_id):
         'toggle_featured': _room_toggle_featured,
         'update_details': _room_update_details,
     }
-    
+
     handler = handlers.get(action)
     if handler:
-        return handler(request, room, data)
+        try:
+            return handler(request, room, data)
+        except BadInput as e:
+            return e.response()
 
     return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
@@ -672,9 +859,11 @@ def room_delete(request, room_id):
             status=400
         )
     room_name = room.name
+    room_type, property_id = room.room_type, room.property_id
     property_name = room.property.name if room.property else 'Unknown Property'
     room.delete()
     _log(request, 'ROOM_DELETED', detail=f"room={room_name}, property={property_name}")
+    _push_ari(room_type, property_id, ("availability",))
     return JsonResponse({'message': f'Room "{room_name}" successfully deleted.'})
 
 
@@ -686,10 +875,10 @@ def audit_log(request):
     action_filter = request.GET.get('action')
     if action_filter:
         logs = logs.filter(action=action_filter)
-        
+
     paginator = Paginator(logs, 50)
     page_obj = paginator.get_page(request.GET.get('page'))
-    
+
     return render(request, 'superadmin/audit_log.html', {
         'logs': page_obj,
         'page_obj': page_obj,
@@ -704,10 +893,13 @@ def audit_log(request):
 def bookings_list(request):
     qs = Booking.objects.select_related('user', 'room__property').order_by('-check_in')
 
+    # Invalid filter values are ignored (shown as "no filter") rather than 500-ing.
     status_filter = request.GET.get('status', '')
-    property_filter = request.GET.get('property', '')
-    date_from = request.GET.get('from', '')
-    date_to = request.GET.get('to', '')
+    if status_filter not in dict(Booking.STATUS_CHOICES):
+        status_filter = ''
+    property_filter = clean_uuid(request.GET.get('property')) or ''
+    date_from = clean_date(request.GET.get('from'))
+    date_to = clean_date(request.GET.get('to'))
     q = request.GET.get('q', '').strip()
 
     if status_filter:
@@ -742,8 +934,8 @@ def bookings_list(request):
         'status_choices': Booking.STATUS_CHOICES,
         'status_filter': status_filter,
         'property_filter': property_filter,
-        'date_from': date_from,
-        'date_to': date_to,
+        'date_from': date_from.isoformat() if date_from else '',
+        'date_to': date_to.isoformat() if date_to else '',
         'q': q,
     })
 
@@ -754,9 +946,11 @@ def walk_in_booking_create(request):
     from rooms.services import create_walk_in_booking
     from payments.models import Payment
     from datetime import datetime
-    from decimal import Decimal, InvalidOperation
+    from decimal import InvalidOperation
 
-    room_id = request.POST.get('room_id')
+    room_id = clean_uuid(request.POST.get('room_id'))
+    if room_id is None:
+        return JsonResponse({'error': 'Choose a valid room.'}, status=400)
     room = get_object_or_404(Room, pk=room_id)
 
     try:
@@ -800,7 +994,7 @@ def walk_in_booking_create(request):
             created_by_staff=request.user,
             operational_notes=request.POST.get('operational_notes', '').strip(),
         )
-        _log(request, 'BOOKING_COMPLETED', target_user=booking.user,
+        _log(request, 'WALK_IN_BOOKING_CREATED', target_user=booking.user,
              detail=f"Walk-in booking: ref={booking.booking_reference}, room={room.name}, method={payment_method}")
         return JsonResponse({
             'message': f'Walk-in booking created successfully. Ref: {booking.booking_reference}',
@@ -814,35 +1008,53 @@ def walk_in_booking_create(request):
         return JsonResponse({'error': 'Internal server error while creating booking.'}, status=500)
 
 
-
 @require_super_admin
 @require_POST
 def booking_cancel(request, booking_id):
+    from payments.models import Payment
     booking = get_object_or_404(Booking, pk=booking_id)
     if booking.status not in ('confirmed', 'pending'):
         return JsonResponse({'error': 'Only confirmed or pending bookings can be cancelled.'}, status=400)
     reason = request.POST.get('reason', '').strip() or 'Cancelled by super admin'
-    if booking.status == 'pending':
+    room = booking.room
+
+    paid = booking.payments.filter(status='captured') \
+        .aggregate(t=Sum('amount'))['t'] or Decimal('0')
+
+    with transaction.atomic():
+        # Only returns a coupon *reserved on a hold* ("applied") to active; a coupon
+        # already redeemed on a paid booking is deliberately left redeemed.
         booking.release_coupon()
-    booking.status = 'cancelled'
-    booking.save(update_fields=['status'])
-    _log(request, 'BOOKING_CANCELLED', target_user=booking.user,
-         detail=f"booking={booking.booking_reference}, reason={reason}")
-    return JsonResponse({'message': 'Booking cancelled.'})
+        booking.status = 'cancelled'
+        booking.save(update_fields=['status'])
+        # Reopen the nights on OTAs (outbox row commits with the cancellation).
+        from core.ota.dispatch import record_ari_change
+        record_ari_change(
+            room.room_type, room.property_id, booking.check_in, booking.check_out,
+            change_types=("availability",),
+        )
+        detail = f"booking={booking.booking_reference}, reason={reason}"
+        if paid > 0:
+            detail += f", refund owed: ₹{paid} (manual)"
+        _log(request, 'BOOKING_CANCELLED', target_user=booking.user, detail=detail)
+
+    message = 'Booking cancelled.'
+    if paid > 0:
+        message += f' Refund of ₹{paid} is owed to the guest and must be processed manually.'
+    return JsonResponse({'message': message})
 
 
 @require_super_admin
 @require_POST
 def booking_complete(request, booking_id):
     booking = get_object_or_404(Booking, pk=booking_id)
-    if booking.status != 'confirmed':
-        return JsonResponse({'error': 'Only confirmed bookings can be marked completed.'}, status=400)
-    booking.status = 'completed'
-    booking.save(update_fields=['status'])
+    try:
+        booking.complete_stay()
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
     _log(request, 'BOOKING_COMPLETED', target_user=booking.user,
-         detail=f"booking={booking.booking_reference}")
+         detail=f"booking={booking.booking_reference}, check_out={booking.check_out}")
     return JsonResponse({'message': 'Booking marked as completed.'})
-
 
 # ── Guests & Loyalty ──────────────────────────────────────────────────────────
 
@@ -853,7 +1065,9 @@ def guests_list(request):
 
     guests = User.objects.filter(
         userprofile__role='guest'
-    ).select_related('userprofile').order_by('-date_joined')
+    ).select_related('userprofile').annotate(
+        stay_count=Count('bookings', filter=Q(bookings__status__in=REVENUE_STATUSES)),
+    ).order_by('-date_joined')
 
     if q:
         guests = guests.filter(
@@ -866,11 +1080,10 @@ def guests_list(request):
     guest_data = []
     for u in page_obj:
         profile = getattr(u, 'userprofile', None)
-        booking_count = Booking.objects.filter(user=u, status__in=('confirmed', 'completed')).count()
         guest_data.append({
             'user': u,
             'profile': profile,
-            'booking_count': booking_count,
+            'booking_count': u.stay_count,
         })
 
     return render(request, 'superadmin/guests.html', {
@@ -914,7 +1127,10 @@ def property_create(request):
 @require_POST
 def property_update(request, property_id):
     prop = get_object_or_404(Property, pk=property_id)
-    data = json.loads(request.body)
+    try:
+        data = parse_json(request)
+    except BadInput as e:
+        return e.response()
     action = data.get('action')
 
     if action == 'toggle_active':
@@ -925,10 +1141,13 @@ def property_update(request, property_id):
         return JsonResponse({'message': f'Property {state}.', 'is_active': prop.is_active})
 
     if action == 'update_details':
-        for field in ('name', 'city', 'address', 'whatsapp_number'):
-            val = data.get(field)
-            if val is not None:
-                setattr(prop, field, val.strip() if isinstance(val, str) else val)
+        try:
+            for field in ('name', 'city', 'address', 'whatsapp_number'):
+                val = data.get(field)
+                if val is not None:
+                    setattr(prop, field, _text(val, field, required=field in ('name', 'city')))
+        except BadInput as e:
+            return e.response()
         prop.save()
         _log(request, 'PROPERTY_UPDATED', detail=f"property={prop.name}")
         return JsonResponse({'message': 'Property updated.'})
@@ -943,30 +1162,33 @@ def property_update(request, property_id):
 def room_create(request):
     property_id = request.POST.get('property_id')
     name = request.POST.get('name', '').strip()
-    room_type = request.POST.get('room_type', 'single')
-    price = request.POST.get('price_per_night', '0')
-    capacity = request.POST.get('capacity', '2')
-    amenities = request.POST.get('amenities', '').strip()
-    description = request.POST.get('description', '').strip()
-    rating_str = request.POST.get('rating', '4.5')
 
     if not property_id or not name:
         return JsonResponse({'error': 'Property and room name are required.'}, status=400)
 
-    prop = get_object_or_404(Property, pk=property_id)
     try:
-        price = Decimal(price)
-        capacity = int(capacity)
-        rating = Decimal(str(round(float(rating_str), 1)))
-    except (ValueError, TypeError):
-        return JsonResponse({'error': 'Invalid numbers provided.'}, status=400)
+        clean_prop_id = clean_uuid(property_id)
+        if clean_prop_id is None:
+            raise BadInput('Invalid property.')
+        fields = {
+            'name': _clean_room_field('name', name),
+            'room_type': _clean_room_field('room_type', request.POST.get('room_type', 'single')),
+            'price_per_night': _clean_room_field('price_per_night', request.POST.get('price_per_night', '0')),
+            'capacity': _clean_room_field('capacity', request.POST.get('capacity', '2')),
+            'amenities': _clean_room_field('amenities', request.POST.get('amenities', '')),
+            'description': _clean_room_field('description', request.POST.get('description', '')),
+            'rating': _clean_room_field('rating', request.POST.get('rating', '4.5')),
+        }
+    except BadInput as e:
+        return e.response()
 
-    room = Room.objects.create(
-        property=prop, name=name, city=prop.city, room_type=room_type,
-        price_per_night=price, capacity=capacity, amenities=amenities,
-        description=description, rating=rating,
-    )
-    _log(request, 'ROOM_CREATED', detail=f"room={room.name}, property={prop.name}")
+    prop = get_object_or_404(Property, pk=clean_prop_id)
+    room = Room.objects.create(property=prop, city=prop.city, **fields)
+    _log(request, 'ROOM_CREATED', detail=(
+        f"room={room.name}, property={prop.name}, type={room.room_type}, "
+        f"price={room.price_per_night}, capacity={room.capacity}"))
+    # New inventory: open it on OTAs.
+    _push_ari(room.room_type, prop.id, ("availability",))
     return JsonResponse({'message': f'Room "{room.name}" created.', 'id': str(room.id)})
 
 
@@ -1027,6 +1249,7 @@ def room_image_set_primary(request, image_id):
     img.room.images.filter(is_primary=True).update(is_primary=False)
     img.is_primary = True
     img.save(update_fields=['is_primary'])
+    _log(request, 'ROOM_IMAGE_PRIMARY_SET', detail=f"room={img.room.name}, image={img.id}")
     return JsonResponse({'message': 'Set as primary image.'})
 
 
@@ -1091,10 +1314,10 @@ def cause_create(request):
         return JsonResponse({'error': 'Title and Location are required.'}, status=400)
 
     try:
-        target_amount = Decimal(target_amount)
-        raised_amount = Decimal(raised_amount)
-    except (ValueError, TypeError):
-        return JsonResponse({'error': 'Invalid amounts.'}, status=400)
+        target_amount = to_decimal(target_amount, 'target amount', min_value=0, max_value=MAX_BIG_MONEY)
+        raised_amount = to_decimal(raised_amount, 'raised amount', min_value=0, max_value=MAX_BIG_MONEY)
+    except BadInput as e:
+        return e.response()
 
     cause = Cause.objects.create(
         title=title, location=location, description=description,
@@ -1105,8 +1328,6 @@ def cause_create(request):
     return JsonResponse({'message': f'Cause "{cause.title}" created.', 'id': str(cause.id)})
 
 
-@require_super_admin
-@require_POST
 def _cause_toggle_active(request, cause, data):
     cause.is_active = not cause.is_active
     cause.save(update_fields=['is_active'])
@@ -1124,7 +1345,7 @@ def _cause_delete(request, cause, data):
 
 def _cause_update_details(request, cause, data):
     fields_changed = []
-    
+
     title_val = data.get('title')
     loc_val = data.get('location')
     desc_val = data.get('description')
@@ -1133,27 +1354,27 @@ def _cause_update_details(request, cause, data):
     sort_val = data.get('sort_order')
 
     if title_val is not None:
-        cause.title = title_val.strip()
+        cause.title = _text(title_val, 'title')
         fields_changed.append('title')
     if loc_val is not None:
-        cause.location = loc_val.strip()
+        cause.location = _text(loc_val, 'location')
         fields_changed.append('location')
     if desc_val is not None:
-        cause.description = desc_val.strip()
+        cause.description = _text(desc_val, 'description')
         fields_changed.append('description')
     if target_val is not None:
-        cause.target_amount = Decimal(str(target_val))
+        cause.target_amount = to_decimal(target_val, 'target amount', min_value=0, max_value=MAX_BIG_MONEY)
         fields_changed.append('target_amount')
     if raised_val is not None:
-        cause.raised_amount = Decimal(str(raised_val))
+        cause.raised_amount = to_decimal(raised_val, 'raised amount', min_value=0, max_value=MAX_BIG_MONEY)
         fields_changed.append('raised_amount')
     if sort_val is not None:
-        cause.sort_order = int(sort_val)
+        cause.sort_order = to_int(sort_val, 'sort order', min_value=0, max_value=MAX_SMALL_INT)
         fields_changed.append('sort_order')
-    
+
     whatsapp_link_val = data.get('whatsapp_link')
     if whatsapp_link_val is not None:
-        cause.whatsapp_link = whatsapp_link_val.strip()
+        cause.whatsapp_link = _text(whatsapp_link_val, 'whatsapp link')
         fields_changed.append('whatsapp_link')
 
     if request.FILES.get('image'):
@@ -1174,7 +1395,10 @@ def cause_update(request, cause_id):
     cause = get_object_or_404(Cause, pk=cause_id)
     
     if request.content_type == 'application/json':
-        data = json.loads(request.body)
+        try:
+            data = parse_json(request)
+        except BadInput as e:
+            return e.response()
         action = data.get('action')
     else:
         action = request.POST.get('action')
@@ -1188,7 +1412,10 @@ def cause_update(request, cause_id):
     
     handler = handlers.get(action)
     if handler:
-        return handler(request, cause, data)
+        try:
+            return handler(request, cause, data)
+        except BadInput as e:
+            return e.response()
 
     return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
@@ -1262,7 +1489,9 @@ def _event_update_details(request, event, data):
         val = data.get(field)
         if val is not None:
             if field == 'sort_order':
-                val = int(val)
+                val = to_int(val, 'sort order', min_value=0, max_value=MAX_SMALL_INT)
+            else:
+                val = _text(val, field)
             setattr(event, field, val)
             fields_changed.append(field)
     if fields_changed:
@@ -1275,7 +1504,10 @@ def _event_update_details(request, event, data):
 def event_update(request, event_id):
     from core.models import Attraction
     event = get_object_or_404(Attraction, pk=event_id)
-    data = json.loads(request.body)
+    try:
+        data = parse_json(request)
+    except BadInput as e:
+        return e.response()
     action = data.get('action')
 
     handlers = {
@@ -1286,7 +1518,10 @@ def event_update(request, event_id):
     
     handler = handlers.get(action)
     if handler:
-        return handler(request, event, data)
+        try:
+            return handler(request, event, data)
+        except BadInput as e:
+            return e.response()
 
     return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
@@ -1312,7 +1547,11 @@ def event_image_upload(request, event_id):
         return JsonResponse({'error': 'No image file provided.'}, status=400)
 
     is_primary = request.POST.get('is_primary') == 'on'
-    sort_order = int(request.POST.get('sort_order', '0'))
+    try:
+        sort_order = to_int(request.POST.get('sort_order', '0') or 0, 'sort order',
+                            min_value=0, max_value=MAX_SMALL_INT)
+    except BadInput as e:
+        return e.response()
 
     if is_primary:
         event.photos.filter(is_primary=True).update(is_primary=False)
@@ -1345,6 +1584,7 @@ def event_image_set_primary(request, image_id):
     img.attraction.photos.filter(is_primary=True).update(is_primary=False)
     img.is_primary = True
     img.save(update_fields=['is_primary'])
+    _log(request, 'EVENT_IMAGE_PRIMARY_SET', detail=f"event={img.attraction.name}, image={img.id}")
     return JsonResponse({'message': 'Set as primary image.'})
 
 
@@ -1415,25 +1655,25 @@ def _activity_update_details(request, activity, data):
     whatsapp_message_val = data.get('whatsapp_message')
 
     if title_val is not None:
-        activity.title = title_val.strip()
+        activity.title = _text(title_val, 'title')
         fields_changed.append('title')
     if cat_val is not None:
-        activity.category = cat_val.strip()
+        activity.category = _text(cat_val, 'category')
         fields_changed.append('category')
     if desc_val is not None:
-        activity.description = desc_val.strip()
+        activity.description = _text(desc_val, 'description')
         fields_changed.append('description')
     if price_val is not None:
-        activity.price = price_val.strip() or REQ_TO_BOOK
+        activity.price = _text(price_val, 'price') or REQ_TO_BOOK
         fields_changed.append('price')
     if sort_val is not None:
-        activity.sort_order = int(sort_val)
+        activity.sort_order = to_int(sort_val, 'sort order', min_value=0, max_value=MAX_SMALL_INT)
         fields_changed.append('sort_order')
     if whatsapp_link_val is not None:
-        activity.whatsapp_link = whatsapp_link_val.strip()
+        activity.whatsapp_link = _text(whatsapp_link_val, 'whatsapp link')
         fields_changed.append('whatsapp_link')
     if whatsapp_message_val is not None:
-        activity.whatsapp_message = whatsapp_message_val.strip()
+        activity.whatsapp_message = _text(whatsapp_message_val, 'whatsapp message')
         fields_changed.append('whatsapp_message')
 
     if request.FILES.get('image'):
@@ -1454,7 +1694,10 @@ def activity_update(request, activity_id):
     activity = get_object_or_404(Activity, pk=activity_id)
 
     if request.content_type == 'application/json':
-        data = json.loads(request.body)
+        try:
+            data = parse_json(request)
+        except BadInput as e:
+            return e.response()
         action = data.get('action')
     else:
         action = request.POST.get('action')
@@ -1468,7 +1711,10 @@ def activity_update(request, activity_id):
     
     handler = handlers.get(action)
     if handler:
-        return handler(request, activity, data)
+        try:
+            return handler(request, activity, data)
+        except BadInput as e:
+            return e.response()
 
     return JsonResponse({'error': UNKNOWN_ACTION_ERR}, status=400)
 
@@ -1489,17 +1735,24 @@ def banners_list(request):
 @require_POST
 def banner_create(request):
     from core.models import SiteBanner
-    from django.contrib import messages
     title = request.POST.get('title', '').strip()
     target_page = request.POST.get('target_page', 'home')
     subtitle = request.POST.get('subtitle', '').strip()
     cta_label = request.POST.get('cta_label', 'Explore Stays').strip()
     cta_url = request.POST.get('cta_url', '/rooms/search/').strip()
-    sort_order = int(request.POST.get('sort_order', 0) or 0)
     image = request.FILES.get('image')
 
     if not title or not image:
         messages.error(request, 'Title and hero image are required.')
+        return redirect('superadmin:banners-list')
+    try:
+        sort_order = to_int(request.POST.get('sort_order', 0) or 0, 'sort order',
+                            min_value=0, max_value=MAX_SMALL_INT)
+    except BadInput as e:
+        messages.error(request, f'Banner not created: {e.message}')
+        return redirect('superadmin:banners-list')
+    if target_page not in dict(SiteBanner.PAGE_CHOICES):
+        messages.error(request, 'Banner not created: choose a valid page.')
         return redirect('superadmin:banners-list')
 
     mobile_image = request.FILES.get('mobile_image')
@@ -1518,7 +1771,7 @@ def banner_create(request):
     from django.core.cache import cache
     cache.delete('ttr_site_banners_map')
 
-    _log(request, 'PROPERTY_UPDATED', detail=f"Created banner: {banner.title} for {banner.target_page}")
+    _log(request, 'BANNER_CREATED', detail=f"banner={banner.title}, page={banner.target_page}")
     messages.success(request, f'Banner "{banner.title}" created successfully.')
     return redirect('superadmin:banners-list')
 
@@ -1532,6 +1785,8 @@ def banner_toggle(request, banner_id):
     banner.is_active = not banner.is_active
     banner.save(update_fields=['is_active'])
     cache.delete('ttr_site_banners_map')
+    _log(request, 'BANNER_UPDATED', detail=(
+        f"banner={banner.title}, {'activated' if banner.is_active else 'deactivated'}"))
     return JsonResponse({'message': 'Status updated.', 'is_active': banner.is_active})
 
 
@@ -1544,6 +1799,7 @@ def banner_delete(request, banner_id):
     title = banner.title
     banner.delete()
     cache.delete('ttr_site_banners_map')
+    _log(request, 'BANNER_DELETED', detail=f"banner={title}")
     return JsonResponse({'message': f'Banner "{title}" deleted.'})
 
 
