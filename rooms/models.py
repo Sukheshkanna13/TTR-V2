@@ -533,6 +533,42 @@ class Booking(models.Model):
             return True
         return False
 
+    def complete_stay(self, today=None):
+        """
+        Mark a confirmed stay as completed (staff checkout).
+
+        Only allowed once the guest has arrived (check_in <= today). Completed
+        bookings no longer block availability, so completing a stay before its
+        check-out date would reopen nights the guest still occupies. An early
+        checkout therefore shortens check_out to today (never below one night),
+        and the freed nights are pushed to Channex. total_price is unchanged.
+
+        Raises ValueError with a user-facing message when not allowed.
+        """
+        from datetime import timedelta
+
+        today = today or timezone.localdate()
+        if self.status != "confirmed":
+            raise ValueError("Only confirmed bookings can be marked completed.")
+        if self.check_in > today:
+            raise ValueError("This stay has not started yet; cancel it instead of completing it.")
+
+        old_check_out = self.check_out
+        new_check_out = max(today, self.check_in + timedelta(days=1))
+        fields = ["status"]
+        if new_check_out < old_check_out:
+            self.check_out = new_check_out
+            fields.append("check_out")
+        self.status = "completed"
+        self.save(update_fields=fields)
+
+        if new_check_out < old_check_out:
+            from core.ota.dispatch import record_ari_change
+            record_ari_change(
+                self.room.room_type, self.room.property_id,
+                new_check_out, old_check_out, change_types=("availability",),
+            )
+
     def release_hold(self, reason="abandoned"):
         """
         Release an unpaid hold early, freeing the room immediately instead of
