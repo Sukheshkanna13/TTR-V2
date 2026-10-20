@@ -40,9 +40,29 @@ def create_walk_in_booking(
     if check_out <= check_in:
         raise ValueError("Check-out date must be after check-in date.")
 
+    # Validate input before taking the room lock.
+    if payment_method not in dict(Payment.METHOD_CHOICES):
+        raise ValueError("Invalid payment method.")
+    if not room.is_active:
+        raise ValueError(f"Room {room.name} is inactive and cannot be booked.")
+    if not isinstance(guests, int) or isinstance(guests, bool) or guests < 1:
+        raise ValueError("Number of guests must be at least 1.")
+    if guests > room.capacity:
+        raise ValueError(f"Room {room.name} holds at most {room.capacity} guest(s).")
+    if price_override is not None:
+        try:
+            override_value = Decimal(str(price_override))
+        except Exception:
+            raise ValueError("Price override must be a valid number.")
+        if not override_value.is_finite() or override_value <= Decimal("0.00"):
+            raise ValueError("Price override must be greater than zero.")
+        price_override = override_value
+
     # 1. Check availability with row lock on Room
     with transaction.atomic():
         locked_room = Room.objects.select_for_update().get(pk=room.pk)
+        if not locked_room.is_active:
+            raise ValueError(f"Room {locked_room.name} is inactive and cannot be booked.")
 
         # Check existing confirmed / non-expired holds
         overlapping_bookings = Booking.objects.filter(
@@ -64,18 +84,27 @@ def create_walk_in_booking(
         clean_phone = (guest_phone or "").strip()
         user = None
 
+        # Only ever attach a walk-in to a guest account, never to staff/admin.
+        guest_users = User.objects.filter(userprofile__role="guest")
+
         if clean_email:
-            user = User.objects.filter(email=clean_email).first()
+            user = guest_users.filter(email=clean_email).first()
 
         if not user and clean_phone:
             # Check by phone
-            user = User.objects.filter(phone=clean_phone).first()
+            user = guest_users.filter(phone=clean_phone).first()
 
         if not user:
             # Auto-generate a guest user so they can log in via OTP
             phone_digits = ''.join(c for c in clean_phone if c.isdigit())
             fallback_email = f"guest_{phone_digits or secrets.token_hex(4)}@guest.templeandtowns.in"
-            target_email = clean_email or fallback_email
+            # Email is unique: if the given email already belongs to another
+            # (non-guest) account, or the fallback is taken, don't collide.
+            target_email = clean_email
+            if not target_email or User.objects.filter(email=target_email).exists():
+                target_email = fallback_email
+            while User.objects.filter(email=target_email).exists():
+                target_email = f"guest_{phone_digits}_{secrets.token_hex(4)}@guest.templeandtowns.in"
             user = User.objects.create(
                 email=target_email,
                 full_name=guest_name.strip(),
@@ -86,8 +115,8 @@ def create_walk_in_booking(
             UserProfile.objects.get_or_create(user=user, defaults={'role': 'guest'})
 
         # 3. Determine price
-        if price_override is not None and price_override > Decimal('0.00'):
-            total_price = Decimal(str(price_override))
+        if price_override is not None:
+            total_price = price_override
         else:
             total_price = Decimal(str(locked_room.calculate_price(check_in, check_out)))
 

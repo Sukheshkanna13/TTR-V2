@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Booking
+from .models import Booking, Room
 
 logger = logging.getLogger(__name__)
 
@@ -68,21 +68,29 @@ def auto_complete_bookings():
     Scheduled task to mark past bookings as COMPLETED.
     Updates all CONFIRMED bookings where check_out date is before today to COMPLETED.
     """
-    today = timezone.now().date()
-    
+    today = timezone.localdate()
+
     # Get all bookings that should be completed today
     bookings_to_complete = Booking.objects.filter(
         status="confirmed",
         check_out__lt=today
-    )
-    
+    ).select_related("room")
+
     completed_count = 0
     for booking in bookings_to_complete:
-        # Update room status to needs cleaning
+        # Flag the room for cleaning, unless another guest is already staying
+        # in it today (same-day turnover): that room is occupied, not dirty.
         room = booking.room
-        room.operational_status = "needs_cleaning"
-        room.save(update_fields=["operational_status"])
-        
+        another_stay_in_progress = Booking.objects.filter(
+            room=room,
+            status="confirmed",
+            check_in__lte=today,
+            check_out__gt=today,
+        ).exclude(pk=booking.pk).exists()
+        if not another_stay_in_progress:
+            room.operational_status = Room.STATUS_CLEANING
+            room.save(update_fields=["operational_status"])
+
         # Complete the booking
         booking.status = "completed"
         booking.save(update_fields=["status"])
