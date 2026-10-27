@@ -63,9 +63,9 @@ def auto_complete_bookings():
     
     completed_count = 0
     for booking in bookings_to_complete:
-        # Update room status to needs cleaning
+        # Update room status to cleaning
         room = booking.room
-        room.operational_status = "needs_cleaning"
+        room.operational_status = "cleaning"
         room.save(update_fields=["operational_status"])
         
         # Complete the booking

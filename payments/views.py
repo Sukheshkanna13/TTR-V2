@@ -59,7 +59,7 @@ class CreateOrderView(APIView):
 
         # Find the booking
         try:
-            booking = Booking.objects.select_related("room").get(
+            booking = Booking.objects.select_related("room", "user").get(
                 id=booking_id,
                 user=request.user,
             )
@@ -138,6 +138,11 @@ class CreateOrderView(APIView):
                     "discount_amount": str(booking.discount_amount),
                     "tax_amount": str(booking.tax_amount),
                     "payable_amount": str(payable),
+                },
+                "user": {
+                    "name": getattr(booking.user, "full_name", "") or getattr(booking.user, "email", ""),
+                    "email": getattr(booking.user, "email", "") or "",
+                    "phone": getattr(booking.user, "phone", "") or "",
                 },
             },
             status=status.HTTP_201_CREATED,

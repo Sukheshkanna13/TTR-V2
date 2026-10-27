@@ -4,7 +4,7 @@ Admin configuration for payments.
 
 from django.contrib import admin
 
-from .models import Payment
+from .models import Payment, ProcessedWebhookEvent
 
 
 @admin.register(Payment)
@@ -12,16 +12,19 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = (
         "razorpay_order_id",
         "razorpay_payment_id",
+        "payment_method",
         "amount",
         "status",
+        "refund_status",
         "get_booking_ref",
         "get_user_email",
         "created_at",
     )
-    list_filter = ("status", "created_at")
+    list_filter = ("status", "payment_method", "refund_status", "created_at")
     search_fields = (
         "razorpay_order_id",
         "razorpay_payment_id",
+        "refund_id",
         "booking__booking_reference",
         "booking__user__email",
     )
@@ -30,13 +33,19 @@ class PaymentAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Payment Info", {
-            "fields": ("id", "status", "amount"),
+            "fields": ("id", "status", "payment_method", "amount"),
         }),
         ("Razorpay Details", {
             "fields": (
                 "razorpay_order_id",
                 "razorpay_payment_id",
                 "razorpay_signature",
+            ),
+        }),
+        ("Refund Details", {
+            "fields": (
+                "refund_id",
+                "refund_status",
             ),
         }),
         ("Booking", {
@@ -59,3 +68,12 @@ class PaymentAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             "booking", "booking__user"
         )
+
+
+@admin.register(ProcessedWebhookEvent)
+class ProcessedWebhookEventAdmin(admin.ModelAdmin):
+    list_display = ("source", "event_id", "processed_at")
+    list_filter = ("source", "processed_at")
+    search_fields = ("event_id", "source")
+    readonly_fields = ("id", "processed_at")
+    list_per_page = 50

@@ -507,3 +507,36 @@ class RoomUXSignalsTest(TestCase):
         self.assertTrue(signals['is_top_rated'])
 
 
+class AutoCompleteBookingsTaskTest(TestCase):
+    def test_auto_complete_sets_operational_status_to_cleaning(self):
+        from rooms.tasks import auto_complete_bookings
+
+        user = _guest("pastguest@test.com")
+        room = _room()
+        room.operational_status = "available"
+        room.save()
+
+        yesterday = timezone.now().date() - timedelta(days=1)
+        three_days_ago = yesterday - timedelta(days=2)
+
+        booking = Booking.objects.create(
+            room=room,
+            user=user,
+            check_in=three_days_ago,
+            check_out=yesterday,
+            guests=1,
+            total_price=Decimal("4000"),
+            status="confirmed",
+        )
+
+        completed_count = auto_complete_bookings()
+        self.assertEqual(completed_count, 1)
+
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, "completed")
+
+        room.refresh_from_db()
+        self.assertEqual(room.operational_status, "cleaning")
+
+
+

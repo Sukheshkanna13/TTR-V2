@@ -214,6 +214,9 @@
   const REMOVE_COUPON_URL = "{% url 'loyalty:remove-coupon-api' %}";
   const MY_COUPONS_URL    = "{% url 'loyalty:my-coupons-api' %}";
   const CSRF_TOKEN        = '{{ csrf_token }}';
+  const USER_NAME         = '{{ request.user.full_name|default:request.user.email|default:""|escapejs }}';
+  const USER_EMAIL        = '{{ request.user.email|default:""|escapejs }}';
+  const USER_PHONE        = '{{ request.user.phone|default:""|escapejs }}';
 
   const params    = new URLSearchParams(globalThis.location.search);
   const bookingId = params.get('booking_id');
@@ -508,7 +511,11 @@
             payBtn.textContent = 'Try again';
           }
         },
-        prefill: { name: 'Guest', email: '', contact: '' },
+        prefill: {
+          name:    (orderData.user && orderData.user.name) || USER_NAME || 'Guest',
+          email:   (orderData.user && orderData.user.email) || USER_EMAIL || '',
+          contact: (orderData.user && orderData.user.phone) || USER_PHONE || ''
+        },
         theme:   { color: '#0a1628' },
         modal:   { ondismiss: () => {
           // Guest closed the payment modal — release the hold right away.
