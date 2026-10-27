@@ -106,3 +106,238 @@ class CheckoutPrefillTest(TestCase):
         self.assertEqual(data["user"]["name"], "Arjun Sharma")
         self.assertEqual(data["user"]["email"], "arjun@test.com")
         self.assertEqual(data["user"]["phone"], "9876543210")
+
+
+class VerifyPaymentViewTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="verify_user@test.com",
+            full_name="Verify User",
+            phone="9876543210",
+            password="testpassword123",
+            is_active=True,
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
+
+        self.prop = Property.objects.create(name="Resort V", city="Pondy", address="Beach road", is_active=True)
+        self.room = Room.objects.create(
+            property=self.prop,
+            name="Deluxe Suite",
+            city="Pondy",
+            room_type="deluxe",
+            price_per_night=Decimal("5000"),
+            capacity=2,
+            operational_status="available",
+        )
+        today = timezone.now().date()
+        self.booking = Booking.objects.create(
+            room=self.room,
+            user=self.user,
+            check_in=today + timezone.timedelta(days=2),
+            check_out=today + timezone.timedelta(days=4),
+            guests=2,
+            total_price=Decimal("10000"),
+            status="pending",
+            razorpay_order_id="order_test_verify_123",
+            hold_expires_at=timezone.now() + timezone.timedelta(minutes=10),
+        )
+        self.payment = Payment.objects.create(
+            booking=self.booking,
+            razorpay_order_id="order_test_verify_123",
+            amount=Decimal("10000"),
+            status="created",
+        )
+
+    @patch("payments.views.verify_razorpay_signature")
+    def test_verify_payment_valid_signature_confirms_booking(self, mock_verify_sig):
+        mock_verify_sig.return_value = True
+
+        res = self.client.post(
+            reverse("payments:verify"),
+            data={
+                "razorpay_order_id": "order_test_verify_123",
+                "razorpay_payment_id": "pay_test_valid_456",
+                "razorpay_signature": "valid_signature_hash",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "confirmed")
+        self.assertIsNotNone(self.booking.booking_reference)
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, "captured")
+        self.assertEqual(self.payment.razorpay_payment_id, "pay_test_valid_456")
+
+    @patch("payments.views.verify_razorpay_signature")
+    def test_verify_payment_invalid_signature_fails_and_releases_hold(self, mock_verify_sig):
+        mock_verify_sig.return_value = False
+
+        res = self.client.post(
+            reverse("payments:verify"),
+            data={
+                "razorpay_order_id": "order_test_verify_123",
+                "razorpay_payment_id": "pay_test_tampered_456",
+                "razorpay_signature": "invalid_tampered_signature",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "SIGNATURE_INVALID")
+
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "failed")
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, "failed")
+
+
+class WebhookViewTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="webhook_user@test.com",
+            full_name="Webhook User",
+            phone="9876543210",
+            password="testpassword123",
+            is_active=True,
+        )
+        self.client = Client()
+        self.prop = Property.objects.create(name="Resort W", city="Pondy", address="Beach road", is_active=True)
+        self.room = Room.objects.create(
+            property=self.prop,
+            name="Sea View Villa",
+            city="Pondy",
+            room_type="villa",
+            price_per_night=Decimal("5000"),
+            capacity=2,
+            operational_status="available",
+        )
+        today = timezone.now().date()
+        self.booking = Booking.objects.create(
+            room=self.room,
+            user=self.user,
+            check_in=today + timezone.timedelta(days=2),
+            check_out=today + timezone.timedelta(days=4),
+            guests=2,
+            total_price=Decimal("10000"),
+            status="pending",
+            razorpay_order_id="order_webhook_789",
+            hold_expires_at=timezone.now() + timezone.timedelta(minutes=10),
+        )
+        self.payment = Payment.objects.create(
+            booking=self.booking,
+            razorpay_order_id="order_webhook_789",
+            amount=Decimal("10000"),
+            status="created",
+        )
+
+    def test_webhook_invalid_signature_rejected(self):
+        res = self.client.post(
+            reverse("payments:webhook"),
+            data={"event": "payment.captured"},
+            content_type="application/json",
+            HTTP_X_RAZORPAY_SIGNATURE="invalid_signature",
+        )
+        self.assertEqual(res.status_code, 400)
+
+    @patch("payments.views.verify_webhook_signature")
+    def test_webhook_payment_captured_confirms_booking(self, mock_verify_wh):
+        mock_verify_wh.return_value = True
+
+        payload = {
+            "id": "evt_test_captured_001",
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_test_wh_111",
+                        "order_id": "order_webhook_789",
+                        "amount": 1000000,
+                    }
+                }
+            },
+        }
+        res = self.client.post(
+            reverse("payments:webhook"),
+            data=payload,
+            content_type="application/json",
+            HTTP_X_RAZORPAY_SIGNATURE="mock_signature",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "confirmed")
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, "captured")
+
+        self.assertTrue(
+            ProcessedWebhookEvent.objects.filter(
+                source="razorpay",
+                event_id="evt_test_captured_001",
+            ).exists()
+        )
+
+    @patch("payments.views.verify_webhook_signature")
+    def test_webhook_duplicate_event_is_idempotent(self, mock_verify_wh):
+        mock_verify_wh.return_value = True
+
+        ProcessedWebhookEvent.objects.create(
+            source="razorpay",
+            event_id="evt_duplicate_002",
+        )
+
+        payload = {
+            "id": "evt_duplicate_002",
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_test_wh_222",
+                        "order_id": "order_webhook_789",
+                        "amount": 1000000,
+                    }
+                }
+            },
+        }
+        res = self.client.post(
+            reverse("payments:webhook"),
+            data=payload,
+            content_type="application/json",
+            HTTP_X_RAZORPAY_SIGNATURE="mock_signature",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json().get("status"), "already_processed")
+
+    @patch("payments.views.verify_webhook_signature")
+    def test_webhook_payment_failed_releases_hold(self, mock_verify_wh):
+        mock_verify_wh.return_value = True
+
+        payload = {
+            "id": "evt_test_failed_003",
+            "event": "payment.failed",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_test_failed_333",
+                        "order_id": "order_webhook_789",
+                    }
+                }
+            },
+        }
+        res = self.client.post(
+            reverse("payments:webhook"),
+            data=payload,
+            content_type="application/json",
+            HTTP_X_RAZORPAY_SIGNATURE="mock_signature",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json().get("status"), "released")
+
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "failed")
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, "failed")
+

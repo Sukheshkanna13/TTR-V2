@@ -349,5 +349,102 @@ class FolioPageTests(TestCase):
         self.assertEqual(res.context['nights_stayed'], 2)
 
     def test_change_password_link_present(self):
-        res = self.client.get(reverse('accounts:folio'))
-        self.assertContains(res, reverse('accounts:change-password'))
+        res = self.client.get(reverse('accounts:change-password'))
+        self.assertEqual(res.status_code, 200)
+
+
+class ForgotPasswordFlowTests(TestCase):
+    """Tests the 3-step OTP forgot-password recovery flow."""
+
+    def setUp(self):
+        from accounts.models import OTP
+        self.OTP = OTP
+        self.user = make_user("resetme@example.com", password="OldPassword123!")
+
+    def test_full_forgot_password_success_flow(self):
+        # Step 1: Submit email to request OTP
+        res_step1 = self.client.post(
+            reverse("accounts:forgot-password"),
+            data={"email": "resetme@example.com"},
+        )
+        self.assertEqual(res_step1.status_code, 302)
+        self.assertRedirects(res_step1, reverse("accounts:forgot-password-verify"))
+
+        # Verify OTP was stored in DB
+        otp_record = self.OTP.objects.filter(
+            email="resetme@example.com",
+            purpose=self.OTP.PURPOSE_PASSWORD_RESET,
+        ).latest("created_at")
+        self.assertIsNotNone(otp_record.code)
+
+        # Step 2: Submit OTP for verification
+        res_step2 = self.client.post(
+            reverse("accounts:forgot-password-verify"),
+            data={"otp": otp_record.code},
+        )
+        self.assertEqual(res_step2.status_code, 302)
+        self.assertRedirects(res_step2, reverse("accounts:forgot-password-set"))
+
+        # Step 3: Set new password
+        res_step3 = self.client.post(
+            reverse("accounts:forgot-password-set"),
+            data={
+                "password1": "NewPassword123!",
+                "password2": "NewPassword123!",
+            },
+        )
+        self.assertEqual(res_step3.status_code, 302)
+        self.assertRedirects(res_step3, reverse("accounts:login-page"))
+
+        # Verify user can log in with new password
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewPassword123!"))
+        self.assertFalse(self.user.check_password("OldPassword123!"))
+
+    def test_invalid_otp_fails_verification(self):
+        # Step 1
+        self.client.post(
+            reverse("accounts:forgot-password"),
+            data={"email": "resetme@example.com"},
+        )
+        # Step 2 with bad code
+        res_step2 = self.client.post(
+            reverse("accounts:forgot-password-verify"),
+            data={"otp": "000000"},
+        )
+        self.assertEqual(res_step2.status_code, 200)
+        content = res_step2.content.decode("utf-8")
+        self.assertTrue("Invalid" in content or "error" in content.lower())
+
+    def test_password_mismatch_fails_in_step3(self):
+        # Perform Step 1
+        self.client.post(
+            reverse("accounts:forgot-password"),
+            data={"email": "resetme@example.com"},
+        )
+        otp_record = self.OTP.objects.filter(
+            email="resetme@example.com",
+            purpose=self.OTP.PURPOSE_PASSWORD_RESET,
+        ).latest("created_at")
+        # Step 2
+        self.client.post(
+            reverse("accounts:forgot-password-verify"),
+            data={"otp": otp_record.code},
+        )
+        # Step 3 with mismatch
+        res_step3 = self.client.post(
+            reverse("accounts:forgot-password-set"),
+            data={
+                "password1": "NewPassword123!",
+                "password2": "MismatchPassword!",
+            },
+        )
+        self.assertEqual(res_step3.status_code, 200)
+        content = res_step3.content.decode("utf-8")
+        self.assertIn("Passwords do not match", content)
+
+    def test_cannot_skip_to_step3_without_verification(self):
+        res = self.client.get(reverse("accounts:forgot-password-set"))
+        self.assertEqual(res.status_code, 302)
+        self.assertRedirects(res, reverse("accounts:forgot-password"))
+

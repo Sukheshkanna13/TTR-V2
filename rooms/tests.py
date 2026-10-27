@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
@@ -537,6 +538,99 @@ class AutoCompleteBookingsTaskTest(TestCase):
 
         room.refresh_from_db()
         self.assertEqual(room.operational_status, "cleaning")
+
+    def test_auto_completed_room_stays_searchable_after_cleaning(self):
+        from rooms.tasks import auto_complete_bookings
+
+        user = _guest("pastguest2@test.com")
+        room = _room()
+        room.operational_status = "available"
+        room.save()
+
+        yesterday = timezone.now().date() - timedelta(days=1)
+        three_days_ago = yesterday - timedelta(days=2)
+
+        booking = Booking.objects.create(
+            room=room,
+            user=user,
+            check_in=three_days_ago,
+            check_out=yesterday,
+            guests=1,
+            total_price=Decimal("4000"),
+            status="confirmed",
+        )
+
+        # Run scheduled auto completion
+        auto_complete_bookings()
+        room.refresh_from_db()
+        self.assertEqual(room.operational_status, "cleaning")
+
+        # Housekeeping completes cleaning and marks room available
+        room.operational_status = "available"
+        room.save(update_fields=["operational_status"])
+
+        # Future search should cleanly find the room
+        next_week_in = timezone.now().date() + timedelta(days=7)
+        next_week_out = next_week_in + timedelta(days=2)
+
+        res = self.client.get(
+            reverse("rooms:search"),
+            {
+                "check_in": next_week_in.isoformat(),
+                "check_out": next_week_out.isoformat(),
+                "guests": 1,
+                "city": room.city,
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        room_ids = [r["id"] for r in data.get("rooms", [])]
+        self.assertIn(str(room.id), room_ids)
+
+
+class CancelBookingRefundTest(TestCase):
+    def setUp(self):
+        self.user = _guest("canceller@test.com")
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.room = _room()
+        today = timezone.now().date()
+        self.booking = Booking.objects.create(
+            room=self.room,
+            user=self.user,
+            check_in=today + timedelta(days=5),
+            check_out=today + timedelta(days=7),
+            guests=1,
+            total_price=Decimal("4000"),
+            status="confirmed",
+        )
+        self.payment = Payment.objects.create(
+            booking=self.booking,
+            razorpay_order_id="order_cancel_test_1",
+            razorpay_payment_id="pay_cancel_test_1",
+            amount=Decimal("4000"),
+            status="captured",
+        )
+
+    @patch("rooms.views.refund_razorpay_payment")
+    def test_cancel_confirmed_booking_initiates_razorpay_refund(self, mock_refund):
+        mock_refund.return_value = {
+            "id": "rfnd_test_cancel_123",
+            "status": "processed",
+        }
+        res = self.client.post(reverse("bookings:cancel", args=[self.booking.id]))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("Refund has been initiated", res.json()["message"])
+
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "cancelled")
+        self.assertIsNone(self.booking.hold_expires_at)
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, "refunded")
+        self.assertEqual(self.payment.refund_id, "rfnd_test_cancel_123")
+        self.assertEqual(self.payment.refund_status, "processed")
+
 
 
 
